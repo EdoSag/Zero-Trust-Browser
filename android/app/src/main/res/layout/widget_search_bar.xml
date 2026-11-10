@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Search bar widget (roadmap W12), in the shared Zero-Trust widget look
+  (Zero-Trust-Core/android-widget-kit). Holds no browsing data at all: every
+  part just opens ZT Browser. SearchWidgetProvider hides the round buttons
+  that don't fit the widget's width.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    style="@style/ZtWidget.Root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:paddingStart="10dp"
+    android:paddingEnd="8dp"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+    <ImageView
+        android:layout_width="26dp"
+        android:layout_height="26dp"
+        android:layout_marginEnd="8dp"
+        android:src="@mipmap/ic_launcher"
+        android:importantForAccessibility="no"/>
+    <LinearLayout
+        android:id="@+id/search_box"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_weight="1"
+        android:background="@drawable/zt_widget_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:contentDescription="Search or type a web address">
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_zt_widget_search"
+            android:tint="@color/zt_widget_on_surface_variant"
+            android:importantForAccessibility="no"/>
+        <TextView
+            style="@style/ZtWidget.Body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/zt_widget_on_surface_variant"
+            android:text="Search or type URL"/>
+    </LinearLayout>
+        <ImageView
+            android:id="@+id/voice_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/zt_widget_tile_circle"
+            android:padding="9dp"
+            android:src="@drawable/ic_zt_widget_mic"
+            android:tint="@color/zt_widget_on_surface"
+            android:contentDescription="Voice search"/>
+        <ImageView
+            android:id="@+id/private_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/zt_widget_tile_circle"
+            android:padding="9dp"
+            android:src="@drawable/ic_zt_widget_private"
+            android:tint="@color/zt_widget_on_surface"
+            android:contentDescription="New private tab"/>
+        <ImageView
+            android:id="@+id/qr_button"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/zt_widget_tile_circle"
+            android:padding="9dp"
+            android:src="@drawable/ic_zt_widget_qr"
+            android:tint="@color/zt_widget_on_surface"
+            android:contentDescription="Scan a QR code"/>
+</LinearLayout>

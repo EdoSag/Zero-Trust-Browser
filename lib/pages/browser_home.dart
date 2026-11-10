@@ -129,8 +129,32 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     }
   }
 
+  /// A tap on the home screen search bar widget.
+  Future<void> _openWidgetAction() async {
+    final String? action = await _engine.consumeWidgetAction();
+    if (action == null || !mounted) return;
+    // A fullscreen video sits over the whole window, above Flutter.
+    await _engine.exitFullscreen();
+    if (!mounted) return;
+    Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);
+    switch (action) {
+      case 'voice':
+        final String? text = await _engine.voiceSearch();
+        if (text == null || text.trim().isEmpty || !mounted) return;
+        await _tabs.open(url: addressOrSearch(text.trim(), _settings.engine));
+      case 'qr':
+        await _tabs.open();
+        await _scanQr();
+      case 'private':
+        _startEditing(await _tabs.open(private: true));
+      default:
+        _startEditing(await _tabs.open());
+    }
+  }
+
   /// A link or text from another app opens in a new tab.
   Future<void> _openPendingLink() async {
+    await _openWidgetAction();
     final String? link = await _engine.consumePendingLink();
     if (link == null || link.trim().isEmpty || !mounted) return;
     Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);

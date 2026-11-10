@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="search_in_app">Search in ZT Browser</string>
+    <string name="search_widget_label">Search</string>
+    <string name="search_widget_description">Search the web, by voice, in a private tab or from a QR code</string>
 </resources>

@@ -65,6 +65,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
 
     /** A link from another app (VIEW, web search, shared text), until Dart takes it. */
     private var pendingUrl: String? = null
+
+    /** A tap on the search bar widget (search, voice, private, qr), until Dart takes it. */
+    private var pendingWidgetAction: String? = null
     private var fileCallback: ValueCallback<Array<Uri>>? = null
     private var fullscreenView: View? = null
     private var fullscreenHidden: (() -> Unit)? = null
@@ -88,6 +91,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         super.onCreate(savedInstanceState)
         downloads = Downloads(this)
         pendingUrl = linkFrom(intent)
+        pendingWidgetAction = SearchWidgetProvider.actionFrom(intent)
         Blocker.onLoaded = {
             PageScripts.invalidate()
             for (t in tabs.values) t.refreshScripts()
@@ -99,6 +103,12 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        val widgetAction = SearchWidgetProvider.actionFrom(intent)
+        if (widgetAction != null) {
+            pendingWidgetAction = widgetAction
+            channel?.invokeMethod("openPending", null)
+            return
+        }
         pendingUrl = linkFrom(intent) ?: return
         channel?.invokeMethod("openPending", null)
     }
@@ -128,6 +138,10 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "consumePending" -> {
                         result.success(pendingUrl)
                         pendingUrl = null
+                    }
+                    "consumeWidgetAction" -> {
+                        result.success(pendingWidgetAction)
+                        pendingWidgetAction = null
                     }
                     "createTab" -> {
                         if (tabId != null && tab == null) {
