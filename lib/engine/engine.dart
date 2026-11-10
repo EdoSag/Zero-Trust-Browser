@@ -68,6 +68,10 @@ class BrowserEngine {
   /// A link from another app (or shared text), once.
   Future<String?> consumePendingLink() => _call<String>('consumePending');
 
+  /// A tap on the search bar widget, once: 'search', 'voice', 'private'
+  /// or 'qr'.
+  Future<String?> consumeWidgetAction() => _call<String>('consumeWidgetAction');
+
   Future<void> createTab(
     String tabId, {
     required bool private,

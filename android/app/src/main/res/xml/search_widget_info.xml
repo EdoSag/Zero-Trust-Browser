@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A search bar, 2x1 up to the full width; round buttons appear as it grows. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="40dp"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:maxResizeHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="1"
+    android:updatePeriodMillis="0"
+    android:initialLayout="@layout/widget_search_bar"
+    android:previewLayout="@layout/widget_search_bar_preview"
+    android:description="@string/search_widget_description"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen|searchbox">
+</appwidget-provider>
