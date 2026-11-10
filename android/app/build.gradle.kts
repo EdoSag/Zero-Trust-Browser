@@ -69,4 +69,6 @@ dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     // Private-tab profiles (MULTI_PROFILE) and document-start scripts.
     implementation("androidx.webkit:webkit:1.14.0")
+    // QR code scanner (Apache 2.0), works offline with no Google services.
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }

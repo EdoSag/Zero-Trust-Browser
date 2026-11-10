@@ -1,0 +1,75 @@
+# Builds the newest tracker, ad and cookie-banner list every week, signs it,
+# and publishes it on the rolling "blocklist" release. ZT Browser downloads
+# it once a week and only uses it when the signature matches the public
+# key built into the app (lib/browser/blocklist_updater.dart), so lists
+# improve without an app update and a changed file is never used.
+#
+# One-time setup (Settings > Secrets and variables > Actions > New secret):
+#   BLOCKLIST_SIGNING_KEY   the Ed25519 private key (PEM) matching the app's
+#                           public key. Never commit it.
+name: Blocklist
+
+on:
+  schedule:
+    # Mondays 04:17 UTC.
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: blocklist
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Get EasyList, EasyPrivacy and the EasyList Cookie List
+        run: git clone --depth 1 https://github.com/easylist/easylist.git "$RUNNER_TEMP/easylist"
+
+      - name: Build the list
+        run: |
+          python3 -I tool/update_blocklist.py "$RUNNER_TEMP/easylist" "$RUNNER_TEMP/blocklist.txt"
+          gzip -9n -c "$RUNNER_TEMP/blocklist.txt" > blocklist.txt.gz
+          ls -l blocklist.txt.gz
+
+      - name: Sign it
+        env:
+          SIGNING_KEY: ${{ secrets.BLOCKLIST_SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::Add the BLOCKLIST_SIGNING_KEY secret (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/key.pem" -rawin -in blocklist.txt.gz \
+            | base64 -w0 > blocklist.txt.gz.sig
+          rm -f "$RUNNER_TEMP/key.pem"
+          # Check it against the key the app trusts before publishing.
+          PUB=$(sed -nE "s/^ *'([A-Za-z0-9+\/=]{44})';$/\1/p" lib/browser/blocklist_updater.dart | head -1)
+          [ -n "$PUB" ] || { echo "::error::Public key not found in the app"; exit 1; }
+          { printf '\x30\x2a\x30\x05\x06\x03\x2b\x65\x70\x03\x21\x00'; printf '%s' "$PUB" | base64 -d; } \
+            | openssl pkey -pubin -inform DER -out "$RUNNER_TEMP/pub.pem"
+          base64 -d blocklist.txt.gz.sig > "$RUNNER_TEMP/sig.bin"
+          openssl pkeyutl -verify -pubin -inkey "$RUNNER_TEMP/pub.pem" -rawin \
+            -in blocklist.txt.gz -sigfile "$RUNNER_TEMP/sig.bin"
+
+      - name: Publish on the "blocklist" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DATE=$(sed -nE 's/^# list-date: (.*)$/\1/p' "$RUNNER_TEMP/blocklist.txt" | head -1)
+          if ! gh release view blocklist >/dev/null 2>&1; then
+            gh release create blocklist --target "$GITHUB_SHA" --latest=false \
+              --title "Blocklist (updated weekly)" \
+              --notes "The tracker, ad and cookie-banner list ZT Browser downloads each week. Made from EasyList, EasyPrivacy and the EasyList Cookie List by The EasyList authors (https://easylist.to), CC BY-SA 3.0. Not an app release."
+          fi
+          gh release upload blocklist blocklist.txt.gz blocklist.txt.gz.sig --clobber
+          gh release edit blocklist --latest=false \
+            --notes "The tracker, ad and cookie-banner list ZT Browser downloads each week (list from $DATE UTC). Made from EasyList, EasyPrivacy and the EasyList Cookie List by The EasyList authors (https://easylist.to), CC BY-SA 3.0. Not an app release."

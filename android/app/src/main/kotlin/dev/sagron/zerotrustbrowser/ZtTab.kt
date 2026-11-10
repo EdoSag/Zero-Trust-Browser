@@ -5,6 +5,7 @@ import android.app.Activity
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.Message
@@ -23,22 +24,29 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.ScriptHandler
+import androidx.webkit.WebMessageCompat
+import androidx.webkit.WebMessagePortCompat
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * One browser tab: a WebView that outlives the Flutter widget showing it,
  * so switching tabs or locking the app keeps the page as it was. Dart
- * closes it with `closeTab`.
+ * closes it with `closeTab`; the activity may also unload it when memory
+ * runs low, keeping its history to restore it later.
  *
- * Privacy defaults: trackers blocked ([Blocker]), third-party cookies off,
- * no file or content access, no mixed content, popups only on a tap, every
- * site permission (camera, microphone, location) refused, Global Privacy
- * Control sent. Private tabs use their own WebView profile (cookies,
- * storage, cache), removed when the last private tab closes.
+ * Privacy defaults: trackers blocked ([Blocker]), ad boxes and cookie
+ * banners hidden, fingerprinting noise ([PageScripts]), third-party cookies
+ * off, no file or content access, no mixed content, popups only on a tap,
+ * camera, microphone and location only after the user agrees, Global
+ * Privacy Control sent. Private tabs use their own WebView profile
+ * (cookies, storage, cache), removed when the last private tab closes.
  */
 @SuppressLint("SetJavaScriptEnabled")
 class ZtTab(
@@ -60,12 +68,20 @@ class ZtTab(
         fun hideFullscreen()
         fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?)
         fun onCrashed(tab: ZtTab)
+
+        /**
+         * Asks the user (through Dart) whether [origin] may use [kinds]
+         * ("camera", "microphone", "location"); [answer] gets those allowed
+         * by both the user and Android.
+         */
+        fun askPermission(tab: ZtTab, origin: String, kinds: List<String>, answer: (Set<String>) -> Unit)
     }
 
     val webView: WebView = WebView(activity)
     private val main = Handler(Looper.getMainLooper())
     private val blocked = AtomicInteger(0)
     private val defaultUserAgent: String
+    private var startScript: ScriptHandler? = null
 
     /** Host of the page now showing, read by the network thread. */
     @Volatile private var pageHost: String? = null
@@ -80,6 +96,12 @@ class ZtTab(
     private var loading = false
     private var sslError = false
     private var desktopMode = desktop
+    private var readerable = false
+    private var readerPending = false
+    private var inReader = false
+
+    /** The URL a JavaScript on/off switch last reloaded, to never loop. */
+    private var jsReloadedFor: String? = null
 
     init {
         if (isPrivate && privateProfileSupported()) {
@@ -99,23 +121,26 @@ class ZtTab(
         s.useWideViewPort = true
         s.loadWithOverviewMode = true
         s.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-        s.setGeolocationEnabled(false)
+        // Sites still need the user's yes (onGeolocationPermissionsShowPrompt).
+        s.setGeolocationEnabled(true)
         if (isPrivate) {
             @Suppress("DEPRECATION")
             s.saveFormData = false
             // Without its own profile, at least nothing is kept in the cache.
             if (!privateProfileSupported()) s.cacheMode = WebSettings.LOAD_NO_CACHE
         }
+        // Password managers fill sign-in forms through Android's autofill,
+        // in private tabs too (nothing is saved by the browser itself).
+        webView.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_YES
         // Look like Chrome rather than an in-app WebView ("; wv" makes some
         // sign-in pages refuse), and keep the original for desktop mode.
         defaultUserAgent = s.userAgentString
             .replace("; wv)", ")")
             .replace(Regex("Version/\\d+\\.\\d+ "), "")
         applyUserAgent()
+        applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-            WebViewCompat.addDocumentStartJavaScript(webView, GPC_SCRIPT, setOf("*"))
-        }
+        refreshScripts()
         webView.webViewClient = Client()
         webView.webChromeClient = Chrome()
         webView.setDownloadListener { url, userAgent, disposition, mime, _ ->
@@ -131,19 +156,95 @@ class ZtTab(
 
     fun load(url: String) {
         val target = upgrade(url)
+        applyJavaScript(target)
         webView.loadUrl(target, privacyHeaders())
     }
 
     fun loadInsecure(url: String) {
         Uri.parse(url).host?.let { insecureAllowed.add(it.lowercase()) }
+        applyJavaScript(url)
         webView.loadUrl(url, privacyHeaders())
     }
+
+    /** Shows [html] as if it were [baseUrl]: reader mode or a saved page. */
+    fun loadHtml(html: String, baseUrl: String, reader: Boolean) {
+        readerPending = reader
+        webView.loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", baseUrl)
+    }
+
+    /** Brings back an unloaded tab's history and page. */
+    fun restore(state: Bundle): Boolean = webView.restoreState(state) != null
+
+    fun saveState(): Bundle = Bundle().also { webView.saveState(it) }
 
     fun setDesktop(on: Boolean) {
         if (desktopMode == on) return
         desktopMode = on
         applyUserAgent()
         webView.reload()
+    }
+
+    /** Text size and dark pages, after a settings change. */
+    fun applyDisplay() {
+        val s = webView.settings
+        s.textZoom = textZoom
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            // Darkens pages without a dark design when the phone is in dark
+            // mode; pages with their own dark design use it either way.
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(s, darkPages)
+        }
+    }
+
+    /** Re-adds the document-start script after a settings or list change. */
+    fun refreshScripts() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        startScript?.remove()
+        startScript = WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.documentStart(), setOf("*"))
+    }
+
+    /** The page as a Readability article (JSON string, or "null"). */
+    fun extractArticle(done: (String?) -> Unit) {
+        if (!webView.settings.javaScriptEnabled) {
+            done(null)
+            return
+        }
+        webView.evaluateJavascript(PageScripts.extractArticle(activity)) { done(it) }
+    }
+
+    /**
+     * Reads a blob: URL the page offered as a download, as a data: URL.
+     * Null when the engine can't (old WebView) or the page refused.
+     */
+    fun fetchBlob(url: String, maxBytes: Long, done: (String?) -> Unit) {
+        val supported = listOf(
+            WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL,
+            WebViewFeature.POST_WEB_MESSAGE,
+            WebViewFeature.WEB_MESSAGE_PORT_SET_MESSAGE_CALLBACK,
+            WebViewFeature.WEB_MESSAGE_CALLBACK_ON_MESSAGE,
+        ).all { WebViewFeature.isFeatureSupported(it) }
+        if (!supported || !webView.settings.javaScriptEnabled) {
+            done(null)
+            return
+        }
+        val ports = WebViewCompat.createWebMessageChannel(webView)
+        var answered = false
+        fun finish(result: String?) {
+            if (answered) return
+            answered = true
+            try { ports[0].close() } catch (e: Exception) { }
+            done(result)
+        }
+        ports[0].setWebMessageCallback(object : WebMessagePortCompat.WebMessageCallbackCompat() {
+            override fun onMessage(port: WebMessagePortCompat, message: WebMessageCompat?) {
+                val data = message?.data
+                main.post { finish(if (data != null && data.startsWith("data:")) data else null) }
+            }
+        })
+        val key = UUID.randomUUID().toString()
+        webView.evaluateJavascript(PageScripts.fetchBlob(url, key, maxBytes)) {
+            WebViewCompat.postWebMessage(webView, WebMessageCompat(key, arrayOf(ports[1])), Uri.parse("*"))
+        }
+        main.postDelayed({ finish(null) }, 60_000)
     }
 
     fun destroy() {
@@ -175,6 +276,9 @@ class ZtTab(
                 "secure" to (url != null && url.startsWith("https://") && !sslError),
                 "blocked" to blocked.get(),
                 "desktop" to desktopMode,
+                "readerable" to readerable,
+                "reader" to inReader,
+                "javascript" to webView.settings.javaScriptEnabled,
             ),
         )
     }
@@ -183,6 +287,15 @@ class ZtTab(
 
     private fun applyUserAgent() {
         webView.settings.userAgentString = if (desktopMode) desktopAgent(defaultUserAgent) else defaultUserAgent
+    }
+
+    /** JavaScript off on sites the user chose; applies from the next load. */
+    private fun applyJavaScript(url: String): Boolean {
+        val h = Uri.parse(url).host?.lowercase() ?: return false
+        val want = Blocker.siteOf(h) !in jsOffSites
+        if (webView.settings.javaScriptEnabled == want) return false
+        webView.settings.javaScriptEnabled = want
+        return true
     }
 
     private fun privacyHeaders(): Map<String, String> = mapOf("Sec-GPC" to "1", "DNT" to "1")
@@ -225,17 +338,38 @@ class ZtTab(
         }
     }
 
+    private fun checkReaderable(view: WebView, url: String) {
+        if (inReader || !view.settings.javaScriptEnabled ||
+            !(url.startsWith("https://") || url.startsWith("http://"))
+        ) {
+            return
+        }
+        view.evaluateJavascript(PageScripts.readerable(activity)) { result ->
+            val now = result == "true"
+            if (now != readerable && view.url == url) {
+                readerable = now
+                queueState()
+            }
+        }
+    }
+
     private inner class Client : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
             val url = request.url.toString()
             return when (request.url.scheme?.lowercase()) {
-                "https", "about", "data", "blob", "javascript" -> false
+                "https" -> {
+                    applyJavaScript(url)
+                    false
+                }
+                "about", "data", "blob", "javascript" -> false
                 "http" -> {
                     val target = upgrade(url)
                     if (target == url) {
+                        applyJavaScript(url)
                         false
                     } else {
+                        applyJavaScript(target)
                         view.loadUrl(target, privacyHeaders())
                         true
                     }
@@ -253,13 +387,31 @@ class ZtTab(
             blocked.set(0)
             sslError = false
             loading = true
+            readerable = false
+            inReader = readerPending
+            readerPending = false
+            // Back, forward and reload skip shouldOverrideUrlLoading: catch
+            // a JavaScript switch that doesn't match this site, once.
+            if (!inReader && url.startsWith("http") && applyJavaScript(url) && jsReloadedFor != url) {
+                jsReloadedFor = url
+                view.stopLoading()
+                view.reload()
+            }
             queueState()
+        }
+
+        override fun onPageCommitVisible(view: WebView, url: String) {
+            if (inReader) return
+            Blocker.siteCss(Uri.parse(url).host)?.let { css ->
+                if (view.settings.javaScriptEnabled) view.evaluateJavascript(PageScripts.siteCss(css), null)
+            }
         }
 
         override fun onPageFinished(view: WebView, url: String) {
             loading = false
             sendState()
-            if (!isPrivate && (url.startsWith("http://") || url.startsWith("https://"))) {
+            checkReaderable(view, url)
+            if (!isPrivate && !inReader && (url.startsWith("http://") || url.startsWith("https://"))) {
                 events("visited", mapOf("url" to url, "title" to view.title))
             }
         }
@@ -364,10 +516,40 @@ class ZtTab(
 
         override fun onHideCustomView() = host.hideFullscreen()
 
-        override fun onPermissionRequest(request: PermissionRequest) = request.deny()
+        /** Camera and microphone: asked per site; anything else refused. */
+        override fun onPermissionRequest(request: PermissionRequest) {
+            val kinds = ArrayList<String>()
+            for (r in request.resources) {
+                when (r) {
+                    PermissionRequest.RESOURCE_VIDEO_CAPTURE -> kinds.add("camera")
+                    PermissionRequest.RESOURCE_AUDIO_CAPTURE -> kinds.add("microphone")
+                    else -> {
+                        request.deny()
+                        return
+                    }
+                }
+            }
+            if (kinds.isEmpty()) {
+                request.deny()
+                return
+            }
+            host.askPermission(this@ZtTab, request.origin.toString(), kinds) { allowed ->
+                val grant = ArrayList<String>()
+                if ("camera" in allowed) grant.add(PermissionRequest.RESOURCE_VIDEO_CAPTURE)
+                if ("microphone" in allowed) grant.add(PermissionRequest.RESOURCE_AUDIO_CAPTURE)
+                try {
+                    if (grant.size == kinds.size) request.grant(grant.toTypedArray()) else request.deny()
+                } catch (e: IllegalStateException) {
+                    // The page gave up waiting.
+                }
+            }
+        }
 
         override fun onGeolocationPermissionsShowPrompt(origin: String, callback: GeolocationPermissions.Callback) {
-            callback.invoke(origin, false, false)
+            host.askPermission(this@ZtTab, origin, listOf("location")) { allowed ->
+                // Not retained by the engine: Dart remembers the answer.
+                callback.invoke(origin, "location" in allowed, false)
+            }
         }
     }
 
@@ -377,17 +559,19 @@ class ZtTab(
         /** HTTPS-only mode, pushed from Dart (`setPrivacy`). */
         @Volatile var httpsOnly = true
 
+        /** Sites (registrable domains) where JavaScript is off. */
+        @Volatile var jsOffSites: Set<String> = emptySet()
+
+        /** Page text size in percent, and dark pages; pushed from Dart. */
+        @Volatile var textZoom = 100
+        @Volatile var darkPages = true
+
         fun privateProfileSupported(): Boolean =
             WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
 
         private fun isLocal(host: String) =
             host == "localhost" || host.endsWith(".local") || host.startsWith("192.168.") ||
                 host.startsWith("10.") || host == "127.0.0.1"
-
-        /** Tells sites the user opts out of sale and sharing (Global Privacy Control). */
-        private const val GPC_SCRIPT =
-            "try{Object.defineProperty(Navigator.prototype,'globalPrivacyControl'," +
-                "{get:function(){return true},configurable:true})}catch(e){}"
 
         private fun desktopAgent(mobile: String): String {
             val chrome = Regex("Chrome/[\\d.]+").find(mobile)?.value ?: "Chrome/130.0.0.0"

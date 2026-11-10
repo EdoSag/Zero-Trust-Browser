@@ -2,16 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
+import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
+import 'package:zerotrust_browser/pages/site_permissions_page.dart';
 
 final _defaultBrowserProvider = FutureProvider.autoDispose<bool>(
   (ref) => ref.read(browserEngineProvider).isDefaultBrowser(),
 );
 
-final _blocklistSizeProvider = FutureProvider.autoDispose<int>(
-  (ref) => ref.read(browserEngineProvider).blocklistSize(),
+final _blocklistProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
+  (ref) => ref.read(browserEngineProvider).blocklistInfo(),
+);
+
+final _autofillProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
+  (ref) => ref.read(browserEngineProvider).autofillStatus(),
 );
 
 /// The shared Zero-Trust settings screen, with the browser's own rows.
@@ -24,7 +31,13 @@ class BrowserSettingsPage extends ConsumerWidget {
     final BrowserData data = ref.read(browserDataProvider);
     final BrowserEngine engine = ref.read(browserEngineProvider);
     final bool isDefault = ref.watch(_defaultBrowserProvider).value ?? false;
-    final int listed = ref.watch(_blocklistSizeProvider).value ?? 0;
+    final Map<Object?, Object?> list =
+        ref.watch(_blocklistProvider).value ?? const <Object?, Object?>{};
+    final int listed = (list['size'] as int?) ?? 0;
+    final String listDate = (list['date'] as String?) ?? '';
+    final Map<Object?, Object?> autofill =
+        ref.watch(_autofillProvider).value ?? const <Object?, Object?>{};
+    final String? passwordManager = autofill['service'] as String?;
 
     Future<void> save(BrowserSettings next) => data.saveSettings(next);
 
@@ -56,6 +69,7 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(s.engine.name),
           onTap: () => _pickEngine(context, s, save),
         ),
+        const _Header('Privacy'),
         SwitchListTile(
           secondary: const Icon(Icons.shield_outlined),
           title: const Text('Block trackers and ads'),
@@ -69,6 +83,29 @@ class BrowserSettingsPage extends ConsumerWidget {
           onChanged: (bool v) => save(s.copyWith(blockTrackers: v)),
         ),
         SwitchListTile(
+          secondary: const Icon(Icons.cookie_outlined),
+          title: const Text('Hide cookie banners and ad boxes'),
+          subtitle: const Text(
+            'Hides "accept cookies" pop-ups (without accepting anything) '
+            'and the empty spaces blocked ads leave. EasyList Cookie List.',
+          ),
+          value: s.hideElements,
+          onChanged: s.blockTrackers
+              ? (bool v) => save(s.copyWith(hideElements: v))
+              : null,
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.fingerprint),
+          title: const Text('Fingerprinting protection'),
+          subtitle: const Text(
+            'Adds noise to what sites read to recognise your phone '
+            '(canvas, audio, graphics chip, memory), different on every '
+            'site and every time you open the app.',
+          ),
+          value: s.fingerprinting,
+          onChanged: (bool v) => save(s.copyWith(fingerprinting: v)),
+        ),
+        SwitchListTile(
           secondary: const Icon(Icons.lock_outline),
           title: const Text('HTTPS-only'),
           subtitle: const Text(
@@ -78,13 +115,101 @@ class BrowserSettingsPage extends ConsumerWidget {
           value: s.httpsOnly,
           onChanged: (bool v) => save(s.copyWith(httpsOnly: v)),
         ),
+        ListTile(
+          leading: const Icon(Icons.update),
+          title: const Text('Blocklist updates'),
+          subtitle: Text(
+            'Downloaded weekly from ZT Browser\'s releases on GitHub and '
+            'checked against its signature. '
+            '${listDate.isEmpty ? '' : 'List from ${listDate.substring(0, 10)}. '}'
+            'Tap to check now.',
+          ),
+          onTap: () => _checkBlocklist(context, ref),
+        ),
+        ListTile(
+          leading: const Icon(Icons.admin_panel_settings_outlined),
+          title: const Text('Site permissions'),
+          subtitle: Text(
+            s.sitePermissions.isEmpty
+                ? 'Sites ask before using your camera, microphone or location'
+                : '${s.sitePermissions.length} site'
+                      '${s.sitePermissions.length == 1 ? '' : 's'} with a '
+                      'remembered answer',
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => const SitePermissionsPage(),
+            ),
+          ),
+        ),
         if (s.allowedSites.isNotEmpty)
           ListTile(
             leading: const Icon(Icons.remove_moderator_outlined),
             title: const Text('Sites without protection'),
             subtitle: Text(s.allowedSites.join(', ')),
-            onTap: () => _editAllowed(context, s, save),
+            onTap: () => _editList(
+              context,
+              s.allowedSites,
+              'Trackers and ads are not blocked on these sites.',
+              'Protect',
+              (List<String> rest) => save(s.copyWith(allowedSites: rest)),
+            ),
           ),
+        if (s.javascriptOff.isNotEmpty)
+          ListTile(
+            leading: const Icon(Icons.code_off),
+            title: const Text('JavaScript off'),
+            subtitle: Text(s.javascriptOff.join(', ')),
+            onTap: () => _editList(
+              context,
+              s.javascriptOff,
+              'JavaScript does not run on these sites.',
+              'Turn on',
+              (List<String> rest) => save(s.copyWith(javascriptOff: rest)),
+            ),
+          ),
+        ListTile(
+          leading: const Icon(Icons.password),
+          title: const Text('Password manager'),
+          subtitle: Text(
+            autofill['supported'] == false
+                ? "This phone doesn't support autofill"
+                : passwordManager != null
+                ? '$passwordManager fills passwords in ZT Browser, in '
+                      'private tabs too. ZT Browser never saves passwords.'
+                : 'Pick a password manager (Bitwarden, Proton Pass, '
+                      '1Password...) in Android settings to fill sign-in '
+                      'forms. ZT Browser never saves passwords itself.',
+          ),
+          onTap: () async {
+            await engine.openAutofillSettings();
+            ref.invalidate(_autofillProvider);
+          },
+        ),
+        const _Header('Pages'),
+        ListTile(
+          leading: const Icon(Icons.format_size),
+          title: const Text('Text size'),
+          subtitle: Text('${s.textZoom}%'),
+          onTap: () => _pickTextSize(context, s, save),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.dark_mode_outlined),
+          title: const Text('Dark pages'),
+          subtitle: const Text(
+            'When your phone is in dark mode, darken sites that have no '
+            'dark design of their own',
+          ),
+          value: s.darkPages,
+          onChanged: (bool v) => save(s.copyWith(darkPages: v)),
+        ),
+        const _Header('Tabs and history'),
+        ListTile(
+          leading: const Icon(Icons.tab_unselected),
+          title: const Text('Close unused tabs'),
+          subtitle: Text(BrowserSettings.closeTabsLabel(s.closeTabsAfterDays)),
+          onTap: () => _pickCloseTabs(context, ref, s, save),
+        ),
         ListTile(
           leading: const Icon(Icons.history),
           title: const Text('Keep history'),
@@ -103,16 +228,18 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(
             'Third-party cookies blocked. Global Privacy Control sent, '
             'telling sites not to sell or share your data. Camera, '
-            'microphone and location requests from sites refused. '
+            'microphone and location only after you say yes to a site. '
             'No usage statistics sent from the web engine.',
           ),
         ),
         const ListTile(
           leading: Icon(Icons.info_outline),
-          title: Text('Blocklists'),
+          title: Text('Open-source credits'),
           subtitle: Text(
-            'EasyList and EasyPrivacy by The EasyList authors '
-            '(easylist.to), used under CC BY-SA 3.0.',
+            'EasyList, EasyPrivacy and the EasyList Cookie List by The '
+            'EasyList authors (easylist.to), used under CC BY-SA 3.0. '
+            'Reader view: Mozilla Readability (Apache 2.0). QR scanner: '
+            'ZXing (Apache 2.0).',
           ),
         ),
       ],
@@ -191,10 +318,12 @@ class BrowserSettingsPage extends ConsumerWidget {
     await ref.read(browserDataProvider).pruneHistory();
   }
 
-  Future<void> _editAllowed(
+  Future<void> _editList(
     BuildContext context,
-    BrowserSettings s,
-    Future<void> Function(BrowserSettings) save,
+    List<String> sites,
+    String explain,
+    String undoLabel,
+    Future<void> Function(List<String>) save,
   ) async {
     await showModalBottomSheet<void>(
       context: context,
@@ -203,31 +332,125 @@ class BrowserSettingsPage extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text('Trackers and ads are not blocked on these sites.'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(explain),
             ),
-            for (final String site in s.allowedSites)
+            for (final String site in sites)
               ListTile(
                 title: Text(site),
                 trailing: TextButton(
                   onPressed: () {
                     Navigator.pop(sheet);
-                    save(
-                      s.copyWith(
-                        allowedSites: s.allowedSites
-                            .where((String x) => x != site)
-                            .toList(),
-                      ),
-                    );
+                    save(sites.where((String x) => x != site).toList());
                   },
-                  child: const Text('Protect'),
+                  child: Text(undoLabel),
                 ),
               ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickTextSize(
+    BuildContext context,
+    BrowserSettings s,
+    Future<void> Function(BrowserSettings) save,
+  ) async {
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (BuildContext d) => SimpleDialog(
+        title: const Text('Text size'),
+        children: <Widget>[
+          RadioGroup<int>(
+            groupValue: s.textZoom,
+            onChanged: (int? v) => Navigator.of(d).pop(v),
+            child: Column(
+              children: <Widget>[
+                for (final int z in BrowserSettings.textZoomChoices)
+                  RadioListTile<int>(
+                    value: z,
+                    title: Text(
+                      '$z%',
+                      style: TextStyle(fontSize: 16 * z / 100),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked != null) await save(s.copyWith(textZoom: picked));
+  }
+
+  Future<void> _pickCloseTabs(
+    BuildContext context,
+    WidgetRef ref,
+    BrowserSettings s,
+    Future<void> Function(BrowserSettings) save,
+  ) async {
+    const int never = -1;
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (BuildContext d) => SimpleDialog(
+        title: const Text('Close unused tabs'),
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 0, 24, 8),
+            child: Text(
+              "Tabs you haven't looked at for this long close by "
+              'themselves. Private tabs always close when the app locks.',
+            ),
+          ),
+          RadioGroup<int>(
+            groupValue: s.closeTabsAfterDays ?? never,
+            onChanged: (int? v) => Navigator.of(d).pop(v),
+            child: Column(
+              children: <Widget>[
+                for (final int? days in BrowserSettings.closeTabsChoices)
+                  RadioListTile<int>(
+                    value: days ?? never,
+                    title: Text(BrowserSettings.closeTabsLabel(days)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null) return;
+    final int? days = picked == never ? null : picked;
+    await save(s.copyWith(closeTabsAfterDays: () => days));
+    if (days != null) {
+      await ref.read(tabsProvider.notifier).closeUnused(days);
+    }
+  }
+
+  Future<void> _checkBlocklist(BuildContext context, WidgetRef ref) async {
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Checking for a newer blocklist…')),
+    );
+    final BlocklistCheck result = await ref
+        .read(blocklistUpdaterProvider)
+        .checkIfDue(force: true);
+    // The engine reads a new list in the background.
+    await Future<void>.delayed(const Duration(seconds: 2));
+    ref.invalidate(_blocklistProvider);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(switch (result) {
+            BlocklistCheck.updated => 'Blocklist updated',
+            BlocklistCheck.upToDate ||
+            BlocklistCheck.notDue => 'The blocklist is up to date',
+            BlocklistCheck.failed => "Couldn't check now. Try again later.",
+          }),
+        ),
+      );
   }
 
   Future<void> _clearSiteData(
@@ -264,4 +487,21 @@ class BrowserSettingsPage extends ConsumerWidget {
       );
     }
   }
+}
+
+class _Header extends StatelessWidget {
+  const _Header(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+    child: Text(
+      text,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+      ),
+    ),
+  );
 }

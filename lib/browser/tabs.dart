@@ -25,6 +25,12 @@ class BrowserTab {
     this.favicon,
     this.crashed = false,
     this.desktop = false,
+    this.unloaded = false,
+    this.group,
+    this.lastUsed,
+    this.readerable = false,
+    this.reader = false,
+    this.javascript = true,
   });
 
   final String id;
@@ -49,6 +55,23 @@ class BrowserTab {
   final bool crashed;
   final bool desktop;
 
+  /// Unloaded to save memory (or not loaded yet after a restart): it
+  /// reloads when shown.
+  final bool unloaded;
+
+  /// Tab group name, or null.
+  final String? group;
+  final DateTime? lastUsed;
+
+  /// The page looks like an article reader mode can show.
+  final bool readerable;
+
+  /// Showing reader mode.
+  final bool reader;
+
+  /// JavaScript on for this page's site.
+  final bool javascript;
+
   bool get isStartPage => url == null || url!.isEmpty || url == 'about:blank';
 
   String get label => (title != null && title!.trim().isNotEmpty)
@@ -68,6 +91,12 @@ class BrowserTab {
     bool clearFavicon = false,
     bool? crashed,
     bool? desktop,
+    bool? unloaded,
+    String? Function()? group,
+    DateTime? lastUsed,
+    bool? readerable,
+    bool? reader,
+    bool? javascript,
   }) => BrowserTab(
     id: id,
     private: private,
@@ -82,6 +111,12 @@ class BrowserTab {
     favicon: clearFavicon ? null : (favicon ?? this.favicon),
     crashed: crashed ?? this.crashed,
     desktop: desktop ?? this.desktop,
+    unloaded: unloaded ?? this.unloaded,
+    group: group != null ? group() : this.group,
+    lastUsed: lastUsed ?? this.lastUsed,
+    readerable: readerable ?? this.readerable,
+    reader: reader ?? this.reader,
+    javascript: javascript ?? this.javascript,
   );
 }
 
@@ -102,6 +137,12 @@ class TabsState {
       tabs.where((BrowserTab t) => !t.private).toList();
   List<BrowserTab> get private =>
       tabs.where((BrowserTab t) => t.private).toList();
+
+  /// Group names in use among normal tabs, in order of first appearance.
+  List<String> get groups => <String>{
+    for (final BrowserTab t in normal)
+      if (t.group != null) t.group!,
+  }.toList();
 }
 
 /// Something the page asked for that needs the user: a link menu, another
@@ -144,24 +185,78 @@ class TabsController extends Notifier<TabsState> {
   }
 
   /// Opens a tab and shows it. [url] null shows the start page.
-  Future<BrowserTab> open({String? url, bool private = false}) async {
+  Future<BrowserTab> open({
+    String? url,
+    bool private = false,
+    String? group,
+  }) async {
     final BrowserTab tab = BrowserTab(
       id: newItemId(),
       private: private,
       url: url,
+      group: private ? null : group,
+      lastUsed: DateTime.now(),
     );
     state = TabsState(
       tabs: <BrowserTab>[...state.tabs, tab],
       currentId: tab.id,
     );
     await _engine.createTab(tab.id, private: private, url: url);
+    await _engine.select(tab.id);
     _queueSave();
     return tab;
   }
 
   void select(String id) {
+    _update(id, (BrowserTab t) => t.copyWith(lastUsed: DateTime.now()));
     state = TabsState(tabs: state.tabs, currentId: id);
-    _engine.requestState(id);
+    _ensureLive(id).ignore();
+    _queueSave();
+  }
+
+  /// Reloads an unloaded tab (keeping its history when the engine has it).
+  Future<void> _ensureLive(String? id) async {
+    if (id == null) return;
+    final BrowserTab? t = byId(id);
+    if (t == null) return;
+    if (t.unloaded) {
+      _update(id, (BrowserTab t) => t.copyWith(unloaded: false));
+      await _engine.createTab(
+        id,
+        private: t.private,
+        url: t.url,
+        desktop: t.desktop,
+      );
+    }
+    await _engine.select(id);
+    await _engine.requestState(id);
+  }
+
+  void setGroup(String id, String? group) {
+    final String? name = (group == null || group.trim().isEmpty)
+        ? null
+        : group.trim();
+    _update(id, (BrowserTab t) => t.copyWith(group: () => name));
+    _queueSave();
+  }
+
+  /// Closes normal tabs not looked at for [days] days (never the one on
+  /// screen). Returns how many closed.
+  Future<int> closeUnused(int days, {DateTime? now}) async {
+    final DateTime cutoff = (now ?? DateTime.now()).subtract(
+      Duration(days: days),
+    );
+    final List<String> old = <String>[
+      for (final BrowserTab t in state.normal)
+        if (t.id != state.currentId &&
+            t.lastUsed != null &&
+            t.lastUsed!.isBefore(cutoff))
+          t.id,
+    ];
+    for (final String id in old) {
+      await close(id);
+    }
+    return old.length;
   }
 
   Future<void> close(String id) async {
@@ -181,6 +276,7 @@ class TabsController extends Notifier<TabsState> {
     }
     state = TabsState(tabs: rest, currentId: current);
     await _engine.closeTab(id);
+    if (current != null && current != id) await _ensureLive(current);
     _queueSave();
   }
 
@@ -190,6 +286,40 @@ class TabsController extends Notifier<TabsState> {
     )) {
       await close(t.id);
     }
+  }
+
+  /// Opens a tab showing [html] as the page at [baseUrl] (a saved copy).
+  Future<BrowserTab> openHtml(String html, String baseUrl) async {
+    final BrowserTab tab = BrowserTab(
+      id: newItemId(),
+      private: false,
+      url: baseUrl,
+      loading: true,
+      lastUsed: DateTime.now(),
+    );
+    state = TabsState(
+      tabs: <BrowserTab>[...state.tabs, tab],
+      currentId: tab.id,
+    );
+    await _engine.createTab(tab.id, private: false);
+    await _engine.select(tab.id);
+    await _engine.loadHtml(tab.id, html, baseUrl: baseUrl);
+    return tab;
+  }
+
+  /// The fire button: closes every tab, normal and private, forgets this
+  /// device's saved tabs, and starts again with one new tab.
+  Future<void> closeAllForFire() async {
+    for (final BrowserTab t in <BrowserTab>[...state.tabs]) {
+      await _engine.closeTab(t.id);
+    }
+    state = const TabsState();
+    _saveTimer?.cancel();
+    await ref
+        .read(browserDataProvider)
+        .saveDeviceTabs(const <SavedTab>[])
+        .catchError((Object _) {});
+    await open();
   }
 
   /// Closes every tab (sign out).
@@ -202,10 +332,19 @@ class TabsController extends Notifier<TabsState> {
   }
 
   Future<void> load(String id, String url) async {
+    final BrowserTab? before = byId(id);
     _update(
       id,
       (BrowserTab t) => t.copyWith(url: url, loading: true, crashed: false),
     );
+    if (before != null && before.unloaded) {
+      _update(id, (BrowserTab t) => t.copyWith(unloaded: false));
+      await _engine.createTab(
+        id,
+        private: before.private,
+        desktop: before.desktop,
+      );
+    }
     await _engine.load(id, url);
   }
 
@@ -227,32 +366,45 @@ class TabsController extends Notifier<TabsState> {
     await _engine.setDesktop(id, on);
   }
 
-  /// Reopens this device's tabs from last time, once per unlock.
-  Future<void> restoreIfEmpty() async {
+  /// Reopens this device's tabs from last time, once per unlock. Only the
+  /// last one loads now; the others load when shown. Tabs unused for longer
+  /// than [closeAfterDays] stay closed.
+  Future<void> restoreIfEmpty({int? closeAfterDays, DateTime? now}) async {
     if (_restored) return;
     _restored = true;
     if (state.tabs.isNotEmpty) return;
-    final List<({String url, String title})> saved = await _savedTabs();
+    final DateTime? cutoff = closeAfterDays == null
+        ? null
+        : (now ?? DateTime.now()).subtract(Duration(days: closeAfterDays));
+    final List<SavedTab> saved = <SavedTab>[
+      for (final SavedTab t in await _savedTabs())
+        if (cutoff == null || t.lastUsed == null || t.lastUsed!.isAfter(cutoff))
+          t,
+    ];
     if (saved.isEmpty) {
       await open();
       return;
     }
-    for (final ({String url, String title}) t in saved) {
-      final BrowserTab tab = BrowserTab(
-        id: newItemId(),
-        private: false,
-        url: t.url,
-        title: t.title,
-      );
-      state = TabsState(
-        tabs: <BrowserTab>[...state.tabs, tab],
-        currentId: tab.id,
-      );
-      await _engine.createTab(tab.id, private: false, url: t.url);
-    }
+    final List<BrowserTab> restored = <BrowserTab>[
+      for (final SavedTab t in saved)
+        BrowserTab(
+          id: newItemId(),
+          private: false,
+          url: t.url,
+          title: t.title,
+          group: t.group,
+          lastUsed: t.lastUsed,
+          unloaded: true,
+        ),
+    ];
+    state = TabsState(
+      tabs: <BrowserTab>[...state.tabs, ...restored],
+      currentId: restored.last.id,
+    );
+    await _ensureLive(restored.last.id);
   }
 
-  Future<List<({String url, String title})>> _savedTabs() async {
+  Future<List<SavedTab>> _savedTabs() async {
     try {
       final String me = await ref.read(ztDeviceIdProvider.future);
       final LocalItemStore store = await ref.read(ztLocalStoreProvider.future);
@@ -260,9 +412,9 @@ class TabsController extends Notifier<TabsState> {
         store,
         'tabs-$me',
       );
-      return mine?.tabs ?? const <({String url, String title})>[];
+      return mine?.tabs ?? const <SavedTab>[];
     } on Object {
-      return const <({String url, String title})>[];
+      return const <SavedTab>[];
     }
   }
 
@@ -293,6 +445,9 @@ class TabsController extends Notifier<TabsState> {
             secure: e.get<bool>('secure'),
             blocked: e.get<int>('blocked'),
             desktop: e.get<bool>('desktop'),
+            readerable: e.get<bool>('readerable'),
+            reader: e.get<bool>('reader'),
+            javascript: e.get<bool>('javascript'),
             clearFavicon: urlChanged && hostOf(url) != hostOf(tab.url),
           ),
         );
@@ -314,7 +469,16 @@ class TabsController extends Notifier<TabsState> {
           _queueSave();
         }
       case 'openTab':
-        open(url: e.get<String>('url'), private: tab.private).ignore();
+        open(
+          url: e.get<String>('url'),
+          private: tab.private,
+          group: tab.group,
+        ).ignore();
+      case 'unloaded':
+        _update(
+          e.tabId,
+          (BrowserTab t) => t.copyWith(unloaded: true, loading: false),
+        );
       case 'crashed':
         _update(
           e.tabId,
@@ -330,11 +494,16 @@ class TabsController extends Notifier<TabsState> {
   void _queueSave() {
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(seconds: 3), () {
-      final List<({String url, String title})> open =
-          <({String url, String title})>[
-            for (final BrowserTab t in state.normal)
-              if (!t.isStartPage) (url: t.url!, title: t.label),
-          ];
+      final List<SavedTab> open = <SavedTab>[
+        for (final BrowserTab t in state.normal)
+          if (!t.isStartPage)
+            SavedTab(
+              url: t.url!,
+              title: t.label,
+              group: t.group,
+              lastUsed: t.lastUsed,
+            ),
+      ];
       ref
           .read(browserDataProvider)
           .saveDeviceTabs(open)

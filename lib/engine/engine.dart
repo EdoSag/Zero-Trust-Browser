@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +12,8 @@ class TabEvent {
   final String tabId;
 
   /// state, favicon, visited, openTab, contextMenu, external, download,
-  /// httpsFailed, sslError, find, crashed.
+  /// downloadDone, httpsFailed, sslError, find, crashed, unloaded,
+  /// permission.
   final String type;
   final Map<Object?, Object?> data;
 
@@ -119,13 +121,121 @@ class BrowserEngine {
     required bool blockTrackers,
     required bool httpsOnly,
     required List<String> allowedSites,
+    bool hideElements = true,
+    bool fingerprinting = true,
+    List<String> javascriptOff = const <String>[],
   }) => _call<void>('setPrivacy', <String, Object?>{
     'blockTrackers': blockTrackers,
     'httpsOnly': httpsOnly,
     'allowedSites': allowedSites,
+    'hideElements': hideElements,
+    'fingerprinting': fingerprinting,
+    'javascriptOff': javascriptOff,
   });
 
+  /// Page text size (percent) and darkening of pages in dark mode.
+  Future<void> setDisplay({required int textZoom, required bool darkPages}) =>
+      _call<void>('setDisplay', <String, Object?>{
+        'textZoom': textZoom,
+        'darkPages': darkPages,
+      });
+
+  /// The tab now on screen: the engine keeps it, and unloads old ones.
+  Future<void> select(String tabId) =>
+      _call<void>('select', <String, Object?>{'tabId': tabId});
+
   Future<int> blocklistSize() async => await _call<int>('blocklistSize') ?? 0;
+
+  /// size, date (of the list), updated (a downloaded list is in use), file
+  /// (where a downloaded list goes).
+  Future<Map<Object?, Object?>> blocklistInfo() async =>
+      await _call<Map<Object?, Object?>>('blocklistInfo') ??
+      const <Object?, Object?>{};
+
+  /// Reads the newest list again, after an update was saved.
+  Future<void> reloadBlocklist() => _call<void>('reloadBlocklist');
+
+  /// The user's answer to a site's camera, microphone or location request.
+  Future<void> answerPermission(int requestId, Iterable<String> allowed) =>
+      _call<void>('answerPermission', <String, Object?>{
+        'requestId': requestId,
+        'allowed': allowed.toList(),
+      });
+
+  /// The page as a Readability article, or null when it isn't one.
+  Future<Map<String, Object?>?> article(String tabId) async {
+    final String? raw = await _call<String>('article', <String, Object?>{
+      'tabId': tabId,
+    });
+    if (raw == null || raw == 'null') return null;
+    try {
+      // The engine hands back the script's value as JSON: here, a string
+      // holding the article's JSON.
+      final Object? outer = jsonDecode(raw);
+      final Object? inner = outer is String ? jsonDecode(outer) : outer;
+      return inner is Map<String, Object?> ? inner : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Shows [html] in the tab as if it were [baseUrl] (reader, saved page).
+  Future<void> loadHtml(
+    String tabId,
+    String html, {
+    required String baseUrl,
+    bool reader = true,
+  }) => _call<void>('loadHtml', <String, Object?>{
+    'tabId': tabId,
+    'html': html,
+    'baseUrl': baseUrl,
+    'reader': reader,
+  });
+
+  Future<List<Map<Object?, Object?>>> downloads() async =>
+      (await _call<List<Object?>>('downloads') ?? const <Object?>[])
+          .whereType<Map<Object?, Object?>>()
+          .toList();
+  Future<bool> openDownload(String key) async =>
+      await _call<bool>('openDownload', <String, Object?>{'key': key}) ?? false;
+  Future<bool> shareDownload(String key) async =>
+      await _call<bool>('shareDownload', <String, Object?>{'key': key}) ??
+      false;
+  Future<void> deleteDownload(String key) =>
+      _call<void>('deleteDownload', <String, Object?>{'key': key});
+
+  /// The system print screen, which can also save the page as a PDF.
+  Future<void> printPage(String tabId, String title) =>
+      _call<void>('print', <String, Object?>{'tabId': tabId, 'title': title});
+
+  /// Asks the launcher to pin a shortcut; false when it can't.
+  Future<bool> addShortcut(String url, String title, Uint8List? icon) async =>
+      await _call<bool>('addShortcut', <String, Object?>{
+        'url': url,
+        'title': title,
+        'icon': icon,
+      }) ??
+      false;
+
+  /// A file the user picks, or null.
+  Future<Uint8List?> pickFile(List<String> mimeTypes) =>
+      _call<Uint8List>('pickFile', <String, Object?>{'mimeTypes': mimeTypes});
+
+  /// Text from a scanned QR code, or null.
+  Future<String?> scanQr() => _call<String>('scanQr');
+
+  Future<bool> voiceAvailable() async =>
+      await _call<bool>('voiceAvailable') ?? false;
+
+  /// What the user said, through the phone's voice input, or null.
+  Future<String?> voiceSearch() => _call<String>('voiceSearch');
+
+  /// supported, enabled, service (the password manager's name or null).
+  Future<Map<Object?, Object?>> autofillStatus() async =>
+      await _call<Map<Object?, Object?>>('autofillStatus') ??
+      const <Object?, Object?>{};
+
+  Future<void> openAutofillSettings() => _call<void>('openAutofillSettings');
 
   Future<bool> privateProfileSupported() async =>
       await _call<bool>('privateProfileSupported') ?? false;

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
@@ -38,6 +40,17 @@ final otherDevicesTabsProvider = StreamProvider<List<DeviceTabs>>((ref) async* {
           ..sort(
             (DeviceTabs a, DeviceTabs b) => b.updatedAt.compareTo(a.updatedAt),
           ),
+  );
+});
+
+/// The reading list, unread first, then newest.
+final readingListProvider = StreamProvider<List<ReadingItem>>((ref) {
+  return _watch(ref, BrowserCollections.reading).map(
+    (List<ReadingItem> l) => l
+      ..sort((ReadingItem a, ReadingItem b) {
+        if (a.read != b.read) return a.read ? 1 : -1;
+        return b.addedAt.compareTo(a.addedAt);
+      }),
   );
 });
 
@@ -96,6 +109,24 @@ class BrowserData {
   Future<void> saveBookmark(Bookmark b) async {
     final (SyncController sync, LocalItemStore store) = await _open();
     await BrowserCollections.bookmarks.save(sync, store, b);
+  }
+
+  /// Adds [items] not bookmarked yet; returns how many were added.
+  Future<int> importBookmarks(Iterable<Bookmark> items) async {
+    final (SyncController sync, LocalItemStore store) = await _open();
+    final List<Bookmark> existing = await BrowserCollections.bookmarks.list(
+      store,
+    );
+    final Set<String> seen = <String>{
+      for (final Bookmark b in existing) _norm(b.url),
+    };
+    int added = 0;
+    for (final Bookmark b in items) {
+      if (!seen.add(_norm(b.url))) continue;
+      await BrowserCollections.bookmarks.save(sync, store, b);
+      added++;
+    }
+    return added;
   }
 
   Future<void> removeBookmark(String id) async {
@@ -159,6 +190,16 @@ class BrowserData {
     ]);
   }
 
+  /// Deletes history visited at or after [since] (the fire button).
+  Future<void> clearHistorySince(DateTime since) async {
+    final (_, LocalItemStore store) = await _open();
+    final List<HistoryEntry> all = await BrowserCollections.history.list(store);
+    await deleteHistory(<String>[
+      for (final HistoryEntry h in all)
+        if (!h.lastVisit.isBefore(since)) h.id,
+    ]);
+  }
+
   /// Applies the "Keep history" setting.
   Future<void> pruneHistory() async {
     final int? days = ref.read(browserSettingsProvider).historyDays;
@@ -175,7 +216,81 @@ class BrowserData {
     await BrowserCollections.settings.save(sync, store, s);
   }
 
-  Future<void> saveDeviceTabs(List<({String url, String title})> tabs) async {
+  // ---- Reading list -------------------------------------------------------
+
+  ReadingItem? readingFor(String url) {
+    final List<ReadingItem> all =
+        ref.read(readingListProvider).value ?? const <ReadingItem>[];
+    for (final ReadingItem r in all) {
+      if (sameAddress(r.url, url)) return r;
+    }
+    return null;
+  }
+
+  /// Adds a page; [html] (its reader view) is kept encrypted for offline.
+  Future<void> addToReadingList(
+    String url,
+    String title, {
+    String? html,
+    String? excerpt,
+  }) async {
+    final ReadingItem? old = readingFor(url);
+    ZtAttachmentRef? saved;
+    if (html != null) {
+      final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+      saved = await files.put(
+        Uint8List.fromList(utf8.encode(html)),
+        mimeType: 'text/html',
+        name: 'page.html',
+      );
+    }
+    final (SyncController sync, LocalItemStore store) = await _open();
+    await BrowserCollections.reading.save(
+      sync,
+      store,
+      ReadingItem(
+        id: old?.id ?? newItemId(),
+        url: url,
+        title: title.trim().isEmpty ? url : title.trim(),
+        addedAt: DateTime.now(),
+        saved: saved ?? old?.saved,
+        excerpt: excerpt ?? old?.excerpt,
+      ),
+    );
+    // A new copy replaces the old one.
+    if (saved != null && old?.saved != null) {
+      final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+      await files.delete(old!.saved!);
+    }
+  }
+
+  /// The saved page's HTML, from this phone or downloaded and decrypted.
+  Future<String?> readSaved(ReadingItem item) async {
+    final ZtAttachmentRef? saved = item.saved;
+    if (saved == null) return null;
+    final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+    return utf8.decode(await files.read(saved), allowMalformed: true);
+  }
+
+  Future<void> setRead(ReadingItem item, bool read) async {
+    final (SyncController sync, LocalItemStore store) = await _open();
+    await BrowserCollections.reading.save(
+      sync,
+      store,
+      item.copyWith(read: read),
+    );
+  }
+
+  Future<void> removeFromReadingList(ReadingItem item) async {
+    final (SyncController sync, _) = await _open();
+    await BrowserCollections.reading.delete(sync, item.id);
+    if (item.saved != null) {
+      final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+      await files.delete(item.saved!);
+    }
+  }
+
+  Future<void> saveDeviceTabs(List<SavedTab> tabs) async {
     final String deviceId = await ref.read(ztDeviceIdProvider.future);
     final (SyncController sync, LocalItemStore store) = await _open();
     final DeviceTabs? old = await BrowserCollections.deviceTabs.get(
@@ -195,26 +310,27 @@ class BrowserData {
     );
   }
 
-  static bool _sameTabs(
-    List<({String url, String title})> a,
-    List<({String url, String title})> b,
-  ) {
+  static bool _sameTabs(List<SavedTab> a, List<SavedTab> b) {
     if (a.length != b.length) return false;
     for (int i = 0; i < a.length; i++) {
-      if (a[i].url != b[i].url) return false;
+      if (a[i].url != b[i].url || a[i].group != b[i].group) return false;
+      // Last use matters to the hour, not to every tap.
+      final int? x = a[i].lastUsed?.millisecondsSinceEpoch;
+      final int? y = b[i].lastUsed?.millisecondsSinceEpoch;
+      if ((x == null) != (y == null)) return false;
+      if (x != null && y != null && (x - y).abs() > 3600000) return false;
     }
     return true;
   }
-}
 
-/// The same page for bookmarks: ignores a trailing slash and http vs https.
-bool sameAddress(String a, String b) {
-  String norm(String u) {
+  static String _norm(String u) {
     String s = u.trim();
     if (s.startsWith('http://')) s = 'https://${s.substring(7)}';
     if (s.endsWith('/')) s = s.substring(0, s.length - 1);
     return s;
   }
-
-  return norm(a) == norm(b);
 }
+
+/// The same page for bookmarks: ignores a trailing slash and http vs https.
+bool sameAddress(String a, String b) =>
+    BrowserData._norm(a) == BrowserData._norm(b);
