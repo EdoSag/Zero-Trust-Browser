@@ -120,6 +120,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   Future<void> _openWidgetAction() async {
     final String? action = await _engine.consumeWidgetAction();
     if (action == null || !mounted) return;
+    // A fullscreen video sits over the whole window, above Flutter.
+    await _engine.exitFullscreen();
+    if (!mounted) return;
     Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);
     switch (action) {
       case 'voice':
