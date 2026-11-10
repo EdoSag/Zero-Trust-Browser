@@ -23,6 +23,7 @@ import android.webkit.WebStorage
 import android.webkit.WebView
 import android.widget.FrameLayout
 import androidx.webkit.ProfileStore
+import androidx.webkit.WebViewCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -104,8 +105,13 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         if (tab != null) {
                             tabs.remove(tabId)
                             tab.destroy()
-                            if (tab.isPrivate) deletePrivateProfileIfUnused()
                         }
+                        // Also after a crash, when the WebView is already gone.
+                        deletePrivateProfileIfUnused()
+                        result.success(null)
+                    }
+                    "exitFullscreen" -> {
+                        hideFullscreen()
                         result.success(null)
                     }
                     "load" -> { tab?.load(call.argument<String>("url") ?: ""); result.success(null) }
@@ -270,13 +276,19 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             .setTitle(name)
             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
-        // Private tabs keep their cookies in their own profile, never shared.
-        if (!tab.isPrivate) {
-            CookieManager.getInstance().getCookie(url)?.let { request.addRequestHeader("Cookie", it) }
-        }
+        // Each tab's own cookies: a private tab's come from its profile,
+        // never from normal tabs.
+        cookieManagerFor(tab).getCookie(url)?.let { request.addRequestHeader("Cookie", it) }
         getSystemService(DownloadManager::class.java)?.enqueue(request)
         tabEvent(tab.id, "download", mapOf("name" to name, "started" to true))
     }
+
+    private fun cookieManagerFor(tab: ZtTab): CookieManager =
+        if (tab.isPrivate && ZtTab.privateProfileSupported()) {
+            WebViewCompat.getProfile(tab.webView).cookieManager
+        } else {
+            CookieManager.getInstance()
+        }
 
     override fun onCrashed(tab: ZtTab) {
         tabs.remove(tab.id)

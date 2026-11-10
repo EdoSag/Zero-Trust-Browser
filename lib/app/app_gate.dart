@@ -75,6 +75,8 @@ class _AppGateState extends ConsumerState<AppGate> with WidgetsBindingObserver {
       // Don't leave a page open over a locked vault.
       if (next is VaultLocked) {
         Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);
+        // Fullscreen video sits above Flutter: take it down first.
+        ref.read(browserEngineProvider).exitFullscreen().ignore();
         // Private tabs never outlive the lock.
         ref.read(tabsProvider.notifier).closeAll(private: true).ignore();
       }

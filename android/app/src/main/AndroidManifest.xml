@@ -9,7 +9,11 @@
     <application
         android:label="ZT Browser"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
+        <!-- Plain http is allowed at the platform level so a site the user
+             agreed to open insecurely (or a LAN device) can load; the
+             browser's own HTTPS-only mode decides, and asks first. -->
         <!-- No usage statistics from the web engine to Google. -->
         <meta-data
             android:name="android.webkit.WebView.MetricsOptOut"

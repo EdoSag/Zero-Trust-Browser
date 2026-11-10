@@ -100,6 +100,9 @@ class BrowserEngine {
   Future<void> requestState(String tabId) =>
       _call<void>('state', <String, Object?>{'tabId': tabId});
 
+  /// Leaves fullscreen video, which the native side shows above Flutter.
+  Future<void> exitFullscreen() => _call<void>('exitFullscreen');
+
   Future<void> setDesktop(String tabId, bool on) =>
       _call<void>('setDesktop', <String, Object?>{'tabId': tabId, 'on': on});
 
