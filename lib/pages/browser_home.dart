@@ -196,6 +196,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
             ..showSnackBar(
               SnackBar(
                 content: Text('Saved ${e.get<String>('name')} to Downloads'),
+                // Flutter keeps a snackbar with an action open until it is tapped.
+                persist: false,
                 action: SnackBarAction(
                   label: 'Show',
                   onPressed: () => _push(const DownloadsPage()),
