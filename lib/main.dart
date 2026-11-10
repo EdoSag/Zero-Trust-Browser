@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,13 +15,30 @@ Future<void> main() async {
   LicenseRegistry.addLicense(
     () => Stream<LicenseEntry>.value(
       const LicenseEntryWithLineBreaks(
-        <String>['EasyList and EasyPrivacy'],
+        <String>['EasyList, EasyPrivacy and EasyList Cookie List'],
         '''
-The tracker and ad blocklists come from EasyList and EasyPrivacy
-(https://easylist.to) by The EasyList authors, used under the Creative
-Commons Attribution-ShareAlike 3.0 licence
+The tracker, ad and cookie-banner lists come from EasyList, EasyPrivacy and
+the EasyList Cookie List (https://easylist.to) by The EasyList authors, used
+under the Creative Commons Attribution-ShareAlike 3.0 licence
 (https://creativecommons.org/licenses/by-sa/3.0/). ZT Browser keeps only the
-rules that block whole host names.''',
+rules that block whole host names and the element-hiding rules written as
+plain CSS.''',
+      ),
+    ),
+  );
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(<String>[
+      'Readability.js',
+    ], await rootBundle.loadString('assets/reader/LICENSE'));
+  });
+  LicenseRegistry.addLicense(
+    () => Stream<LicenseEntry>.value(
+      const LicenseEntryWithLineBreaks(
+        <String>['ZXing Android Embedded'],
+        '''
+QR code scanning uses ZXing ("Zebra Crossing") and ZXing Android Embedded
+(https://github.com/journeyapps/zxing-android-embedded), licensed under the
+Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).''',
       ),
     ),
   );

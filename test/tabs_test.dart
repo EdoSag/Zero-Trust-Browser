@@ -41,9 +41,12 @@ void main() {
     final TabsController tabs = c.read(tabsProvider.notifier);
     final BrowserTab t = await tabs.open(url: 'https://a.org');
     expect(c.read(tabsProvider).current?.id, t.id);
-    expect(calls.single.method, 'createTab');
-    expect(calls.single.arguments['url'], 'https://a.org');
-    expect(calls.single.arguments['private'], false);
+    expect(calls.first.method, 'createTab');
+    expect(calls.first.arguments['url'], 'https://a.org');
+    expect(calls.first.arguments['private'], false);
+    // The engine learns which tab is on screen (to unload old ones).
+    expect(calls[1].method, 'select');
+    expect(calls[1].arguments['tabId'], t.id);
   });
 
   test('closing the current tab shows a neighbour of the same kind', () async {
@@ -54,7 +57,10 @@ void main() {
     final BrowserTab b = await tabs.open(url: 'https://b.org');
     await tabs.close(b.id);
     expect(c.read(tabsProvider).current?.id, a.id);
-    expect(calls.last.method, 'closeTab');
+    expect(
+      calls.map((MethodCall m) => m.method),
+      containsAllInOrder(<String>['closeTab', 'select']),
+    );
   });
 
   test('closeAll(private) leaves normal tabs', () async {
@@ -119,5 +125,67 @@ void main() {
     expect(c.read(tabsProvider).current?.crashed, isFalse);
     expect(calls.single.method, 'createTab');
     expect(calls.single.arguments['tabId'], t.id);
+  });
+
+  test('an unloaded tab reloads, with its history, when shown', () async {
+    final ProviderContainer c = container();
+    final TabsController tabs = c.read(tabsProvider.notifier);
+    final BrowserTab a = await tabs.open(url: 'https://a.org');
+    final BrowserTab b = await tabs.open(url: 'https://b.org');
+    await nativeEvent(<String, Object?>{'tabId': a.id, 'type': 'unloaded'});
+    expect(tabs.byId(a.id)!.unloaded, isTrue);
+    calls.clear();
+    tabs.select(a.id);
+    await Future<void>.delayed(Duration.zero);
+    expect(tabs.byId(a.id)!.unloaded, isFalse);
+    expect(calls.first.method, 'createTab');
+    expect(calls.first.arguments['tabId'], a.id);
+    expect(calls[1].method, 'select');
+    expect(c.read(tabsProvider).currentId, a.id);
+    expect(tabs.byId(b.id)!.unloaded, isFalse);
+  });
+
+  test('tabs join, leave and list groups', () async {
+    final ProviderContainer c = container();
+    final TabsController tabs = c.read(tabsProvider.notifier);
+    final BrowserTab a = await tabs.open(url: 'https://a.org');
+    final BrowserTab b = await tabs.open(url: 'https://b.org', group: 'Trip');
+    tabs.setGroup(a.id, ' Work ');
+    expect(tabs.byId(a.id)!.group, 'Work');
+    expect(c.read(tabsProvider).groups, <String>['Work', 'Trip']);
+    tabs.setGroup(a.id, '');
+    expect(tabs.byId(a.id)!.group, isNull);
+    // Links opened from a grouped tab stay in its group.
+    await nativeEvent(<String, Object?>{
+      'tabId': b.id,
+      'type': 'openTab',
+      'url': 'https://c.org',
+      'private': false,
+    });
+    await Future<void>.delayed(Duration.zero);
+    expect(c.read(tabsProvider).current?.group, 'Trip');
+  });
+
+  test('private tabs never join a group', () async {
+    final ProviderContainer c = container();
+    final BrowserTab p = await c
+        .read(tabsProvider.notifier)
+        .open(private: true, group: 'Work');
+    expect(p.group, isNull);
+  });
+
+  test('tabs unused for N days close, but never the one on screen', () async {
+    final ProviderContainer c = container();
+    final TabsController tabs = c.read(tabsProvider.notifier);
+    final BrowserTab old = await tabs.open(url: 'https://old.org');
+    final BrowserTab fresh = await tabs.open(url: 'https://new.org');
+    final DateTime later = DateTime.now().add(const Duration(days: 8));
+    tabs.select(old.id);
+    tabs.select(fresh.id);
+    // Both were used "now"; eight days later both count as unused, but
+    // the one on screen stays.
+    final int closed = await tabs.closeUnused(7, now: later);
+    expect(closed, 1);
+    expect(c.read(tabsProvider).tabs.single.id, fresh.id);
   });
 }

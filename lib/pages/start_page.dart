@@ -5,6 +5,7 @@ import 'package:zerotrust_browser/app/browser_config.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
+import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 /// What a new tab shows: a search box, favourite sites from bookmarks, and
@@ -71,6 +72,57 @@ class StartPage extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 24),
+        if (!private &&
+            !ref.watch(browserSettingsProvider).autofillTipDismissed)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    children: <Widget>[
+                      Icon(Icons.password, color: scheme.primary),
+                      const SizedBox(width: 12),
+                      Text('Your passwords', style: text.titleSmall),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'ZT Browser never stores passwords. Your password '
+                    'manager (Bitwarden, Proton Pass, 1Password...) fills '
+                    "sign-in forms through Android's autofill, in private "
+                    'tabs too.',
+                    style: text.bodyMedium,
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      TextButton(
+                        onPressed: () => ref
+                            .read(browserEngineProvider)
+                            .openAutofillSettings(),
+                        child: const Text('Choose in Android'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          final BrowserSettings s = ref.read(
+                            browserSettingsProvider,
+                          );
+                          ref
+                              .read(browserDataProvider)
+                              .saveSettings(
+                                s.copyWith(autofillTipDismissed: true),
+                              );
+                        },
+                        child: const Text('Got it'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         if (private)
           Card(
             child: Padding(

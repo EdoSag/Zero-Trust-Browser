@@ -95,6 +95,38 @@ class HistoryEntry {
   );
 }
 
+/// One open tab as saved in the account: enough to reopen it, its group,
+/// and when it was last looked at (to close tabs left unused).
+class SavedTab {
+  const SavedTab({
+    required this.url,
+    required this.title,
+    this.group,
+    this.lastUsed,
+  });
+
+  final String url;
+  final String title;
+  final String? group;
+  final DateTime? lastUsed;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'url': url,
+    'title': title,
+    if (group != null) 'group': group,
+    if (lastUsed != null) 'lastUsed': lastUsed!.millisecondsSinceEpoch,
+  };
+
+  static SavedTab fromJson(Map<Object?, Object?> j) => SavedTab(
+    url: j['url'] as String? ?? '',
+    title: j['title'] as String? ?? '',
+    group: j['group'] as String?,
+    lastUsed: j['lastUsed'] is int
+        ? DateTime.fromMillisecondsSinceEpoch(j['lastUsed']! as int)
+        : null,
+  );
+}
+
 /// The open tabs of one device, so other devices can show "Tabs from your
 /// other devices". Private tabs are never included.
 class DeviceTabs {
@@ -107,7 +139,7 @@ class DeviceTabs {
 
   final String deviceId;
   final String deviceName;
-  final List<({String url, String title})> tabs;
+  final List<SavedTab> tabs;
   final DateTime updatedAt;
 
   String get id => 'tabs-$deviceId';
@@ -115,9 +147,7 @@ class DeviceTabs {
   Map<String, Object?> toJson() => <String, Object?>{
     'deviceId': deviceId,
     'deviceName': deviceName,
-    'tabs': <Map<String, String>>[
-      for (final t in tabs) <String, String>{'url': t.url, 'title': t.title},
-    ],
+    'tabs': <Map<String, Object?>>[for (final SavedTab t in tabs) t.toJson()],
     'updatedAt': updatedAt.millisecondsSinceEpoch,
   };
 
@@ -125,13 +155,9 @@ class DeviceTabs {
       DeviceTabs(
         deviceId: j['deviceId'] as String? ?? id,
         deviceName: j['deviceName'] as String? ?? 'Another device',
-        tabs: <({String url, String title})>[
+        tabs: <SavedTab>[
           for (final Object? t in (j['tabs'] as List<Object?>? ?? const []))
-            if (t is Map)
-              (
-                url: t['url'] as String? ?? '',
-                title: t['title'] as String? ?? '',
-              ),
+            if (t is Map) SavedTab.fromJson(t),
         ],
         updatedAt: _ms(j['updatedAt'], at),
       );
@@ -202,6 +228,20 @@ class SearchEngine {
       all.firstWhere((SearchEngine e) => e.id == id, orElse: () => duckDuckGo);
 }
 
+/// A site permission ZT Browser asks about: camera, microphone, location.
+abstract final class SitePermission {
+  static const String camera = 'camera';
+  static const String microphone = 'microphone';
+  static const String location = 'location';
+
+  static String label(String kind) => switch (kind) {
+    camera => 'Camera',
+    microphone => 'Microphone',
+    location => 'Location',
+    _ => kind,
+  };
+}
+
 /// Browser settings, synced so every device behaves the same.
 class BrowserSettings {
   const BrowserSettings({
@@ -210,6 +250,14 @@ class BrowserSettings {
     this.httpsOnly = true,
     this.allowedSites = const <String>[],
     this.historyDays = 90,
+    this.hideElements = true,
+    this.fingerprinting = true,
+    this.javascriptOff = const <String>[],
+    this.textZoom = 100,
+    this.darkPages = true,
+    this.closeTabsAfterDays,
+    this.sitePermissions = const <String, Map<String, bool>>{},
+    this.autofillTipDismissed = false,
   });
 
   static const String itemId = 'browser-settings';
@@ -224,7 +272,42 @@ class BrowserSettings {
   /// How long history is kept: 0 keeps none, null keeps it forever.
   final int? historyDays;
 
+  /// Hide cookie banners and the empty boxes blocked ads leave.
+  final bool hideElements;
+
+  /// Add noise to what sites can read to tell your phone apart.
+  final bool fingerprinting;
+
+  /// Sites (like `example.com`) where JavaScript is off.
+  final List<String> javascriptOff;
+
+  /// Page text size in percent.
+  final int textZoom;
+
+  /// Darken pages without a dark design when the phone is in dark mode.
+  final bool darkPages;
+
+  /// Close tabs not looked at for this many days; null never.
+  final int? closeTabsAfterDays;
+
+  /// Remembered answers per host: {"meet.example.com": {"camera": true}}.
+  final Map<String, Map<String, bool>> sitePermissions;
+
+  /// The password manager tip on the start page was dismissed.
+  final bool autofillTipDismissed;
+
   static const List<int?> historyChoices = <int?>[0, 7, 30, 90, 365, null];
+  static const List<int?> closeTabsChoices = <int?>[null, 1, 7, 14, 30];
+  static const List<int> textZoomChoices = <int>[
+    80,
+    90,
+    100,
+    115,
+    130,
+    150,
+    175,
+    200,
+  ];
 
   static String historyLabel(int? days) => switch (days) {
     0 => "Don't keep history",
@@ -236,7 +319,37 @@ class BrowserSettings {
     final int d => '$d days',
   };
 
+  static String closeTabsLabel(int? days) => switch (days) {
+    null => 'Never',
+    1 => 'After a day',
+    7 => 'After a week',
+    14 => 'After 2 weeks',
+    30 => 'After a month',
+    final int d => 'After $d days',
+  };
+
   SearchEngine get engine => SearchEngine.byId(searchEngine);
+
+  /// The remembered answer for [kind] on [host], or null to ask.
+  bool? permissionFor(String host, String kind) =>
+      sitePermissions[host.toLowerCase()]?[kind];
+
+  BrowserSettings withPermission(String host, String kind, bool? allow) {
+    final String h = host.toLowerCase();
+    final Map<String, Map<String, bool>> all = <String, Map<String, bool>>{
+      for (final MapEntry<String, Map<String, bool>> e
+          in sitePermissions.entries)
+        e.key: <String, bool>{...e.value},
+    };
+    final Map<String, bool> site = all.putIfAbsent(h, () => <String, bool>{});
+    if (allow == null) {
+      site.remove(kind);
+    } else {
+      site[kind] = allow;
+    }
+    if (site.isEmpty) all.remove(h);
+    return copyWith(sitePermissions: all);
+  }
 
   BrowserSettings copyWith({
     String? searchEngine,
@@ -244,12 +357,30 @@ class BrowserSettings {
     bool? httpsOnly,
     List<String>? allowedSites,
     int? Function()? historyDays,
+    bool? hideElements,
+    bool? fingerprinting,
+    List<String>? javascriptOff,
+    int? textZoom,
+    bool? darkPages,
+    int? Function()? closeTabsAfterDays,
+    Map<String, Map<String, bool>>? sitePermissions,
+    bool? autofillTipDismissed,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
     httpsOnly: httpsOnly ?? this.httpsOnly,
     allowedSites: allowedSites ?? this.allowedSites,
     historyDays: historyDays != null ? historyDays() : this.historyDays,
+    hideElements: hideElements ?? this.hideElements,
+    fingerprinting: fingerprinting ?? this.fingerprinting,
+    javascriptOff: javascriptOff ?? this.javascriptOff,
+    textZoom: textZoom ?? this.textZoom,
+    darkPages: darkPages ?? this.darkPages,
+    closeTabsAfterDays: closeTabsAfterDays != null
+        ? closeTabsAfterDays()
+        : this.closeTabsAfterDays,
+    sitePermissions: sitePermissions ?? this.sitePermissions,
+    autofillTipDismissed: autofillTipDismissed ?? this.autofillTipDismissed,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -259,7 +390,21 @@ class BrowserSettings {
     'allowedSites': allowedSites,
     // -1 is "forever", so a missing key still means the default.
     'historyDays': historyDays ?? -1,
+    'hideElements': hideElements,
+    'fingerprinting': fingerprinting,
+    'javascriptOff': javascriptOff,
+    'textZoom': textZoom,
+    'darkPages': darkPages,
+    // -1 is "never", the default.
+    'closeTabsAfterDays': closeTabsAfterDays ?? -1,
+    'sitePermissions': sitePermissions,
+    'autofillTipDismissed': autofillTipDismissed,
   };
+
+  static List<String> _strings(Object? v) => <String>[
+    for (final Object? s in (v as List<Object?>? ?? const <Object?>[]))
+      if (s is String) s,
+  ];
 
   static BrowserSettings fromJson(
     String id,
@@ -267,16 +412,98 @@ class BrowserSettings {
     DateTime at,
   ) {
     final Object? days = j['historyDays'];
+    final Object? close = j['closeTabsAfterDays'];
+    final Object? zoom = j['textZoom'];
+    final Map<String, Map<String, bool>> perms = <String, Map<String, bool>>{};
+    final Object? rawPerms = j['sitePermissions'];
+    if (rawPerms is Map) {
+      for (final MapEntry<Object?, Object?> e in rawPerms.entries) {
+        final Object? kinds = e.value;
+        if (e.key is! String || kinds is! Map) continue;
+        final Map<String, bool> site = <String, bool>{
+          for (final MapEntry<Object?, Object?> k in kinds.entries)
+            if (k.key is String && k.value is bool)
+              k.key! as String: k.value! as bool,
+        };
+        if (site.isNotEmpty) perms[e.key! as String] = site;
+      }
+    }
     return BrowserSettings(
       searchEngine: j['searchEngine'] as String? ?? 'duckduckgo',
       blockTrackers: j['blockTrackers'] as bool? ?? true,
       httpsOnly: j['httpsOnly'] as bool? ?? true,
-      allowedSites: <String>[
-        for (final Object? s
-            in (j['allowedSites'] as List<Object?>? ?? const []))
-          if (s is String) s,
-      ],
+      allowedSites: _strings(j['allowedSites']),
       historyDays: days is int ? (days < 0 ? null : days) : 90,
+      hideElements: j['hideElements'] as bool? ?? true,
+      fingerprinting: j['fingerprinting'] as bool? ?? true,
+      javascriptOff: _strings(j['javascriptOff']),
+      textZoom: zoom is int && zoom >= 50 && zoom <= 300 ? zoom : 100,
+      darkPages: j['darkPages'] as bool? ?? true,
+      closeTabsAfterDays: close is int && close > 0 ? close : null,
+      sitePermissions: perms,
+      autofillTipDismissed: j['autofillTipDismissed'] as bool? ?? false,
+    );
+  }
+}
+
+/// A page saved to read later. With [saved], its text (reader view) is
+/// kept as an encrypted attachment, so it opens offline on every device.
+class ReadingItem {
+  const ReadingItem({
+    required this.id,
+    required this.url,
+    required this.title,
+    required this.addedAt,
+    this.read = false,
+    this.saved,
+    this.excerpt,
+  });
+
+  final String id;
+  final String url;
+  final String title;
+  final DateTime addedAt;
+  final bool read;
+  final ZtAttachmentRef? saved;
+  final String? excerpt;
+
+  ReadingItem copyWith({bool? read}) => ReadingItem(
+    id: id,
+    url: url,
+    title: title,
+    addedAt: addedAt,
+    read: read ?? this.read,
+    saved: saved,
+    excerpt: excerpt,
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'url': url,
+    'title': title,
+    'addedAt': addedAt.millisecondsSinceEpoch,
+    'read': read,
+    if (saved != null) 'saved': saved!.toJson(),
+    if (excerpt != null) 'excerpt': excerpt,
+  };
+
+  static ReadingItem fromJson(String id, Map<String, Object?> j, DateTime at) {
+    ZtAttachmentRef? saved;
+    final Object? raw = j['saved'];
+    if (raw is Map<String, Object?>) {
+      try {
+        saved = ZtAttachmentRef.fromJson(raw);
+      } on Object {
+        saved = null;
+      }
+    }
+    return ReadingItem(
+      id: id,
+      url: j['url'] as String? ?? '',
+      title: j['title'] as String? ?? '',
+      addedAt: _ms(j['addedAt'], at),
+      read: j['read'] as bool? ?? false,
+      saved: saved,
+      excerpt: j['excerpt'] as String?,
     );
   }
 }
@@ -302,6 +529,13 @@ abstract final class BrowserCollections {
     fromJson: DeviceTabs.fromJson,
     toJson: (DeviceTabs t) => t.toJson(),
     idOf: (DeviceTabs t) => t.id,
+  );
+
+  static final ZtCollection<ReadingItem> reading = ZtCollection<ReadingItem>(
+    kind: 'reading',
+    fromJson: ReadingItem.fromJson,
+    toJson: (ReadingItem r) => r.toJson(),
+    idOf: (ReadingItem r) => r.id,
   );
 
   static final ZtCollection<BrowserSettings> settings =

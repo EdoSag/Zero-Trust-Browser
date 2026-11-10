@@ -6,17 +6,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
+import 'package:zerotrust_browser/browser/apply_settings.dart';
+import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/reader.dart';
+import 'package:zerotrust_browser/browser/site_permissions.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/engine/tab_view.dart';
 import 'package:zerotrust_browser/pages/bookmarks_page.dart';
+import 'package:zerotrust_browser/pages/downloads_page.dart';
 import 'package:zerotrust_browser/pages/history_page.dart';
+import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
 import 'package:zerotrust_browser/pages/start_page.dart';
 import 'package:zerotrust_browser/pages/tabs_page.dart';
+import 'package:zerotrust_browser/widgets/qr_sheet.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 /// The browser once unlocked: address bar, the current tab, toolbar.
@@ -27,7 +34,8 @@ class BrowserHome extends ConsumerStatefulWidget {
   ConsumerState<BrowserHome> createState() => _BrowserHomeState();
 }
 
-class _BrowserHomeState extends ConsumerState<BrowserHome> {
+class _BrowserHomeState extends ConsumerState<BrowserHome>
+    with WidgetsBindingObserver {
   late final BrowserEngine _engine = ref.read(browserEngineProvider);
   final TextEditingController _address = TextEditingController();
   final FocusNode _addressFocus = FocusNode();
@@ -38,10 +46,12 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
   bool _finding = false;
   String _findResult = '';
   bool _pruned = false;
+  bool _voice = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _addressFocus.addListener(() {
       if (!_addressFocus.hasFocus && _editing) setState(() => _editing = false);
     });
@@ -53,12 +63,27 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
 
   Future<void> _start() async {
     _pushPrivacy(ref.read(browserSettingsProvider));
-    await ref.read(tabsProvider.notifier).restoreIfEmpty();
+    await ref
+        .read(tabsProvider.notifier)
+        .restoreIfEmpty(closeAfterDays: _settings.closeTabsAfterDays);
     await _openPendingLink();
+    final bool voice = await _engine.voiceAvailable();
+    if (mounted) setState(() => _voice = voice);
+    // Weekly, in the background: a fresh signed blocklist.
+    ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final int? days = _settings.closeTabsAfterDays;
+    if (days != null) _tabs.closeUnused(days).ignore();
+    ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _prompts?.cancel();
     _engine.pendingLinks.removeListener(_openPendingLink);
     _engine.systemUiOpen.removeListener(_onSystemUi);
@@ -73,13 +98,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
   BrowserSettings get _settings => ref.read(browserSettingsProvider);
 
   void _pushPrivacy(BrowserSettings s) {
-    _engine
-        .setPrivacy(
-          blockTrackers: s.blockTrackers,
-          httpsOnly: s.httpsOnly,
-          allowedSites: s.allowedSites,
-        )
-        .ignore();
+    applySettings(_engine, s).ignore();
   }
 
   /// The file picker leaves the app; auto-lock waits until it's back.
@@ -170,6 +189,24 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
               ? 'Downloading ${e.get<String>('name')}'
               : "This file can't be downloaded",
         );
+      case 'downloadDone':
+        if (e.get<bool>('ok') == true) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
+              SnackBar(
+                content: Text('Saved ${e.get<String>('name')} to Downloads'),
+                action: SnackBarAction(
+                  label: 'Show',
+                  onPressed: () => _push(const DownloadsPage()),
+                ),
+              ),
+            );
+        } else {
+          _snack("${e.get<String>('name')} couldn't be saved");
+        }
+      case 'permission':
+        await _askPermission(e);
       case 'httpsFailed':
         await _offerInsecure(e.get<String>('url') ?? '', tab);
       case 'sslError':
@@ -327,6 +364,241 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
     }
   }
 
+  // ---- Site permissions -----------------------------------------------------
+
+  Future<void> _askPermission(TabEvent e) async {
+    final int id = e.get<int>('requestId') ?? 0;
+    final String origin = e.get<String>('origin') ?? '';
+    final String host = (Uri.tryParse(origin)?.host ?? '').isEmpty
+        ? origin
+        : Uri.parse(origin).host;
+    final List<String> kinds = <String>[
+      for (final Object? k in (e.data['kinds'] as List<Object?>? ?? const []))
+        if (k is String) k,
+    ];
+    final bool private = e.get<bool>('private') ?? false;
+    final PermissionDecision d = decidePermission(
+      _settings,
+      host,
+      kinds,
+      private: private,
+    );
+    if (d.ask.isEmpty) {
+      await _engine.answerPermission(id, d.allowed);
+      return;
+    }
+    final String? choice = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext c) => AlertDialog(
+        icon: Icon(
+          kinds.contains(SitePermission.location)
+              ? Icons.location_on_outlined
+              : kinds.contains(SitePermission.camera)
+              ? Icons.videocam_outlined
+              : Icons.mic_none,
+        ),
+        title: Text('Allow $host to use ${permissionPhrase(d.ask)}?'),
+        content: Text(
+          private
+              ? 'This private tab asks every time.'
+              : 'You can change this later in the site menu (the shield) '
+                    'or in Settings > Site permissions.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(c, 'block'),
+            child: const Text('Block'),
+          ),
+          if (!private)
+            TextButton(
+              onPressed: () => Navigator.pop(c, 'once'),
+              child: const Text('Only this time'),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, private ? 'once' : 'allow'),
+            child: const Text('Allow'),
+          ),
+        ],
+      ),
+    );
+    final bool allow = choice == 'allow' || choice == 'once';
+    if (!private && (choice == 'allow' || choice == 'block')) {
+      BrowserSettings next = _settings;
+      for (final String kind in d.ask) {
+        next = next.withPermission(host, kind, choice == 'allow');
+      }
+      await ref.read(browserDataProvider).saveSettings(next);
+    }
+    await _engine.answerPermission(id, <String>{
+      ...d.allowed,
+      if (allow) ...d.ask,
+    });
+  }
+
+  // ---- Reader, reading list, page tools ------------------------------------
+
+  Future<void> _toggleReader(BrowserTab tab) async {
+    if (tab.reader) {
+      await _engine.back(tab.id);
+      return;
+    }
+    final Article? a = Article.fromJson(await _engine.article(tab.id));
+    if (!mounted) return;
+    if (a == null) {
+      _snack(
+        tab.javascript
+            ? "This page can't be shown in reader view"
+            : 'Reader view needs JavaScript on for this site',
+      );
+      return;
+    }
+    await _engine.loadHtml(
+      tab.id,
+      readerHtml(a, url: tab.url!),
+      baseUrl: tab.url!,
+    );
+  }
+
+  Future<void> _addToReadingList(BrowserTab tab) async {
+    final String url = tab.url!;
+    final Article? a = Article.fromJson(await _engine.article(tab.id));
+    try {
+      await ref
+          .read(browserDataProvider)
+          .addToReadingList(
+            url,
+            a?.title.isNotEmpty == true ? a!.title : tab.label,
+            html: a == null ? null : readerHtml(a, url: url, saved: true),
+            excerpt: a?.excerpt,
+          );
+      _snack(
+        a == null
+            ? 'Added to reading list'
+            : 'Added to reading list, saved to read offline',
+      );
+    } on Object {
+      _snack("Couldn't add to the reading list");
+    }
+  }
+
+  Future<void> _openReading(ReadingItem item, {required bool saved}) async {
+    Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst);
+    if (!saved || item.saved == null) {
+      _openFromList(item.url, newTab: true);
+      return;
+    }
+    try {
+      final String? html = await ref.read(browserDataProvider).readSaved(item);
+      if (html == null) throw StateError('no copy');
+      await _tabs.openHtml(html, item.url);
+    } on Object {
+      _snack("The saved copy isn't available. Opening the page instead.");
+      _openFromList(item.url, newTab: true);
+    }
+  }
+
+  Future<void> _addShortcut(BrowserTab tab) async {
+    final bool ok = await _engine.addShortcut(tab.url!, tab.label, tab.favicon);
+    if (!ok) _snack("Your home screen doesn't accept shortcuts");
+  }
+
+  /// The fire button: close every tab and clear browsing data.
+  Future<void> _fire() async {
+    const List<(String, Duration?)> ranges = <(String, Duration?)>[
+      ('Last hour', Duration(hours: 1)),
+      ('Last 24 hours', Duration(days: 1)),
+      ('All history', null),
+    ];
+    int range = 0;
+    bool history = true;
+    final bool go =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext c) => StatefulBuilder(
+            builder: (BuildContext c, StateSetter set) => AlertDialog(
+              icon: const Icon(Icons.local_fire_department_outlined),
+              title: const Text('Close all tabs and clear data?'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      'Closes every tab, normal and private, and deletes '
+                      'cookies, site data and the cache on this phone. You '
+                      'are signed out of websites. Bookmarks, the reading '
+                      'list and downloads stay.',
+                    ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      value: history,
+                      onChanged: (bool? v) => set(() => history = v ?? true),
+                      title: const Text('Also delete history'),
+                    ),
+                    if (history)
+                      RadioGroup<int>(
+                        groupValue: range,
+                        onChanged: (int? v) => set(() => range = v ?? 0),
+                        child: Column(
+                          children: <Widget>[
+                            for (int i = 0; i < ranges.length; i++)
+                              RadioListTile<int>(
+                                contentPadding: EdgeInsets.zero,
+                                value: i,
+                                title: Text(ranges[i].$1),
+                              ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                TextButton(
+                  onPressed: () => Navigator.pop(c, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(c, true),
+                  child: const Text('Clear'),
+                ),
+              ],
+            ),
+          ),
+        ) ??
+        false;
+    if (!go) return;
+    await _tabs.closeAllForFire();
+    await _engine.clearBrowsingData();
+    if (history) {
+      final Duration? d = ranges[range].$2;
+      final BrowserData data = ref.read(browserDataProvider);
+      if (d == null) {
+        await data.clearHistory();
+      } else {
+        await data.clearHistorySince(DateTime.now().subtract(d));
+      }
+    }
+    _snack('Tabs closed and browsing data cleared');
+  }
+
+  Future<void> _scanQr() async {
+    final String? text = await _engine.scanQr();
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    // Shown in the address bar first: a code can hold any address.
+    _address.text = text.trim();
+    _address.selection = TextSelection.collapsed(offset: _address.text.length);
+    setState(() => _editing = true);
+    _addressFocus.requestFocus();
+  }
+
+  Future<void> _voiceSearch() async {
+    final String? text = await _engine.voiceSearch();
+    if (text == null || text.trim().isEmpty || !mounted) return;
+    await go(text.trim());
+  }
+
   // ---- Find in page ---------------------------------------------------------
 
   void _openFind() {
@@ -436,11 +708,65 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
                   onTap: () =>
                       run(() => _push(HistoryPage(onOpen: _openFromList))),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.chrome_reader_mode_outlined),
+                  title: const Text('Reading list'),
+                  onTap: () =>
+                      run(() => _push(ReadingListPage(onOpen: _openReading))),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.download_outlined),
+                  title: const Text('Downloads'),
+                  onTap: () => run(() => _push(const DownloadsPage())),
+                ),
+                if (onPage) const Divider(),
+                if (onPage)
+                  ListTile(
+                    leading: Icon(
+                      tab.reader
+                          ? Icons.web_outlined
+                          : Icons.chrome_reader_mode_outlined,
+                    ),
+                    title: Text(
+                      tab.reader ? 'Leave reader view' : 'Reader view',
+                    ),
+                    onTap: () => run(() => _toggleReader(tab)),
+                  ),
+                if (onPage)
+                  ListTile(
+                    leading: const Icon(Icons.bookmark_add_outlined),
+                    title: Text(
+                      data.readingFor(tab.url!) == null
+                          ? 'Add to reading list'
+                          : 'Save again to reading list',
+                    ),
+                    onTap: () => run(() => _addToReadingList(tab)),
+                  ),
                 if (onPage)
                   ListTile(
                     leading: const Icon(Icons.find_in_page_outlined),
                     title: const Text('Find in page'),
                     onTap: () => run(_openFind),
+                  ),
+                if (onPage)
+                  ListTile(
+                    leading: const Icon(Icons.print_outlined),
+                    title: const Text('Print or save as PDF'),
+                    onTap: () =>
+                        run(() => _engine.printPage(tab.id, tab.label)),
+                  ),
+                if (onPage)
+                  ListTile(
+                    leading: const Icon(Icons.qr_code_2),
+                    title: const Text('Share as QR code'),
+                    onTap: () =>
+                        run(() => showQrSheet(context, tab.url!, tab.label)),
+                  ),
+                if (onPage && !tab.private)
+                  ListTile(
+                    leading: const Icon(Icons.add_to_home_screen),
+                    title: const Text('Add to home screen'),
+                    onTap: () => run(() => _addShortcut(tab)),
                   ),
                 if (onPage)
                   SwitchListTile(
@@ -450,6 +776,11 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
                     onChanged: (bool v) =>
                         run(() => _tabs.setDesktop(tab.id, v)),
                   ),
+                ListTile(
+                  leading: const Icon(Icons.local_fire_department_outlined),
+                  title: const Text('Close all tabs and clear data'),
+                  onTap: () => run(_fire),
+                ),
                 ListTile(
                   leading: const Icon(Icons.settings_outlined),
                   title: const Text('Settings'),
@@ -519,6 +850,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
                   onShield: tab == null || tab.isStartPage
                       ? null
                       : () => showSiteSheet(context, ref, tab),
+                  onReader:
+                      tab != null &&
+                          !tab.isStartPage &&
+                          (tab.readerable || tab.reader)
+                      ? () => _toggleReader(tab)
+                      : null,
+                  onVoice: _voice ? _voiceSearch : null,
+                  onScan: _scanQr,
                 ),
                 if (tab != null && tab.loading && !_editing)
                   LinearProgressIndicator(
@@ -584,6 +923,17 @@ class _BrowserHomeState extends ConsumerState<BrowserHome> {
           ),
         ),
       );
+    }
+    if (tab.unloaded) {
+      // Loads again when shown (tabs restored after a restart, or unloaded
+      // to save memory).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final BrowserTab? now = ref.read(tabsProvider).current;
+        if (now != null && now.id == tab.id && now.unloaded) {
+          _tabs.select(tab.id);
+        }
+      });
+      return const Center(child: CircularProgressIndicator());
     }
     if (tab.isStartPage) {
       return StartPage(
@@ -662,6 +1012,9 @@ class _AddressBar extends StatelessWidget {
     required this.onSubmit,
     required this.onCancel,
     required this.onShield,
+    required this.onReader,
+    required this.onVoice,
+    required this.onScan,
   });
 
   final BrowserTab? tab;
@@ -672,6 +1025,11 @@ class _AddressBar extends StatelessWidget {
   final ValueChanged<String> onSubmit;
   final VoidCallback onCancel;
   final VoidCallback? onShield;
+
+  /// Reader view (shown when the page is an article).
+  final VoidCallback? onReader;
+  final VoidCallback? onVoice;
+  final VoidCallback onScan;
 
   @override
   Widget build(BuildContext context) {
@@ -763,10 +1121,40 @@ class _AddressBar extends StatelessWidget {
                       ),
               ),
               if (editing)
+                ListenableBuilder(
+                  listenable: controller,
+                  builder: (BuildContext context, _) => controller.text.isEmpty
+                      ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            if (onVoice != null)
+                              IconButton(
+                                tooltip: 'Voice search',
+                                icon: const Icon(Icons.mic_none),
+                                onPressed: onVoice,
+                              ),
+                            IconButton(
+                              tooltip: 'Scan QR code',
+                              icon: const Icon(Icons.qr_code_scanner),
+                              onPressed: onScan,
+                            ),
+                          ],
+                        )
+                      : IconButton(
+                          tooltip: 'Clear',
+                          icon: const Icon(Icons.close),
+                          onPressed: controller.clear,
+                        ),
+                )
+              else if (onReader != null)
                 IconButton(
-                  tooltip: 'Clear',
-                  icon: const Icon(Icons.close),
-                  onPressed: controller.clear,
+                  tooltip: t?.reader == true
+                      ? 'Leave reader view'
+                      : 'Reader view',
+                  isSelected: t?.reader == true,
+                  icon: const Icon(Icons.chrome_reader_mode_outlined),
+                  selectedIcon: const Icon(Icons.chrome_reader_mode),
+                  onPressed: onReader,
                 )
               else if (private)
                 const Padding(

@@ -1,8 +1,13 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/browser/address.dart';
+import 'package:zerotrust_browser/browser/bookmark_import.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
+import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 typedef OpenUrl = void Function(String url, {bool newTab, bool private});
@@ -79,6 +84,66 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     );
   }
 
+  /// Bookmarks exported from Chrome, Firefox, Edge or Safari (an .html
+  /// file), added to the account; ones already saved are skipped.
+  Future<void> _import() async {
+    final bool go =
+        await showDialog<bool>(
+          context: context,
+          builder: (BuildContext d) => AlertDialog(
+            title: const Text('Import bookmarks'),
+            content: const Text(
+              'Pick the bookmarks file you exported from your other '
+              'browser:\n\n'
+              '• Chrome or Edge: Bookmarks > Bookmark manager > ⋮ > Export '
+              'bookmarks (on a computer).\n'
+              '• Firefox: Bookmarks > Manage bookmarks > Import and Backup > '
+              'Export bookmarks to HTML.\n\n'
+              'The file stays on this phone; the bookmarks are end-to-end '
+              'encrypted in your account.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(d, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(d, true),
+                child: const Text('Pick file'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!go) return;
+    final Uint8List? bytes = await ref.read(browserEngineProvider).pickFile(
+      const <String>['text/html', 'application/xhtml+xml', '*/*'],
+    );
+    if (bytes == null || !mounted) return;
+    final List<Bookmark> found = parseBookmarksHtml(
+      utf8.decode(bytes, allowMalformed: true),
+    );
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    if (found.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No bookmarks found in that file')),
+      );
+      return;
+    }
+    final int added = await ref
+        .read(browserDataProvider)
+        .importBookmarks(found);
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          added == 0
+              ? 'All ${found.length} bookmarks were already saved'
+              : 'Imported $added bookmark${added == 1 ? '' : 's'}',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final AsyncValue<List<Bookmark>> all = ref.watch(bookmarksProvider);
@@ -88,11 +153,21 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
           (Bookmark b) =>
               q.isEmpty ||
               b.title.toLowerCase().contains(q) ||
-              b.url.toLowerCase().contains(q),
+              b.url.toLowerCase().contains(q) ||
+              (b.folder?.toLowerCase().contains(q) ?? false),
         )
         .toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Bookmarks')),
+      appBar: AppBar(
+        title: const Text('Bookmarks'),
+        actions: <Widget>[
+          IconButton(
+            tooltip: 'Import bookmarks',
+            icon: const Icon(Icons.file_upload_outlined),
+            onPressed: _import,
+          ),
+        ],
+      ),
       body: Column(
         children: <Widget>[
           Padding(
@@ -143,7 +218,9 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           subtitle: Text(
-                            displayAddress(b.url),
+                            b.folder == null
+                                ? displayAddress(b.url)
+                                : '${b.folder} · ${displayAddress(b.url)}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

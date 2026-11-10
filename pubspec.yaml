@@ -1,7 +1,7 @@
 name: zerotrust_browser
 description: "Zero-Trust Browser: a private web browser that blocks trackers, with bookmarks and history end-to-end encrypted in your Zero-Trust account."
 publish_to: none
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: ^3.9.0
@@ -30,6 +30,13 @@ dependencies:
   flutter_dotenv: ^6.0.1
   url_launcher: ^6.3.1
   share_plus: ^13.3.1
+  # Share a page as a QR code (BSD-3-Clause).
+  qr_flutter: ^4.1.0
+  # Weekly blocklist updates: download, check the signature, keep the file.
+  http: ^1.6.0
+  cryptography: ^2.9.0
+  path_provider: ^2.1.6
+  shared_preferences: ^2.5.6
 
 dev_dependencies:
   flutter_test:
@@ -41,3 +48,4 @@ flutter:
   assets:
     - .env
     - assets/blocklist/
+    - assets/reader/
