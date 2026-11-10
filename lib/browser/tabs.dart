@@ -219,6 +219,8 @@ class TabsController extends Notifier<TabsState> {
     if (id == null) return;
     final BrowserTab? t = byId(id);
     if (t == null) return;
+    // Shown now, so it counts as used (also the tab restored on start).
+    _update(id, (BrowserTab t) => t.copyWith(lastUsed: DateTime.now()));
     if (t.unloaded) {
       _update(id, (BrowserTab t) => t.copyWith(unloaded: false));
       await _engine.createTab(
@@ -451,6 +453,13 @@ class TabsController extends Notifier<TabsState> {
             clearFavicon: urlChanged && hostOf(url) != hostOf(tab.url),
           ),
         );
+        // Browsing in the tab on screen keeps it "used".
+        if (urlChanged && e.tabId == state.currentId) {
+          _update(
+            e.tabId,
+            (BrowserTab t) => t.copyWith(lastUsed: DateTime.now()),
+          );
+        }
         if (urlChanged && !tab.private) _queueSave();
       case 'favicon':
         final Uint8List? png = e.get<Uint8List>('png');

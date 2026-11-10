@@ -186,8 +186,33 @@ class Downloads(private val context: Context) {
             return if (meta.split(';').any { it.equals("base64", ignoreCase = true) }) {
                 Base64.decode(payload, Base64.DEFAULT)
             } else {
-                Uri.decode(payload).toByteArray(Charsets.UTF_8)
+                percentDecode(payload)
             }
+        }
+
+        /** %XX escapes straight to bytes, so binary content survives. */
+        fun percentDecode(s: String): ByteArray {
+            val out = java.io.ByteArrayOutputStream(s.length)
+            var i = 0
+            while (i < s.length) {
+                val c = s[i]
+                if (c == '%' && i + 2 < s.length) {
+                    val hi = Character.digit(s[i + 1], 16)
+                    val lo = Character.digit(s[i + 2], 16)
+                    if (hi >= 0 && lo >= 0) {
+                        out.write(hi * 16 + lo)
+                        i += 3
+                        continue
+                    }
+                }
+                if (c.code < 0x80) {
+                    out.write(c.code)
+                } else {
+                    out.write(c.toString().toByteArray(Charsets.UTF_8))
+                }
+                i++
+            }
+            return out.toByteArray()
         }
 
         /** Adds the usual extension for [mime] when [name] has none. */
