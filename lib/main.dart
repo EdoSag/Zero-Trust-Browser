@@ -1,0 +1,69 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:zero_trust_core/zero_trust_core.dart';
+import 'package:zerotrust_browser/app/app_gate.dart';
+import 'package:zerotrust_browser/app/browser_config.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Shown under Settings > Open-source licences.
+  LicenseRegistry.addLicense(
+    () => Stream<LicenseEntry>.value(
+      const LicenseEntryWithLineBreaks(
+        <String>['EasyList and EasyPrivacy'],
+        '''
+The tracker and ad blocklists come from EasyList and EasyPrivacy
+(https://easylist.to) by The EasyList authors, used under the Creative
+Commons Attribution-ShareAlike 3.0 licence
+(https://creativecommons.org/licenses/by-sa/3.0/). ZT Browser keeps only the
+rules that block whole host names.''',
+      ),
+    ),
+  );
+  await dotenv.load(fileName: '.env');
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+  runApp(
+    ProviderScope(
+      overrides: [ztAppConfigProvider.overrideWithValue(browserAppConfig)],
+      child: const ZeroTrustBrowserApp(),
+    ),
+  );
+}
+
+class ZeroTrustBrowserApp extends ConsumerWidget {
+  const ZeroTrustBrowserApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return ZtThemeBuilder(
+      builder: (context, theme, darkTheme, mode) => MaterialApp(
+        // On-device task switcher label; the store name is Zero-Trust Browser.
+        title: 'ZT Browser',
+        theme: theme,
+        darkTheme: darkTheme,
+        themeMode: mode,
+        localizationsDelegates: const [
+          ZtL10n.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: ZtL10n.supportedLocales,
+        home: const AppGate(),
+        // Any touch on any screen counts as activity for auto-lock.
+        builder: (BuildContext context, Widget? child) => Listener(
+          onPointerDown: (_) =>
+              ref.read(vaultControllerProvider.notifier).touch(),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
