@@ -1,0 +1,620 @@
+{
+  "@@locale": "en",
+  "cancel": "Cancel",
+  "save": "Save",
+  "delete": "Delete",
+  "clear": "Clear",
+  "open": "Open",
+  "share": "Share",
+  "edit": "Edit",
+  "remove": "Remove",
+  "undo": "Undo",
+  "allow": "Allow",
+  "block": "Block",
+  "copied": "Copied",
+  "more": "More",
+  "close": "Close",
+  "reload": "Reload",
+  "back": "Back",
+  "forward": "Forward",
+  "home": "Home",
+  "menu": "Menu",
+  "settings": "Settings",
+  "newTab": "New tab",
+  "newPrivateTab": "New private tab",
+  "privateTab": "Private tab",
+  "bookmarks": "Bookmarks",
+  "history": "History",
+  "readingList": "Reading list",
+  "downloads": "Downloads",
+  "tabs": "Tabs",
+  "name": "Name",
+  "address": "Address",
+  "today": "Today",
+  "yesterday": "Yesterday",
+  "privacyReport": "Privacy report",
+  "downloadStarted": "Downloading {name}",
+  "@downloadStarted": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "cantDownload": "This file can't be downloaded",
+  "savedToDownloads": "Saved {name} to Downloads",
+  "@savedToDownloads": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "show": "Show",
+  "couldntSave": "{name} couldn't be saved",
+  "@couldntSave": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "badCertificate": "This site's security certificate isn't valid, so it was not opened.",
+  "findNoMatches": "No matches",
+  "findCount": "{active} of {count}",
+  "@findCount": {
+    "placeholders": {
+      "active": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openInNewTab": "Open in new tab",
+  "openInPrivateTab": "Open in private tab",
+  "openImageInNewTab": "Open image in new tab",
+  "copyLink": "Copy link",
+  "copyImageAddress": "Copy image address",
+  "openInAnotherAppTitle": "Open in another app?",
+  "externalMail": "This link writes an email in your mail app.",
+  "externalTel": "This link calls a number with your phone app.",
+  "externalOther": "This page wants to open another app on your phone.",
+  "stayHere": "Stay here",
+  "notSecureTitle": "Not a secure site",
+  "notSecureBody": "{host} doesn't offer a secure (HTTPS) connection. If you continue, others on your network can see and change what you send and receive on this site.",
+  "@notSecureBody": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "continueAnyway": "Continue anyway",
+  "goBack": "Go back",
+  "permissionAsk": "Allow {host} to use your {what}?",
+  "@permissionAsk": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "what": {
+        "type": "String"
+      }
+    }
+  },
+  "permWhatCamera": "camera",
+  "permWhatMicrophone": "microphone",
+  "permWhatLocation": "location",
+  "listAnd": "{first} and {last}",
+  "@listAnd": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "last": {
+        "type": "String"
+      }
+    }
+  },
+  "listComma": "{first}, {next}",
+  "@listComma": {
+    "placeholders": {
+      "first": {
+        "type": "String"
+      },
+      "next": {
+        "type": "String"
+      }
+    }
+  },
+  "permissionPrivateNote": "This private tab asks every time.",
+  "permissionChangeLater": "You can change this later in the site menu (the shield) or in Settings > Site permissions.",
+  "onlyThisTime": "Only this time",
+  "readerCant": "This page can't be shown in reader view",
+  "readerNeedsJs": "Reader view needs JavaScript on for this site",
+  "addedToReadingList": "Added to reading list",
+  "addedToReadingListOffline": "Added to reading list, saved to read offline",
+  "couldntAddReading": "Couldn't add to the reading list",
+  "savedCopyUnavailable": "The saved copy isn't available. Opening the page instead.",
+  "noHomeShortcuts": "Your home screen doesn't accept shortcuts",
+  "fireTitle": "Close all tabs and clear data?",
+  "fireBody": "Closes every tab, normal and private, and deletes cookies, site data and the cache on this phone. You are signed out of websites. Bookmarks, the reading list and downloads stay.",
+  "fireAlsoHistory": "Also delete history and the privacy report",
+  "rangeLastHour": "Last hour",
+  "rangeLast24": "Last 24 hours",
+  "rangeLast7Days": "Last 7 days",
+  "rangeAll": "All history",
+  "fireDone": "Tabs closed and browsing data cleared",
+  "bookmarkAction": "Bookmark",
+  "removeBookmark": "Remove bookmark",
+  "bookmarked": "Bookmarked",
+  "bookmarkRemoved": "Bookmark removed",
+  "leaveReader": "Leave reader view",
+  "readerView": "Reader view",
+  "addToReadingList": "Add to reading list",
+  "saveAgainReadingList": "Save again to reading list",
+  "findInPage": "Find in page",
+  "printOrPdf": "Print or save as PDF",
+  "shareAsQr": "Share as QR code",
+  "addToHomeScreen": "Add to home screen",
+  "desktopSite": "Desktop site",
+  "fireMenu": "Close all tabs and clear data",
+  "pageStopped": "This page stopped working.",
+  "previous": "Previous",
+  "next": "Next",
+  "siteProtection": "Site protection",
+  "addressHint": "Search or type an address",
+  "addressHintPrivate": "Private tab: search or type an address",
+  "voiceSearch": "Voice search",
+  "scanQr": "Scan QR code",
+  "privateTooltip": "Private tab: no history, cookies cleared on close",
+  "searchWith": "Search with {engine}",
+  "@searchWith": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "qrPrompt": "Point at a QR code",
+  "voicePrompt": "Search or say an address",
+  "pinToStart": "Pin to start page",
+  "unpinFromStart": "Unpin from start page",
+  "pinnedToStart": "Pinned to the start page",
+  "unpinnedFromStart": "Removed from the start page",
+  "editThisSearch": "Edit this search",
+  "yourPasswords": "Your passwords",
+  "passwordsTip": "ZT Browser never stores passwords. Your password manager (Bitwarden, Proton Pass, 1Password...) fills sign-in forms through Android's autofill, in private tabs too.",
+  "chooseInAndroid": "Choose in Android",
+  "gotIt": "Got it",
+  "privateExplain": "Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads and bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.",
+  "startBlurb": "Trackers and ads are blocked on every site. Your bookmarks and history are end-to-end encrypted in your Zero-Trust account: only your devices can read them.",
+  "shortcuts": "Shortcuts",
+  "mostVisited": "Most visited",
+  "addShortcut": "Add shortcut",
+  "editShortcut": "Edit shortcut",
+  "editShortcuts": "Edit shortcuts",
+  "add": "Add",
+  "pin": "Pin",
+  "unpin": "Unpin",
+  "dontShowHere": "Don't show here",
+  "shortcutInvalid": "Type a web address, like example.com",
+  "shortcutsEmpty": "Pin the sites you open most. On any page, open the menu and tap \"Pin to start page\", or add one here.",
+  "dragToReorder": "Hold and drag to change the order",
+  "blockedThisWeek": "{count, plural, =1{1 tracker or ad blocked this week} other{{count} trackers and ads blocked this week}}",
+  "@blockedThisWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "defaultBrowser": "Default browser",
+  "defaultBrowserOn": "Links from other apps open in ZT Browser",
+  "defaultBrowserOff": "Tap to open links from other apps in ZT Browser",
+  "searchEngine": "Search engine",
+  "privacy": "Privacy",
+  "blockTrackers": "Block trackers and ads",
+  "blockTrackersCount": "{count} known tracker and ad hosts, from EasyList and EasyPrivacy",
+  "@blockTrackersCount": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "blockTrackersNoCount": "Known tracker and ad hosts, from EasyList and EasyPrivacy",
+  "hideBanners": "Hide cookie banners and ad boxes",
+  "hideBannersSub": "Hides \"accept cookies\" pop-ups (without accepting anything) and the empty spaces blocked ads leave. EasyList Cookie List.",
+  "stripTracking": "Remove tracking from links",
+  "stripTrackingSub": "Removes tags like utm_source and fbclid when you open, copy or share a link, and skips Google AMP copies and pages that only report your click before sending you on.",
+  "fingerprinting": "Fingerprinting protection",
+  "fingerprintingSub": "Adds noise to what sites read to recognise your phone (canvas, audio, graphics chip, memory), different on every site and every time you open the app.",
+  "httpsOnly": "HTTPS-only",
+  "httpsOnlySub": "Open sites securely, and ask before loading one that only works without encryption",
+  "blocklistUpdates": "Blocklist updates",
+  "blocklistUpdatesSub": "Downloaded weekly from ZT Browser's releases on GitHub and checked against its signature. Tap to check now.",
+  "blocklistUpdatesSubDated": "Downloaded weekly from ZT Browser's releases on GitHub and checked against its signature. List from {date}. Tap to check now.",
+  "@blocklistUpdatesSubDated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sitePermissions": "Site permissions",
+  "sitePermissionsNone": "Sites ask before using your camera, microphone or location",
+  "sitePermissionsCount": "{count, plural, =1{1 site with a remembered answer} other{{count} sites with a remembered answer}}",
+  "@sitePermissionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sitesWithoutProtection": "Sites without protection",
+  "sitesWithoutProtectionExplain": "Trackers and ads are not blocked on these sites.",
+  "protect": "Protect",
+  "javascriptOff": "JavaScript off",
+  "javascriptOffExplain": "JavaScript does not run on these sites.",
+  "turnOn": "Turn on",
+  "passwordManager": "Password manager",
+  "autofillUnsupported": "This phone doesn't support autofill",
+  "autofillActive": "{name} fills passwords in ZT Browser, in private tabs too. ZT Browser never saves passwords.",
+  "@autofillActive": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "autofillPick": "Pick a password manager (Bitwarden, Proton Pass, 1Password...) in Android settings to fill sign-in forms. ZT Browser never saves passwords itself.",
+  "pagesSection": "Pages",
+  "textSize": "Text size",
+  "darkPages": "Dark pages",
+  "darkPagesSub": "When your phone is in dark mode, darken sites that have no dark design of their own",
+  "tabsAndHistory": "Tabs and history",
+  "closeUnusedTabs": "Close unused tabs",
+  "keepHistory": "Keep history",
+  "clearCookies": "Clear cookies and site data",
+  "clearCookiesSub": "Signs you out of websites on this phone",
+  "alwaysOn": "Always on",
+  "alwaysOnSub": "Third-party cookies blocked. Global Privacy Control sent, telling sites not to sell or share your data. Camera, microphone and location only after you say yes to a site. No usage statistics sent from the web engine.",
+  "credits": "Open-source credits",
+  "creditsSub": "EasyList, EasyPrivacy and the EasyList Cookie List by The EasyList authors (easylist.to), used under CC BY-SA 3.0. Reader view: Mozilla Readability (Apache 2.0). QR scanner: ZXing (Apache 2.0).",
+  "keepHistoryExplain": "Older pages are deleted from your history on all your devices.",
+  "closeTabsExplain": "Tabs you haven't looked at for this long close by themselves. Private tabs always close when the app locks.",
+  "checkingBlocklist": "Checking for a newer blocklist…",
+  "blocklistUpdated": "Blocklist updated",
+  "blocklistUpToDate": "The blocklist is up to date",
+  "blocklistFailed": "Couldn't check now. Try again later.",
+  "clearCookiesTitle": "Clear cookies and site data?",
+  "clearCookiesBody": "You will be signed out of websites on this phone. Bookmarks and history stay.",
+  "cookiesCleared": "Cookies and site data cleared",
+  "historyNone": "Don't keep history",
+  "forever": "Forever",
+  "oneWeek": "1 week",
+  "oneMonth": "1 month",
+  "threeMonths": "3 months",
+  "oneYear": "1 year",
+  "nDays": "{count} days",
+  "@nDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "never": "Never",
+  "afterDay": "After a day",
+  "afterWeek": "After a week",
+  "afterTwoWeeks": "After 2 weeks",
+  "afterMonth": "After a month",
+  "afterDays": "After {count} days",
+  "@afterDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchSuggestions": "Search suggestions",
+  "searchSuggestionsOff": "Off: nothing you type is sent anywhere until you search.",
+  "searchSuggestionsOn": "What you type in the address bar is sent to {engine} as you type. Never addresses, and never in private tabs.",
+  "@searchSuggestionsOn": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "searchSuggestionsNone": "{engine} doesn't offer suggestions.",
+  "@searchSuggestionsNone": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "searchSuggestionsAskTitle": "Turn on search suggestions?",
+  "searchSuggestionsAskBody": "As you type in the address bar, the letters are sent to {engine} so it can suggest searches. That tells it what you type even if you never search for it. Addresses and private tabs are never sent.",
+  "@searchSuggestionsAskBody": {
+    "placeholders": {
+      "engine": {
+        "type": "String"
+      }
+    }
+  },
+  "addSearchEngine": "Add search engine",
+  "engineAddress": "Search address, with %s where the words go",
+  "engineInvalid": "Type a name and a web address that contains %s",
+  "removeEngine": "Remove {name}",
+  "@removeEngine": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "language": "Language",
+  "languageSystem": "Phone language",
+  "languageNote": "Sign-in and account screens are shared by all Zero-Trust apps and are in English for now.",
+  "startPageSection": "Start page",
+  "showMostVisited": "Show most visited sites",
+  "showMostVisitedSub": "From your history, on the start page",
+  "privacyReportSub": "Counts the trackers and ads blocked on each site. Kept like your history: end-to-end encrypted in your account.",
+  "reportWeek": "{count, plural, =0{Nothing blocked in the last 7 days} =1{1 tracker or ad blocked in the last 7 days} other{{count} trackers and ads blocked in the last 7 days}}",
+  "@reportWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportMonth": "Last {days} days: {count}",
+  "@reportMonth": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "reportTopSites": "Where most was blocked this week",
+  "reportEmpty": "Nothing counted yet. Browse a little and come back.",
+  "reportOff": "The privacy report is off. Trackers are still blocked; they just aren't counted.",
+  "reportClear": "Clear report",
+  "reportCleared": "Privacy report cleared",
+  "reportNote": "Counted on your devices and kept end-to-end encrypted in your account, like your history. Private tabs add to the total without the name of the site.",
+  "reportNoSites": "Site names are not kept while history is off.",
+  "reportCountOnSite": "{count} blocked",
+  "@reportCountOnSite": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "newGroup": "New group",
+  "removeFromGroup": "Remove from group",
+  "groupName": "Group name",
+  "newTabInGroup": "New tab in this group",
+  "renameGroup": "Rename group",
+  "ungroupTabs": "Ungroup tabs",
+  "closeNTabs": "{count, plural, =1{Close 1 tab} other{Close {count} tabs}}",
+  "@closeNTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchTabs": "Search tabs",
+  "stopSearching": "Stop searching",
+  "closeAllPrivateTabs": "Close all private tabs",
+  "closeAllTabs": "Close all tabs",
+  "tabsCount": "Tabs ({count})",
+  "@tabsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "privateCount": "Private ({count})",
+  "@privateCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "otherDevices": "Other devices",
+  "noOpenTabs": "No open tabs",
+  "privateTabsExplain": "Private tabs keep no history, and their cookies are deleted when the last one closes or the app locks.",
+  "noTabsMatch": "No tabs match.",
+  "notInGroup": "Not in a group",
+  "nTabs": "{count, plural, =1{1 tab} other{{count} tabs}}",
+  "@nTabs": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "groupOptions": "Group options",
+  "closeTab": "Close tab",
+  "otherDevicesEmpty": "Tabs open in ZT Browser on your other devices show here, end-to-end encrypted. Private tabs are never shared.",
+  "editBookmark": "Edit bookmark",
+  "importBookmarks": "Import bookmarks",
+  "importExplain": "Pick the bookmarks file you exported from your other browser:\n\n• Chrome or Edge: Bookmarks > Bookmark manager > ⋮ > Export bookmarks (on a computer).\n• Firefox: Bookmarks > Manage bookmarks > Import and Backup > Export bookmarks to HTML.\n\nThe file stays on this phone; the bookmarks are end-to-end encrypted in your account.",
+  "pickFile": "Pick file",
+  "noBookmarksInFile": "No bookmarks found in that file",
+  "allAlreadySaved": "All {count} bookmarks were already saved",
+  "@allAlreadySaved": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "importedCount": "{count, plural, =1{Imported 1 bookmark} other{Imported {count} bookmarks}}",
+  "@importedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchBookmarks": "Search bookmarks",
+  "noBookmarksYet": "No bookmarks yet. Tap the star in the menu to save a page. Bookmarks are end-to-end encrypted and on all your devices.",
+  "noBookmarksMatch": "No bookmarks match.",
+  "daysAgo": "{count} days ago",
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearHistory": "Clear history",
+  "historyCleared": "History cleared on all your devices",
+  "searchHistory": "Search history",
+  "historyOff": "History is off. Turn it on in Settings, under Keep history.",
+  "historyEmpty": "Pages you visit show here, end-to-end encrypted. Private tabs are never saved.",
+  "nothingMatches": "Nothing matches.",
+  "sizeBytes": "{count} bytes",
+  "@sizeBytes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "fileFallbackName": "File",
+  "noAppOpens": "No app on this phone opens this kind of file",
+  "cancelDownloadTitle": "Cancel download?",
+  "deleteFileTitle": "Delete file?",
+  "stopsDownloading": "{name} stops downloading.",
+  "@stopsDownloading": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletedFromPhone": "{name} is deleted from this phone.",
+  "@deletedFromPhone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "keep": "Keep",
+  "cancelDownload": "Cancel download",
+  "downloadsEmpty": "Files you download show here. They are saved in your phone's Downloads folder.",
+  "progressOf": "{done} of {total}",
+  "@progressOf": {
+    "placeholders": {
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingEllipsis": "Downloading…",
+  "waitingConnection": "Waiting for a connection",
+  "couldntDownload": "Couldn't download",
+  "cantShare": "This file can't be shared",
+  "readingListError": "The reading list couldn't load.",
+  "readingListEmpty": "Save pages from the menu with \"Add to reading list\". Articles are kept to read offline, end-to-end encrypted in your account.",
+  "savedOffline": "Saved offline",
+  "openSavedCopy": "Open saved copy",
+  "markUnread": "Mark unread",
+  "markRead": "Mark read",
+  "savedCopy": "Saved copy",
+  "permCamera": "Camera",
+  "permMicrophone": "Microphone",
+  "permLocation": "Location",
+  "permOnHost": "{kind} on {host}",
+  "@permOnHost": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "askNextTime": "Ask next time",
+  "sitePermsEmpty": "When a site asks for your camera, microphone or location, ZT Browser asks you first. Answers you choose to remember show here.",
+  "permAllowedChip": "{kind}: allowed",
+  "@permAllowedChip": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "permBlockedChip": "{kind}: blocked",
+  "@permBlockedChip": {
+    "placeholders": {
+      "kind": {
+        "type": "String"
+      }
+    }
+  },
+  "forget": "Forget",
+  "allowed": "Allowed",
+  "blocked": "Blocked",
+  "connectionSecure": "Connection is secure",
+  "connectionNotSecure": "Connection is not secure",
+  "connectionSecureSub": "What you send and see on this site is encrypted on the way.",
+  "connectionNotSecureSub": "Others on your network can see and change this page. Don't enter passwords or card numbers here.",
+  "blockedOnPage": "{count, plural, =1{1 tracker or ad blocked} other{{count} trackers and ads blocked}}",
+  "@blockedOnPage": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blockedOnPageSub": "On this page, from EasyList and EasyPrivacy.",
+  "protectionOn": "Protection on {site}",
+  "@protectionOn": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "protectionSub": "Turn off only if the site doesn't work. It reloads.",
+  "trackerBlockingOff": "Tracker blocking is off",
+  "turnOnInSettings": "Turn it on in Settings.",
+  "javascriptOn": "JavaScript on {site}",
+  "@javascriptOn": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "javascriptSub": "Off makes many sites simpler and harder to track you on, but some stop working. It reloads.",
+  "qrFor": "QR code for {url}",
+  "@qrFor": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "shareLink": "Share link"
+}

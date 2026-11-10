@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
+import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
@@ -74,9 +75,8 @@ class BrowserTab {
 
   bool get isStartPage => url == null || url!.isEmpty || url == 'about:blank';
 
-  String get label => (title != null && title!.trim().isNotEmpty)
-      ? title!.trim()
-      : (url ?? 'New tab');
+  String get label =>
+      (title != null && title!.trim().isNotEmpty) ? title!.trim() : (url ?? '');
 
   BrowserTab copyWith({
     String? url,
@@ -435,6 +435,17 @@ class TabsController extends Notifier<TabsState> {
       case 'state':
         final String? url = e.get<String>('url');
         final bool urlChanged = url != null && url != tab.url;
+        // For the privacy report: what was blocked since the last update
+        // (the count starts again on every new page).
+        final int blocked = e.get<int>('blocked') ?? tab.blocked;
+        final int more = blocked >= tab.blocked
+            ? blocked - tab.blocked
+            : blocked;
+        if (more > 0) {
+          ref
+              .read(privacyReportRecorderProvider)
+              .add(tab.private ? '' : hostOf(url ?? tab.url), more);
+        }
         _update(
           e.tabId,
           (BrowserTab t) => t.copyWith(

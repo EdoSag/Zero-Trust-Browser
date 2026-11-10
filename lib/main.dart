@@ -8,6 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/app/app_gate.dart';
 import 'package:zerotrust_browser/app/browser_config.dart';
+import 'package:zerotrust_browser/app/language.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,13 +69,18 @@ class ZeroTrustBrowserApp extends ConsumerWidget {
         theme: theme,
         darkTheme: darkTheme,
         themeMode: mode,
+        // English or Hebrew: the phone's language, unless one is chosen in
+        // Settings. The shared account screens (ZtL10n) are English only
+        // for now and stay English in Hebrew.
+        locale: ref.watch(appLanguageProvider),
         localizationsDelegates: const [
+          AppL10n.delegate,
           ZtL10n.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
-        supportedLocales: ZtL10n.supportedLocales,
+        supportedLocales: appLocales,
         home: const AppGate(),
         // Any touch on any screen counts as activity for auto-lock.
         builder: (BuildContext context, Widget? child) => Listener(

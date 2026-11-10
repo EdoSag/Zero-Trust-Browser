@@ -36,20 +36,3 @@ PermissionDecision decidePermission(
   }
   return PermissionDecision(allowed: allowed, ask: ask);
 }
-
-/// "your camera and microphone", for the question.
-String permissionPhrase(List<String> kinds) {
-  final List<String> words = <String>[
-    for (final String k in kinds)
-      switch (k) {
-        SitePermission.camera => 'camera',
-        SitePermission.microphone => 'microphone',
-        SitePermission.location => 'location',
-        _ => k,
-      },
-  ];
-  if (words.isEmpty) return '';
-  if (words.length == 1) return 'your ${words.first}';
-  return 'your ${words.sublist(0, words.length - 1).join(', ')} and '
-      '${words.last}';
-}

@@ -165,7 +165,14 @@ class DeviceTabs {
 
 /// A search engine the address bar can use.
 class SearchEngine {
-  const SearchEngine(this.id, this.name, this.template, this.home);
+  const SearchEngine(
+    this.id,
+    this.name,
+    this.template,
+    this.home, {
+    this.suggest,
+    this.custom = false,
+  });
 
   final String id;
   final String name;
@@ -174,14 +181,66 @@ class SearchEngine {
   final String template;
   final String home;
 
+  /// Where search suggestions come from (`{q}` for what was typed), in the
+  /// OpenSearch JSON format; null when the engine has none.
+  final String? suggest;
+
+  /// Added by the user.
+  final bool custom;
+
   Uri searchUrl(String query) =>
       Uri.parse(template.replaceAll('{q}', Uri.encodeQueryComponent(query)));
+
+  Uri? suggestUrl(String query) => suggest == null
+      ? null
+      : Uri.parse(suggest!.replaceAll('{q}', Uri.encodeQueryComponent(query)));
+
+  /// A search engine from what the user typed: a name and a search address
+  /// with `%s` (or `{q}`) where the words go. Null when the address isn't a
+  /// web address with that marker.
+  static SearchEngine? fromUser(String name, String address, {String? id}) {
+    String t = address.trim();
+    if (t.isEmpty || name.trim().isEmpty) return null;
+    if (!t.contains('://')) t = 'https://$t';
+    t = t.replaceAll('%s', '{q}');
+    if (!t.contains('{q}')) return null;
+    final Uri? u = Uri.tryParse(t.replaceAll('{q}', 'x'));
+    if (u == null ||
+        (u.scheme != 'https' && u.scheme != 'http') ||
+        u.host.isEmpty ||
+        !u.host.contains('.')) {
+      return null;
+    }
+    return SearchEngine(
+      id ?? 'custom-${newItemId().substring(0, 8)}',
+      name.trim(),
+      t,
+      '${u.scheme}://${u.authority}/',
+      custom: true,
+    );
+  }
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'name': name,
+    'template': template,
+  };
+
+  static SearchEngine? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final Object? id = j['id'];
+    final Object? name = j['name'];
+    final Object? template = j['template'];
+    if (id is! String || name is! String || template is! String) return null;
+    return fromUser(name, template, id: id);
+  }
 
   static const SearchEngine duckDuckGo = SearchEngine(
     'duckduckgo',
     'DuckDuckGo',
     'https://duckduckgo.com/?q={q}',
     'https://duckduckgo.com/',
+    suggest: 'https://duckduckgo.com/ac/?q={q}&type=list',
   );
 
   static const List<SearchEngine> all = <SearchEngine>[
@@ -191,12 +250,14 @@ class SearchEngine {
       'Startpage',
       'https://www.startpage.com/do/search?q={q}',
       'https://www.startpage.com/',
+      suggest: 'https://www.startpage.com/osuggestions?q={q}',
     ),
     SearchEngine(
       'brave',
       'Brave Search',
       'https://search.brave.com/search?q={q}',
       'https://search.brave.com/',
+      suggest: 'https://search.brave.com/api/suggest?q={q}',
     ),
     SearchEngine(
       'mojeek',
@@ -209,23 +270,57 @@ class SearchEngine {
       'Ecosia',
       'https://www.ecosia.org/search?q={q}',
       'https://www.ecosia.org/',
+      suggest: 'https://ac.ecosia.org/autocomplete?q={q}&type=list',
     ),
     SearchEngine(
       'google',
       'Google',
       'https://www.google.com/search?q={q}',
       'https://www.google.com/',
+      suggest:
+          'https://www.google.com/complete/search?client=firefox&ie=utf-8&oe=utf-8&q={q}',
     ),
     SearchEngine(
       'bing',
       'Bing',
       'https://www.bing.com/search?q={q}',
       'https://www.bing.com/',
+      suggest: 'https://www.bing.com/osjson.aspx?query={q}',
     ),
   ];
 
-  static SearchEngine byId(String? id) =>
-      all.firstWhere((SearchEngine e) => e.id == id, orElse: () => duckDuckGo);
+  static SearchEngine byId(
+    String? id, [
+    List<SearchEngine> custom = const <SearchEngine>[],
+  ]) {
+    for (final SearchEngine e in all) {
+      if (e.id == id) return e;
+    }
+    for (final SearchEngine e in custom) {
+      if (e.id == id) return e;
+    }
+    return duckDuckGo;
+  }
+}
+
+/// A site pinned to the start page.
+class Shortcut {
+  const Shortcut({required this.url, required this.title});
+
+  final String url;
+  final String title;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'url': url,
+    'title': title,
+  };
+
+  static Shortcut? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final Object? url = j['url'];
+    if (url is! String || url.isEmpty) return null;
+    return Shortcut(url: url, title: j['title'] as String? ?? '');
+  }
 }
 
 /// A site permission ZT Browser asks about: camera, microphone, location.
@@ -233,13 +328,6 @@ abstract final class SitePermission {
   static const String camera = 'camera';
   static const String microphone = 'microphone';
   static const String location = 'location';
-
-  static String label(String kind) => switch (kind) {
-    camera => 'Camera',
-    microphone => 'Microphone',
-    location => 'Location',
-    _ => kind,
-  };
 }
 
 /// Browser settings, synced so every device behaves the same.
@@ -258,6 +346,13 @@ class BrowserSettings {
     this.closeTabsAfterDays,
     this.sitePermissions = const <String, Map<String, bool>>{},
     this.autofillTipDismissed = false,
+    this.stripTracking = true,
+    this.searchSuggestions = false,
+    this.customEngines = const <SearchEngine>[],
+    this.shortcuts = const <Shortcut>[],
+    this.showMostVisited = true,
+    this.hiddenTopSites = const <String>[],
+    this.privacyReport = true,
   });
 
   static const String itemId = 'browser-settings';
@@ -296,6 +391,29 @@ class BrowserSettings {
   /// The password manager tip on the start page was dismissed.
   final bool autofillTipDismissed;
 
+  /// Remove tracking tags (utm_, fbclid...) from links, and skip redirect
+  /// and AMP wrappers.
+  final bool stripTracking;
+
+  /// Ask the search engine for suggestions while typing. Off by default:
+  /// it sends what is typed to the search engine.
+  final bool searchSuggestions;
+
+  /// Search engines the user added.
+  final List<SearchEngine> customEngines;
+
+  /// Sites pinned to the start page, in the user's order.
+  final List<Shortcut> shortcuts;
+
+  /// Show the most visited sites on the start page.
+  final bool showMostVisited;
+
+  /// Hosts the user removed from "Most visited".
+  final List<String> hiddenTopSites;
+
+  /// Count blocked trackers per site for the privacy report.
+  final bool privacyReport;
+
   static const List<int?> historyChoices = <int?>[0, 7, 30, 90, 365, null];
   static const List<int?> closeTabsChoices = <int?>[null, 1, 7, 14, 30];
   static const List<int> textZoomChoices = <int>[
@@ -309,26 +427,43 @@ class BrowserSettings {
     200,
   ];
 
-  static String historyLabel(int? days) => switch (days) {
-    0 => "Don't keep history",
-    null => 'Forever',
-    7 => '1 week',
-    30 => '1 month',
-    90 => '3 months',
-    365 => '1 year',
-    final int d => '$d days',
-  };
+  SearchEngine get engine => SearchEngine.byId(searchEngine, customEngines);
 
-  static String closeTabsLabel(int? days) => switch (days) {
-    null => 'Never',
-    1 => 'After a day',
-    7 => 'After a week',
-    14 => 'After 2 weeks',
-    30 => 'After a month',
-    final int d => 'After $d days',
-  };
+  /// Built-in engines, then the user's own.
+  List<SearchEngine> get engines => <SearchEngine>[
+    ...SearchEngine.all,
+    ...customEngines,
+  ];
 
-  SearchEngine get engine => SearchEngine.byId(searchEngine);
+  bool isPinned(String url) =>
+      shortcuts.any((Shortcut s) => _sameShortcut(s.url, url));
+
+  static bool _sameShortcut(String a, String b) {
+    String n(String u) {
+      String s = u.trim();
+      if (s.startsWith('http://')) s = 'https://${s.substring(7)}';
+      if (s.endsWith('/')) s = s.substring(0, s.length - 1);
+      return s;
+    }
+
+    return n(a) == n(b);
+  }
+
+  BrowserSettings withShortcut(String url, String title) => isPinned(url)
+      ? this
+      : copyWith(
+          shortcuts: <Shortcut>[
+            ...shortcuts,
+            Shortcut(url: url, title: title),
+          ],
+        );
+
+  BrowserSettings withoutShortcut(String url) => copyWith(
+    shortcuts: <Shortcut>[
+      for (final Shortcut s in shortcuts)
+        if (!_sameShortcut(s.url, url)) s,
+    ],
+  );
 
   /// The remembered answer for [kind] on [host], or null to ask.
   bool? permissionFor(String host, String kind) =>
@@ -365,6 +500,13 @@ class BrowserSettings {
     int? Function()? closeTabsAfterDays,
     Map<String, Map<String, bool>>? sitePermissions,
     bool? autofillTipDismissed,
+    bool? stripTracking,
+    bool? searchSuggestions,
+    List<SearchEngine>? customEngines,
+    List<Shortcut>? shortcuts,
+    bool? showMostVisited,
+    List<String>? hiddenTopSites,
+    bool? privacyReport,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -381,6 +523,13 @@ class BrowserSettings {
         : this.closeTabsAfterDays,
     sitePermissions: sitePermissions ?? this.sitePermissions,
     autofillTipDismissed: autofillTipDismissed ?? this.autofillTipDismissed,
+    stripTracking: stripTracking ?? this.stripTracking,
+    searchSuggestions: searchSuggestions ?? this.searchSuggestions,
+    customEngines: customEngines ?? this.customEngines,
+    shortcuts: shortcuts ?? this.shortcuts,
+    showMostVisited: showMostVisited ?? this.showMostVisited,
+    hiddenTopSites: hiddenTopSites ?? this.hiddenTopSites,
+    privacyReport: privacyReport ?? this.privacyReport,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -399,6 +548,17 @@ class BrowserSettings {
     'closeTabsAfterDays': closeTabsAfterDays ?? -1,
     'sitePermissions': sitePermissions,
     'autofillTipDismissed': autofillTipDismissed,
+    'stripTracking': stripTracking,
+    'searchSuggestions': searchSuggestions,
+    'customEngines': <Map<String, Object?>>[
+      for (final SearchEngine e in customEngines) e.toJson(),
+    ],
+    'shortcuts': <Map<String, Object?>>[
+      for (final Shortcut s in shortcuts) s.toJson(),
+    ],
+    'showMostVisited': showMostVisited,
+    'hiddenTopSites': hiddenTopSites,
+    'privacyReport': privacyReport,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -442,6 +602,21 @@ class BrowserSettings {
       closeTabsAfterDays: close is int && close > 0 ? close : null,
       sitePermissions: perms,
       autofillTipDismissed: j['autofillTipDismissed'] as bool? ?? false,
+      stripTracking: j['stripTracking'] as bool? ?? true,
+      searchSuggestions: j['searchSuggestions'] as bool? ?? false,
+      customEngines: <SearchEngine>[
+        for (final Object? e
+            in (j['customEngines'] as List<Object?>? ?? const <Object?>[]))
+          ?SearchEngine.fromJson(e),
+      ],
+      shortcuts: <Shortcut>[
+        for (final Object? e
+            in (j['shortcuts'] as List<Object?>? ?? const <Object?>[]))
+          ?Shortcut.fromJson(e),
+      ],
+      showMostVisited: j['showMostVisited'] as bool? ?? true,
+      hiddenTopSites: _strings(j['hiddenTopSites']),
+      privacyReport: j['privacyReport'] as bool? ?? true,
     );
   }
 }

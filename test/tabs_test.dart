@@ -1,8 +1,19 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
+
+/// Collects what the tabs count for the privacy report.
+class _Counted extends PrivacyReportRecorder {
+  _Counted(super.ref);
+
+  static final List<(String, int)> seen = <(String, int)>[];
+
+  @override
+  void add(String site, int count, {DateTime? now}) => seen.add((site, count));
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -11,6 +22,7 @@ void main() {
 
   setUp(() {
     calls = <MethodCall>[];
+    _Counted.seen.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall call) async {
           calls.add(call);
@@ -22,6 +34,7 @@ void main() {
     final ProviderContainer c = ProviderContainer(
       overrides: [
         browserEngineProvider.overrideWithValue(BrowserEngine(channel)),
+        privacyReportRecorderProvider.overrideWith(_Counted.new),
       ],
     );
     addTearDown(c.dispose);
@@ -97,7 +110,41 @@ void main() {
     expect(now.blocked, 7);
     expect(now.secure, isTrue);
     expect(now.canGoBack, isTrue);
+    expect(_Counted.seen, <(String, int)>[('a.org', 7)]);
   });
+
+  test(
+    'the privacy report counts what is new, without private sites',
+    () async {
+      final ProviderContainer c = container();
+      final TabsController tabs = c.read(tabsProvider.notifier);
+      final BrowserTab t = await tabs.open(url: 'https://a.org');
+      Future<void> blocked(String id, int n, [String? url]) =>
+          nativeEvent(<String, Object?>{
+            'tabId': id,
+            'type': 'state',
+            'blocked': n,
+            'url': ?url,
+          });
+      await blocked(t.id, 3);
+      await blocked(t.id, 3);
+      await blocked(t.id, 5);
+      // A new page starts counting from zero again.
+      await blocked(t.id, 0, 'https://www.b.org/');
+      await blocked(t.id, 2);
+      final BrowserTab p = await tabs.open(
+        url: 'https://secret.org',
+        private: true,
+      );
+      await blocked(p.id, 4);
+      expect(_Counted.seen, <(String, int)>[
+        ('a.org', 3),
+        ('a.org', 2),
+        ('b.org', 2),
+        ('', 4),
+      ]);
+    },
+  );
 
   test('a pop-up opens as a new tab of the same kind', () async {
     final ProviderContainer c = container();
