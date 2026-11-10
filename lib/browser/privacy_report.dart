@@ -237,13 +237,29 @@ class PrivacyReportRecorder {
     _timer ??= Timer(saveEvery, () => flush().ignore());
   }
 
+  /// Whether counts wait to be saved.
+  bool get hasPending => _pending.isNotEmpty;
+
+  /// Counts up on [discard] and [clear]: a save that started before
+  /// either must not write, or queue again, what it holds.
+  int _generation = 0;
+  Future<void>? _saveInFlight;
+
   /// Writes what was counted since the last save. Safe to call any time;
   /// when the vault is locked the counts wait for the next call.
   Future<void> flush() async {
     _timer?.cancel();
     _timer = null;
-    if (_pending.isEmpty || _saving) return;
+    if (_pending.isEmpty) return;
+    if (_saving) return _saveInFlight;
+    final Future<void> save = _save();
+    _saveInFlight = save;
+    return save;
+  }
+
+  Future<void> _save() async {
     _saving = true;
+    final int generation = _generation;
     final Map<String, ReportDay> adding = <String, ReportDay>{..._pending};
     _pending.clear();
     try {
@@ -252,6 +268,8 @@ class PrivacyReportRecorder {
       final PrivacyReport old =
           await PrivacyReport.collection.get(store, 'report-$deviceId') ??
           PrivacyReport(deviceId: deviceId);
+      // Cleared, or the account changed, while waiting: drop it.
+      if (generation != _generation) return;
       await PrivacyReport.collection.save(
         ref.read(ztSyncControllerProvider.notifier),
         store,
@@ -263,19 +281,33 @@ class PrivacyReportRecorder {
       );
     } on Object {
       // Not unlocked, or the store is busy: keep the counts for next time.
-      for (final MapEntry<String, ReportDay> e in adding.entries) {
-        _pending[e.key] = (_pending[e.key] ?? const ReportDay()).plus(e.value);
+      if (generation == _generation) {
+        for (final MapEntry<String, ReportDay> e in adding.entries) {
+          _pending[e.key] = (_pending[e.key] ?? const ReportDay()).plus(
+            e.value,
+          );
+        }
       }
     } finally {
       _saving = false;
+      _saveInFlight = null;
     }
+  }
+
+  /// Drops what was counted and not saved yet. For sign-out: the counts
+  /// belong to the account that left, never to the next one.
+  void discard() {
+    _generation++;
+    _timer?.cancel();
+    _timer = null;
+    _pending.clear();
   }
 
   /// Forgets the report on every device.
   Future<void> clear() async {
-    _timer?.cancel();
-    _timer = null;
-    _pending.clear();
+    discard();
+    // A save past its last check finishes first, so the delete wins.
+    await _saveInFlight;
     final LocalItemStore store = await ref.read(ztLocalStoreProvider.future);
     final SyncController sync = ref.read(ztSyncControllerProvider.notifier);
     for (final PrivacyReport r in await PrivacyReport.collection.list(store)) {

@@ -1,4 +1,10 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zero_trust_core/zero_trust_core.dart';
+import 'package:zerotrust_browser/data/browser_data.dart';
+import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 
 void main() {
@@ -105,5 +111,64 @@ void main() {
 
   test('days are named in local time, across a month end', () {
     expect(reportDay(DateTime(2026, 3, 1 - 1)), '2026-02-28');
+  });
+
+  group('recorder', () {
+    late int asked;
+    late Completer<String> deviceId;
+
+    ProviderContainer container() {
+      asked = 0;
+      deviceId = Completer<String>();
+      final ProviderContainer c = ProviderContainer(
+        overrides: [
+          browserSettingsProvider.overrideWithValue(const BrowserSettings()),
+          ztDeviceIdProvider.overrideWith((ref) {
+            asked++;
+            return deviceId.future;
+          }),
+          // No vault in this test: saving fails as it does when locked.
+          ztLocalStoreProvider.overrideWith(
+            (ref) => throw StateError('locked'),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+      return c;
+    }
+
+    test('counts wait while locked and are tried again', () async {
+      final ProviderContainer c = container();
+      final PrivacyReportRecorder r = c.read(privacyReportRecorderProvider);
+      r.add('a.example', 2, now: now);
+      deviceId.complete('d1');
+      await r.flush();
+      expect(asked, 1);
+      // Still held for the next try.
+      expect(r.hasPending, isTrue);
+      r.discard();
+    });
+
+    test('nothing is kept after sign-out', () async {
+      final ProviderContainer c = container();
+      final PrivacyReportRecorder r = c.read(privacyReportRecorderProvider);
+      r.add('a.example', 2, now: now);
+      r.discard();
+      await r.flush();
+      expect(asked, 0);
+    });
+
+    test('a save under way when the report is cleared is dropped', () async {
+      final ProviderContainer c = container();
+      final PrivacyReportRecorder r = c.read(privacyReportRecorderProvider);
+      r.add('a.example', 2, now: now);
+      final Future<void> saving = r.flush();
+      // Cleared (here: discarded) before the save got to the store.
+      r.discard();
+      deviceId.complete('d1');
+      await saving;
+      // The failed save did not put its counts back.
+      expect(r.hasPending, isFalse);
+    });
   });
 }

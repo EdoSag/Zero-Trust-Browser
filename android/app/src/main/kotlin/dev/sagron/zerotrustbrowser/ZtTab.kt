@@ -378,7 +378,9 @@ class ZtTab(
             val url = request.url.toString()
             return when (request.url.scheme?.lowercase()) {
                 "https" -> {
-                    val target = untracked(url)
+                    // A wrapper on https can hold an http address: that one
+                    // goes through HTTPS-only like any other.
+                    val target = upgrade(untracked(url))
                     applyJavaScript(target)
                     if (target == url) {
                         false
