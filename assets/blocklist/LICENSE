@@ -1,0 +1,12 @@
+domains.txt is made from EasyList and EasyPrivacy
+(https://easylist.to, https://github.com/easylist/easylist)
+by The EasyList authors.
+
+EasyList and EasyPrivacy are dual licensed under the GNU General Public
+License version 3 or later and the Creative Commons Attribution-ShareAlike
+3.0 Unported licence. ZT Browser uses them under CC BY-SA 3.0:
+https://creativecommons.org/licenses/by-sa/3.0/
+
+Changes: only the rules that block a whole host name are kept, written as
+one host per line ("<host>" or "<host> 3p" for third-party only), by
+tool/update_blocklist.py. domains.txt is shared under the same licence.
