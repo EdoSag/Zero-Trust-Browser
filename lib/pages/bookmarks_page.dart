@@ -76,6 +76,8 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('Bookmark removed'),
+        // Flutter keeps a snackbar with an action open until it is tapped.
+        persist: false,
         action: SnackBarAction(
           label: 'Undo',
           onPressed: () => data.saveBookmark(b),
