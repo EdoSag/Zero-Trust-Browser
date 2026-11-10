@@ -4,6 +4,8 @@ import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/widgets/address_text.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 /// Open tabs: normal (with groups and search), private, and those on the
@@ -38,6 +40,7 @@ class _TabsPageState extends ConsumerState<TabsPage>
   }
 
   TabsController get _controller => ref.read(tabsProvider.notifier);
+  AppL10n get l => context.l10n;
 
   void _show(String id) {
     _controller.select(id);
@@ -67,16 +70,16 @@ class _TabsPageState extends ConsumerState<TabsPage>
               ),
             ListTile(
               leading: const Icon(Icons.create_new_folder_outlined),
-              title: const Text('New group'),
+              title: Text(l.newGroup),
               onTap: () async {
-                final String? name = await _askName(sheet, 'New group', '');
+                final String? name = await _askName(sheet, l.newGroup, '');
                 if (sheet.mounted) Navigator.pop(sheet, name);
               },
             ),
             if (t.group != null)
               ListTile(
                 leading: const Icon(Icons.folder_off_outlined),
-                title: const Text('Remove from group'),
+                title: Text(l.removeFromGroup),
                 onTap: () => Navigator.pop(sheet, ''),
               ),
           ],
@@ -97,17 +100,14 @@ class _TabsPageState extends ConsumerState<TabsPage>
           controller: name,
           autofocus: true,
           textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(labelText: 'Group name'),
+          decoration: InputDecoration(labelText: l.groupName),
           onSubmitted: (String v) => Navigator.pop(d, v.trim()),
         ),
         actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(d),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(d), child: Text(l.cancel)),
           FilledButton(
             onPressed: () => Navigator.pop(d, name.text.trim()),
-            child: const Text('Save'),
+            child: Text(l.save),
           ),
         ],
       ),
@@ -124,22 +124,22 @@ class _TabsPageState extends ConsumerState<TabsPage>
           children: <Widget>[
             ListTile(
               leading: const Icon(Icons.add),
-              title: const Text('New tab in this group'),
+              title: Text(l.newTabInGroup),
               onTap: () => Navigator.pop(sheet, 'new'),
             ),
             ListTile(
               leading: const Icon(Icons.edit_outlined),
-              title: const Text('Rename group'),
+              title: Text(l.renameGroup),
               onTap: () => Navigator.pop(sheet, 'rename'),
             ),
             ListTile(
               leading: const Icon(Icons.folder_off_outlined),
-              title: const Text('Ungroup tabs'),
+              title: Text(l.ungroupTabs),
               onTap: () => Navigator.pop(sheet, 'ungroup'),
             ),
             ListTile(
               leading: const Icon(Icons.close),
-              title: Text('Close ${tabs.length} tabs'),
+              title: Text(l.closeNTabs(tabs.length)),
               onTap: () => Navigator.pop(sheet, 'close'),
             ),
           ],
@@ -151,7 +151,7 @@ class _TabsPageState extends ConsumerState<TabsPage>
         await _new(private: false, group: group);
       case 'rename':
         if (!mounted) return;
-        final String? name = await _askName(context, 'Rename group', group);
+        final String? name = await _askName(context, l.renameGroup, group);
         if (name == null || name.isEmpty) return;
         for (final BrowserTab t in tabs) {
           _controller.setGroup(t.id, name);
@@ -178,16 +178,16 @@ class _TabsPageState extends ConsumerState<TabsPage>
             ? TextField(
                 controller: _search,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Search tabs',
+                decoration: InputDecoration(
+                  hintText: l.searchTabs,
                   border: InputBorder.none,
                 ),
                 onChanged: (_) => setState(() {}),
               )
-            : const Text('Tabs'),
+            : Text(l.tabs),
         actions: <Widget>[
           IconButton(
-            tooltip: _searching ? 'Stop searching' : 'Search tabs',
+            tooltip: _searching ? l.stopSearching : l.searchTabs,
             icon: Icon(_searching ? Icons.close : Icons.search),
             onPressed: () => setState(() {
               _searching = !_searching;
@@ -200,8 +200,8 @@ class _TabsPageState extends ConsumerState<TabsPage>
                 ? const SizedBox.shrink()
                 : IconButton(
                     tooltip: _tabs.index == 1
-                        ? 'Close all private tabs'
-                        : 'Close all tabs',
+                        ? l.closeAllPrivateTabs
+                        : l.closeAllTabs,
                     icon: const Icon(Icons.clear_all),
                     onPressed: () =>
                         _controller.closeAll(private: _tabs.index == 1),
@@ -211,9 +211,9 @@ class _TabsPageState extends ConsumerState<TabsPage>
         bottom: TabBar(
           controller: _tabs,
           tabs: <Widget>[
-            Tab(text: 'Tabs (${state.normal.length})'),
-            Tab(text: 'Private (${state.private.length})'),
-            const Tab(text: 'Other devices'),
+            Tab(text: l.tabsCount(state.normal.length)),
+            Tab(text: l.privateCount(state.private.length)),
+            Tab(text: l.otherDevices),
           ],
         ),
       ),
@@ -224,19 +224,14 @@ class _TabsPageState extends ConsumerState<TabsPage>
             : FloatingActionButton.extended(
                 onPressed: () => _new(private: _tabs.index == 1),
                 icon: const Icon(Icons.add),
-                label: Text(_tabs.index == 1 ? 'Private tab' : 'New tab'),
+                label: Text(_tabs.index == 1 ? l.privateTab : l.newTab),
               ),
       ),
       body: TabBarView(
         controller: _tabs,
         children: <Widget>[
-          _list(state.normal, state.currentId, 'No open tabs', groups: true),
-          _list(
-            state.private,
-            state.currentId,
-            'Private tabs keep no history, and their cookies are deleted '
-            'when the last one closes or the app locks.',
-          ),
+          _list(state.normal, state.currentId, l.noOpenTabs, groups: true),
+          _list(state.private, state.currentId, l.privateTabsExplain),
           _otherDevices(others),
         ],
       ),
@@ -264,7 +259,7 @@ class _TabsPageState extends ConsumerState<TabsPage>
         child: Padding(
           padding: const EdgeInsets.all(32),
           child: Text(
-            all.isEmpty ? empty : 'No tabs match.',
+            all.isEmpty ? empty : l.noTabsMatch,
             textAlign: TextAlign.center,
           ),
         ),
@@ -295,7 +290,7 @@ class _TabsPageState extends ConsumerState<TabsPage>
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 16, 8, 4),
             child: Text(
-              'Not in a group',
+              l.notInGroup,
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
@@ -321,12 +316,12 @@ class _TabsPageState extends ConsumerState<TabsPage>
       contentPadding: const EdgeInsets.symmetric(horizontal: 8),
       leading: Icon(folded ? Icons.folder_outlined : Icons.folder_open),
       title: Text(group, style: Theme.of(context).textTheme.titleSmall),
-      subtitle: Text('${tabs.length} tab${tabs.length == 1 ? '' : 's'}'),
+      subtitle: Text(l.nTabs(tabs.length)),
       onTap: () => setState(() {
         if (!_folded.remove(group)) _folded.add(group);
       }),
       trailing: IconButton(
-        tooltip: 'Group options',
+        tooltip: l.groupOptions,
         icon: const Icon(Icons.more_vert),
         onPressed: () => _groupMenu(group, tabs),
       ),
@@ -343,19 +338,13 @@ class _TabsPageState extends ConsumerState<TabsPage>
         child: ListTile(
           leading: SiteIcon(url: t.url, favicon: t.favicon),
           title: Text(
-            t.isStartPage ? 'New tab' : t.label,
+            t.isStartPage ? l.newTab : t.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          subtitle: t.isStartPage
-              ? null
-              : Text(
-                  displayAddress(t.url),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+          subtitle: t.isStartPage ? null : AddressText(displayAddress(t.url)),
           trailing: IconButton(
-            tooltip: 'Close tab',
+            tooltip: l.closeTab,
             icon: const Icon(Icons.close),
             onPressed: () => _controller.close(t.id),
           ),
@@ -368,14 +357,10 @@ class _TabsPageState extends ConsumerState<TabsPage>
 
   Widget _otherDevices(List<DeviceTabs> others) {
     if (others.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Text(
-            'Tabs open in ZT Browser on your other devices show here, '
-            'end-to-end encrypted. Private tabs are never shared.',
-            textAlign: TextAlign.center,
-          ),
+          padding: const EdgeInsets.all(32),
+          child: Text(l.otherDevicesEmpty, textAlign: TextAlign.center),
         ),
       );
     }
@@ -402,11 +387,7 @@ class _TabsPageState extends ConsumerState<TabsPage>
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  displayAddress(t.url),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                subtitle: AddressText(displayAddress(t.url)),
                 onTap: () async {
                   await _controller.open(url: t.url);
                   if (mounted) Navigator.of(context).pop();

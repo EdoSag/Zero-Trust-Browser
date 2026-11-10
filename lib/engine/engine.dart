@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zerotrust_browser/browser/clean_url.dart';
 
 /// Something a tab's page did: new state, a favicon, a link to open...
 class TabEvent {
@@ -128,7 +129,15 @@ class BrowserEngine {
     bool hideElements = true,
     bool fingerprinting = true,
     List<String> javascriptOff = const <String>[],
+    bool stripTracking = true,
   }) => _call<void>('setPrivacy', <String, Object?>{
+    'stripTracking': stripTracking,
+    // The rules for links tapped on a page: one list, kept in Dart.
+    'trackingParams': trackingParams.toList(),
+    'trackingPrefixes': trackingPrefixes,
+    'redirectWrappers': <Map<String, String>>[
+      for (final RedirectWrapper w in redirectWrappers) w.toJson(),
+    ],
     'blockTrackers': blockTrackers,
     'httpsOnly': httpsOnly,
     'allowedSites': allowedSites,
@@ -225,14 +234,16 @@ class BrowserEngine {
   Future<Uint8List?> pickFile(List<String> mimeTypes) =>
       _call<Uint8List>('pickFile', <String, Object?>{'mimeTypes': mimeTypes});
 
-  /// Text from a scanned QR code, or null.
-  Future<String?> scanQr() => _call<String>('scanQr');
+  /// Text from a scanned QR code, or null. [prompt] shows under the camera.
+  Future<String?> scanQr({String? prompt}) =>
+      _call<String>('scanQr', <String, Object?>{'prompt': prompt});
 
   Future<bool> voiceAvailable() async =>
       await _call<bool>('voiceAvailable') ?? false;
 
   /// What the user said, through the phone's voice input, or null.
-  Future<String?> voiceSearch() => _call<String>('voiceSearch');
+  Future<String?> voiceSearch({String? prompt}) =>
+      _call<String>('voiceSearch', <String, Object?>{'prompt': prompt});
 
   /// supported, enabled, service (the password manager's name or null).
   Future<Map<Object?, Object?>> autofillStatus() async =>

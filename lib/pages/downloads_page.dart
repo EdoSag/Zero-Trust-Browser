@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
 
 /// One file in the Downloads list.
 class DownloadItem {
@@ -18,7 +19,7 @@ class DownloadItem {
 
   factory DownloadItem.fromMap(Map<Object?, Object?> m) => DownloadItem(
     key: m['key'] as String? ?? '',
-    name: m['name'] as String? ?? 'File',
+    name: m['name'] as String? ?? '',
     mime: m['mime'] as String? ?? '',
     time: DateTime.fromMillisecondsSinceEpoch(
       (m['time'] as num?)?.toInt() ?? 0,
@@ -41,16 +42,6 @@ class DownloadItem {
   bool get running => status == 'running' || status == 'paused';
 }
 
-/// Human file size: 1.2 MB, 340 KB, 12 bytes.
-String fileSize(int bytes) {
-  if (bytes < 1000) return '$bytes bytes';
-  if (bytes < 1000 * 1000) return '${(bytes / 1000).toStringAsFixed(0)} KB';
-  if (bytes < 1000 * 1000 * 1000) {
-    return '${(bytes / 1000 / 1000).toStringAsFixed(1)} MB';
-  }
-  return '${(bytes / 1000 / 1000 / 1000).toStringAsFixed(1)} GB';
-}
-
 /// Files downloaded in ZT Browser: open, share or delete them.
 class DownloadsPage extends ConsumerStatefulWidget {
   const DownloadsPage({super.key});
@@ -63,6 +54,9 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   late final BrowserEngine _engine = ref.read(browserEngineProvider);
   List<DownloadItem>? _items;
   Timer? _poll;
+  AppL10n get l => context.l10n;
+
+  String _name(DownloadItem d) => d.name.isEmpty ? l.fileFallbackName : d.name;
 
   @override
   void initState() {
@@ -97,7 +91,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   Future<void> _open(DownloadItem d) async {
     if (d.status != 'done') return;
     if (!await _engine.openDownload(d.key)) {
-      _snack('No app on this phone opens this kind of file');
+      _snack(l.noAppOpens);
     }
   }
 
@@ -106,20 +100,20 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
         await showDialog<bool>(
           context: context,
           builder: (BuildContext c) => AlertDialog(
-            title: Text(d.running ? 'Cancel download?' : 'Delete file?'),
+            title: Text(d.running ? l.cancelDownloadTitle : l.deleteFileTitle),
             content: Text(
               d.running
-                  ? '${d.name} stops downloading.'
-                  : '${d.name} is deleted from this phone.',
+                  ? l.stopsDownloading(_name(d))
+                  : l.deletedFromPhone(_name(d)),
             ),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.pop(c, false),
-                child: const Text('Keep'),
+                child: Text(l.keep),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(c, true),
-                child: Text(d.running ? 'Cancel download' : 'Delete'),
+                child: Text(d.running ? l.cancelDownload : l.delete),
               ),
             ],
           ),
@@ -134,18 +128,14 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   Widget build(BuildContext context) {
     final List<DownloadItem>? items = _items;
     return Scaffold(
-      appBar: AppBar(title: const Text('Downloads')),
+      appBar: AppBar(title: Text(l.downloads)),
       body: items == null
           ? const Center(child: CircularProgressIndicator())
           : items.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Files you download show here. They are saved in your '
-                  "phone's Downloads folder.",
-                  textAlign: TextAlign.center,
-                ),
+                padding: const EdgeInsets.all(32),
+                child: Text(l.downloadsEmpty, textAlign: TextAlign.center),
               ),
             )
           : RefreshIndicator(
@@ -161,16 +151,18 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
 
   Widget _tile(DownloadItem d) {
     final String detail = switch (d.status) {
-      'running' when d.total > 0 =>
-        '${fileSize(d.bytes)} of ${fileSize(d.total)}',
-      'running' => 'Downloading…',
-      'paused' => 'Waiting for a connection',
-      'failed' => "Couldn't download",
-      _ => fileSize(d.bytes),
+      'running' when d.total > 0 => l.progressOf(
+        l.fileSize(d.bytes),
+        l.fileSize(d.total),
+      ),
+      'running' => l.downloadingEllipsis,
+      'paused' => l.waitingConnection,
+      'failed' => l.couldntDownload,
+      _ => l.fileSize(d.bytes),
     };
     return ListTile(
       leading: Icon(_icon(d)),
-      title: Text(d.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+      title: Text(_name(d), maxLines: 2, overflow: TextOverflow.ellipsis),
       subtitle: d.running && d.total > 0
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,14 +175,14 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
           : Text(detail),
       onTap: () => _open(d),
       trailing: PopupMenuButton<String>(
-        tooltip: 'More',
+        tooltip: l.more,
         onSelected: (String v) async {
           switch (v) {
             case 'open':
               await _open(d);
             case 'share':
               if (!await _engine.shareDownload(d.key)) {
-                _snack("This file can't be shared");
+                _snack(l.cantShare);
               }
             case 'delete':
               await _delete(d);
@@ -198,12 +190,12 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
         },
         itemBuilder: (_) => <PopupMenuEntry<String>>[
           if (d.status == 'done')
-            const PopupMenuItem<String>(value: 'open', child: Text('Open')),
+            PopupMenuItem<String>(value: 'open', child: Text(l.open)),
           if (d.status == 'done')
-            const PopupMenuItem<String>(value: 'share', child: Text('Share')),
+            PopupMenuItem<String>(value: 'share', child: Text(l.share)),
           PopupMenuItem<String>(
             value: 'delete',
-            child: Text(d.running ? 'Cancel download' : 'Delete'),
+            child: Text(d.running ? l.cancelDownload : l.delete),
           ),
         ],
       ),

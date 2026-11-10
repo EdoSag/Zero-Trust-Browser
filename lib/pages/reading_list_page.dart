@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/widgets/address_text.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 /// Opens a reading list item: the live page, or its saved copy.
@@ -17,25 +19,20 @@ class ReadingListPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppL10n l = context.l10n;
     final AsyncValue<List<ReadingItem>> items = ref.watch(readingListProvider);
     final BrowserData data = ref.read(browserDataProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Reading list')),
+      appBar: AppBar(title: Text(l.readingList)),
       body: items.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (Object e, _) =>
-            const Center(child: Text("The reading list couldn't load.")),
+        error: (Object e, _) => Center(child: Text(l.readingListError)),
         data: (List<ReadingItem> list) {
           if (list.isEmpty) {
-            return const Center(
+            return Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'Save pages from the menu with "Add to reading list". '
-                  'Articles are kept to read offline, end-to-end encrypted '
-                  'in your account.',
-                  textAlign: TextAlign.center,
-                ),
+                padding: const EdgeInsets.all(32),
+                child: Text(l.readingListEmpty, textAlign: TextAlign.center),
               ),
             );
           }
@@ -62,20 +59,19 @@ class ReadingListPage extends ConsumerWidget {
                             )
                           : const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: Text(
-                      <String>[
-                        displayAddress(r.url),
-                        if (r.saved != null) 'Saved offline',
-                      ].join(' · '),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        AddressText(displayAddress(r.url)),
+                        if (r.saved != null) Text(l.savedOffline),
+                      ],
                     ),
                     onTap: () {
                       data.setRead(r, true).ignore();
                       onOpen(r, saved: false);
                     },
                     trailing: PopupMenuButton<String>(
-                      tooltip: 'More',
+                      tooltip: l.more,
                       onSelected: (String v) {
                         switch (v) {
                           case 'saved':
@@ -89,17 +85,17 @@ class ReadingListPage extends ConsumerWidget {
                       },
                       itemBuilder: (_) => <PopupMenuEntry<String>>[
                         if (r.saved != null)
-                          const PopupMenuItem<String>(
+                          PopupMenuItem<String>(
                             value: 'saved',
-                            child: Text('Open saved copy'),
+                            child: Text(l.openSavedCopy),
                           ),
                         PopupMenuItem<String>(
                           value: 'read',
-                          child: Text(r.read ? 'Mark unread' : 'Mark read'),
+                          child: Text(r.read ? l.markUnread : l.markRead),
                         ),
-                        const PopupMenuItem<String>(
+                        PopupMenuItem<String>(
                           value: 'remove',
-                          child: Text('Remove'),
+                          child: Text(l.remove),
                         ),
                       ],
                     ),

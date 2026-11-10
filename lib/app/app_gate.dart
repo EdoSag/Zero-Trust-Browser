@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/app/auth_providers.dart';
+import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/pages/browser_home.dart';
@@ -87,6 +88,8 @@ class _AppGateState extends ConsumerState<AppGate> with WidgetsBindingObserver {
         // The next account on this phone starts with a clean browser.
         ref.read(tabsProvider.notifier).closeEverything().ignore();
         ref.read(browserEngineProvider).clearBrowsingData().ignore();
+        // Counts not saved yet belong to the account that just left.
+        ref.read(privacyReportRecorderProvider).discard();
         setState(() => _signingIn = true);
       }
     });

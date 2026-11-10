@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
 
 /// Lets the user change a remembered camera, microphone or location answer:
 /// allow, block, or ask again next time.
@@ -11,22 +12,23 @@ Future<void> editSitePermission(
   String host,
   String kind,
 ) async {
+  final AppL10n l = context.l10n;
   final BrowserSettings s = ref.read(browserSettingsProvider);
   const String ask = 'ask';
   final bool? now = s.permissionFor(host, kind);
   final String? picked = await showDialog<String>(
     context: context,
     builder: (BuildContext d) => SimpleDialog(
-      title: Text('${SitePermission.label(kind)} on $host'),
+      title: Text(l.permOnHost(l.permissionLabel(kind), host)),
       children: <Widget>[
         RadioGroup<String>(
           groupValue: now == null ? ask : (now ? 'allow' : 'block'),
           onChanged: (String? v) => Navigator.of(d).pop(v),
-          child: const Column(
+          child: Column(
             children: <Widget>[
-              RadioListTile<String>(value: 'allow', title: Text('Allow')),
-              RadioListTile<String>(value: 'block', title: Text('Block')),
-              RadioListTile<String>(value: ask, title: Text('Ask next time')),
+              RadioListTile<String>(value: 'allow', title: Text(l.allow)),
+              RadioListTile<String>(value: 'block', title: Text(l.block)),
+              RadioListTile<String>(value: ask, title: Text(l.askNextTime)),
             ],
           ),
         ),
@@ -52,20 +54,16 @@ class SitePermissionsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppL10n l = context.l10n;
     final BrowserSettings s = ref.watch(browserSettingsProvider);
     final List<String> hosts = s.sitePermissions.keys.toList()..sort();
     return Scaffold(
-      appBar: AppBar(title: const Text('Site permissions')),
+      appBar: AppBar(title: Text(l.sitePermissions)),
       body: hosts.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Text(
-                  'When a site asks for your camera, microphone or location, '
-                  'ZT Browser asks you first. Answers you choose to remember '
-                  'show here.',
-                  textAlign: TextAlign.center,
-                ),
+                padding: const EdgeInsets.all(32),
+                child: Text(l.sitePermsEmpty, textAlign: TextAlign.center),
               ),
             )
           : ListView(
@@ -84,8 +82,9 @@ class SitePermissionsPage extends ConsumerWidget {
                               size: 18,
                             ),
                             label: Text(
-                              '${SitePermission.label(p.key)}: '
-                              '${p.value ? 'allowed' : 'blocked'}',
+                              p.value
+                                  ? l.permAllowedChip(l.permissionLabel(p.key))
+                                  : l.permBlockedChip(l.permissionLabel(p.key)),
                             ),
                             onPressed: () =>
                                 editSitePermission(context, ref, host, p.key),
@@ -93,7 +92,7 @@ class SitePermissionsPage extends ConsumerWidget {
                       ],
                     ),
                     trailing: IconButton(
-                      tooltip: 'Forget',
+                      tooltip: l.forget,
                       icon: const Icon(Icons.delete_outline),
                       onPressed: () {
                         BrowserSettings next = s;

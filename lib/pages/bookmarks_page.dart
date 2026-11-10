@@ -8,6 +8,8 @@ import 'package:zerotrust_browser/browser/bookmark_import.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/widgets/address_text.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 typedef OpenUrl = void Function(String url, {bool newTab, bool private});
@@ -24,6 +26,7 @@ class BookmarksPage extends ConsumerStatefulWidget {
 
 class _BookmarksPageState extends ConsumerState<BookmarksPage> {
   String _query = '';
+  AppL10n get l => context.l10n;
 
   Future<void> _edit(Bookmark b) async {
     final TextEditingController title = TextEditingController(text: b.title);
@@ -31,29 +34,30 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     final bool? save = await showDialog<bool>(
       context: context,
       builder: (BuildContext d) => AlertDialog(
-        title: const Text('Edit bookmark'),
+        title: Text(l.editBookmark),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             TextField(
               controller: title,
-              decoration: const InputDecoration(labelText: 'Name'),
+              decoration: InputDecoration(labelText: l.name),
             ),
             TextField(
               controller: url,
               keyboardType: TextInputType.url,
-              decoration: const InputDecoration(labelText: 'Address'),
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(labelText: l.address),
             ),
           ],
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(d, false),
-            child: const Text('Cancel'),
+            child: Text(l.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(d, true),
-            child: const Text('Save'),
+            child: Text(l.save),
           ),
         ],
       ),
@@ -75,11 +79,11 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Bookmark removed'),
+        content: Text(l.bookmarkRemoved),
         // Flutter keeps a snackbar with an action open until it is tapped.
         persist: false,
         action: SnackBarAction(
-          label: 'Undo',
+          label: l.undo,
           onPressed: () => data.saveBookmark(b),
         ),
       ),
@@ -89,29 +93,21 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
   /// Bookmarks exported from Chrome, Firefox, Edge or Safari (an .html
   /// file), added to the account; ones already saved are skipped.
   Future<void> _import() async {
+    final AppL10n l = this.l;
     final bool go =
         await showDialog<bool>(
           context: context,
           builder: (BuildContext d) => AlertDialog(
-            title: const Text('Import bookmarks'),
-            content: const Text(
-              'Pick the bookmarks file you exported from your other '
-              'browser:\n\n'
-              '• Chrome or Edge: Bookmarks > Bookmark manager > ⋮ > Export '
-              'bookmarks (on a computer).\n'
-              '• Firefox: Bookmarks > Manage bookmarks > Import and Backup > '
-              'Export bookmarks to HTML.\n\n'
-              'The file stays on this phone; the bookmarks are end-to-end '
-              'encrypted in your account.',
-            ),
+            title: Text(l.importBookmarks),
+            content: SingleChildScrollView(child: Text(l.importExplain)),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.pop(d, false),
-                child: const Text('Cancel'),
+                child: Text(l.cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(d, true),
-                child: const Text('Pick file'),
+                child: Text(l.pickFile),
               ),
             ],
           ),
@@ -127,9 +123,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     );
     final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
     if (found.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('No bookmarks found in that file')),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(l.noBookmarksInFile)));
       return;
     }
     final int added = await ref
@@ -138,9 +132,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
     messenger.showSnackBar(
       SnackBar(
         content: Text(
-          added == 0
-              ? 'All ${found.length} bookmarks were already saved'
-              : 'Imported $added bookmark${added == 1 ? '' : 's'}',
+          added == 0 ? l.allAlreadySaved(found.length) : l.importedCount(added),
         ),
       ),
     );
@@ -161,10 +153,10 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
         .toList();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bookmarks'),
+        title: Text(l.bookmarks),
         actions: <Widget>[
           IconButton(
-            tooltip: 'Import bookmarks',
+            tooltip: l.importBookmarks,
             icon: const Icon(Icons.file_upload_outlined),
             onPressed: _import,
           ),
@@ -175,7 +167,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: SearchBar(
-              hintText: 'Search bookmarks',
+              hintText: l.searchBookmarks,
               leading: const Icon(Icons.search),
               elevation: const WidgetStatePropertyAll<double>(0),
               onChanged: (String v) => setState(() => _query = v),
@@ -189,11 +181,7 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(32),
                       child: Text(
-                        q.isEmpty
-                            ? 'No bookmarks yet. Tap the star in the menu to '
-                                  'save a page. Bookmarks are end-to-end '
-                                  'encrypted and on all your devices.'
-                            : 'No bookmarks match.',
+                        q.isEmpty ? l.noBookmarksYet : l.noBookmarksMatch,
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -206,8 +194,8 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                         key: ValueKey<String>(b.id),
                         direction: DismissDirection.endToStart,
                         background: Container(
-                          alignment: Alignment.centerRight,
-                          padding: const EdgeInsets.only(right: 24),
+                          alignment: AlignmentDirectional.centerEnd,
+                          padding: const EdgeInsetsDirectional.only(end: 24),
                           color: Theme.of(context).colorScheme.errorContainer,
                           child: const Icon(Icons.delete_outline),
                         ),
@@ -219,13 +207,13 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          subtitle: Text(
-                            b.folder == null
-                                ? displayAddress(b.url)
-                                : '${b.folder} · ${displayAddress(b.url)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          subtitle: b.folder == null
+                              ? AddressText(displayAddress(b.url))
+                              : Text(
+                                  '${b.folder} · ${displayAddress(b.url)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                           onTap: () => widget.onOpen(b.url),
                           trailing: PopupMenuButton<String>(
                             onSelected: (String v) => switch (v) {
@@ -234,22 +222,22 @@ class _BookmarksPageState extends ConsumerState<BookmarksPage> {
                               'edit' => _edit(b),
                               _ => _remove(b),
                             },
-                            itemBuilder: (_) => const <PopupMenuEntry<String>>[
+                            itemBuilder: (_) => <PopupMenuEntry<String>>[
                               PopupMenuItem<String>(
                                 value: 'tab',
-                                child: Text('Open in new tab'),
+                                child: Text(l.openInNewTab),
                               ),
                               PopupMenuItem<String>(
                                 value: 'private',
-                                child: Text('Open in private tab'),
+                                child: Text(l.openInPrivateTab),
                               ),
                               PopupMenuItem<String>(
                                 value: 'edit',
-                                child: Text('Edit'),
+                                child: Text(l.edit),
                               ),
                               PopupMenuItem<String>(
                                 value: 'delete',
-                                child: Text('Delete'),
+                                child: Text(l.delete),
                               ),
                             ],
                           ),
