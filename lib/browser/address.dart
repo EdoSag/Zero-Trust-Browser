@@ -24,16 +24,31 @@ final RegExp _host = RegExp(
   caseSensitive: false,
 );
 
+/// Whether [input] would open as an address rather than be searched for.
+bool looksLikeAddress(String input) {
+  final String text = input.trim();
+  final String lower = text.toLowerCase();
+  if (lower.startsWith('http://') ||
+      lower.startsWith('https://') ||
+      lower.startsWith('about:')) {
+    return true;
+  }
+  return !text.contains(' ') && _looksLikeHost(text);
+}
+
 bool _looksLikeHost(String s) =>
     s.startsWith('localhost') || _ipv4.hasMatch(s) || _host.hasMatch(s);
 
 /// The address shown in the bar when not editing: host and path, without
 /// `https://` and `www.`. Search result pages show the search words.
-String displayAddress(String? url) {
+String displayAddress(
+  String? url, [
+  List<SearchEngine> engines = SearchEngine.all,
+]) {
   if (url == null || url.isEmpty) return '';
   final Uri? u = Uri.tryParse(url);
   if (u == null || u.host.isEmpty) return url;
-  for (final SearchEngine e in SearchEngine.all) {
+  for (final SearchEngine e in engines) {
     final Uri t = Uri.parse(e.template);
     if (u.host == t.host && u.path == t.path) {
       final String? q = u.queryParameters['q'];
@@ -50,4 +65,18 @@ String displayAddress(String? url) {
 String hostOf(String? url) {
   final String h = Uri.tryParse(url ?? '')?.host ?? '';
   return h.startsWith('www.') ? h.substring(4) : h;
+}
+
+/// [input] as a web address (`https://` added when missing), or null when
+/// it isn't one. For addresses typed into a form, never searched for.
+String? webAddress(String input) {
+  final String text = input.trim();
+  if (text.isEmpty || text.contains(' ')) return null;
+  final String lower = text.toLowerCase();
+  final String url = lower.startsWith('http://') || lower.startsWith('https://')
+      ? text
+      : 'https://$text';
+  final Uri? u = Uri.tryParse(url);
+  if (u == null || u.host.isEmpty || !_looksLikeHost(u.host)) return null;
+  return url;
 }

@@ -6,6 +6,7 @@ import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/site_permissions_page.dart';
 
 /// The shield in the address bar: is the connection secure, how much was
@@ -25,6 +26,7 @@ Future<void> showSiteSheet(
     isScrollControlled: true,
     builder: (BuildContext sheet) => Consumer(
       builder: (BuildContext context, WidgetRef ref, _) {
+        final AppL10n l = context.l10n;
         final BrowserSettings s = ref.watch(browserSettingsProvider);
         final BrowserTab live =
             ref.watch(tabsProvider.select((TabsState t) => t.current)) ?? tab;
@@ -48,35 +50,24 @@ Future<void> showSiteSheet(
                         : Icons.no_encryption_gmailerrorred_outlined,
                   ),
                   title: Text(
-                    live.secure
-                        ? 'Connection is secure'
-                        : 'Connection is not secure',
+                    live.secure ? l.connectionSecure : l.connectionNotSecure,
                   ),
                   subtitle: Text(
                     live.secure
-                        ? 'What you send and see on this site is encrypted on the way.'
-                        : 'Others on your network can see and change this page. '
-                              "Don't enter passwords or card numbers here.",
+                        ? l.connectionSecureSub
+                        : l.connectionNotSecureSub,
                   ),
                 ),
                 ListTile(
                   leading: const Icon(Icons.shield_outlined),
-                  title: Text(
-                    live.blocked == 1
-                        ? '1 tracker or ad blocked'
-                        : '${live.blocked} trackers and ads blocked',
-                  ),
-                  subtitle: const Text(
-                    'On this page, from EasyList and EasyPrivacy.',
-                  ),
+                  title: Text(l.blockedOnPage(live.blocked)),
+                  subtitle: Text(l.blockedOnPageSub),
                 ),
                 if (s.blockTrackers)
                   SwitchListTile(
                     secondary: const Icon(Icons.verified_user_outlined),
-                    title: Text('Protection on $site'),
-                    subtitle: const Text(
-                      'Turn off only if the site doesn\'t work. It reloads.',
-                    ),
+                    title: Text(l.protectionOn(site)),
+                    subtitle: Text(l.protectionSub),
                     value: protectedHere,
                     onChanged: (bool on) async {
                       final List<String> allowed = <String>[
@@ -92,18 +83,15 @@ Future<void> showSiteSheet(
                     },
                   )
                 else
-                  const ListTile(
-                    leading: Icon(Icons.info_outline),
-                    title: Text('Tracker blocking is off'),
-                    subtitle: Text('Turn it on in Settings.'),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline),
+                    title: Text(l.trackerBlockingOff),
+                    subtitle: Text(l.turnOnInSettings),
                   ),
                 SwitchListTile(
                   secondary: const Icon(Icons.code),
-                  title: Text('JavaScript on $site'),
-                  subtitle: const Text(
-                    'Off makes many sites simpler and harder to track you on, '
-                    'but some stop working. It reloads.',
-                  ),
+                  title: Text(l.javascriptOn(site)),
+                  subtitle: Text(l.javascriptSub),
                   value: !s.javascriptOff.contains(site),
                   onChanged: (bool on) async {
                     final BrowserSettings next = s.copyWith(
@@ -127,8 +115,8 @@ Future<void> showSiteSheet(
                       SitePermission.microphone => Icons.mic_none,
                       _ => Icons.location_on_outlined,
                     }),
-                    title: Text(SitePermission.label(p.key)),
-                    subtitle: Text(p.value ? 'Allowed' : 'Blocked'),
+                    title: Text(l.permissionLabel(p.key)),
+                    subtitle: Text(p.value ? l.allowed : l.blocked),
                     onTap: () => editSitePermission(context, ref, host, p.key),
                   ),
                 const SizedBox(height: 8),

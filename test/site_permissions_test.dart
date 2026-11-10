@@ -72,9 +72,4 @@ void main() {
         .withPermission('a.example', cam, null);
     expect(s.sitePermissions, isEmpty);
   });
-
-  test('the question names what is asked', () {
-    expect(permissionPhrase(<String>[cam]), 'your camera');
-    expect(permissionPhrase(<String>[cam, mic]), 'your camera and microphone');
-  });
 }

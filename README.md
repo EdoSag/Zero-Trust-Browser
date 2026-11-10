@@ -15,6 +15,13 @@ it is **ZT Browser**.
 - **Per-site JavaScript switch** and **per-site camera / microphone /
   location**: sites ask, you answer once (remembered and synced) or only
   this time; private tabs always ask.
+- **Links without tracking tags**: `utm_…`, `fbclid`, `gclid` and some 70
+  others are removed from links you open, copy or share; redirect pages
+  that only report the click (`google.com/url?q=…`, `l.facebook.com`…) and
+  Google AMP copies are skipped, so the real page opens directly.
+- **Privacy report**: trackers and ads blocked this week, per day and per
+  site, over all your devices. Kept like history (end-to-end encrypted);
+  private tabs add to the total without the site's name.
 - **HTTPS-only**: sites open over an encrypted connection; a site that only
   works without one asks first.
 - **Private tabs** with their own cookies, storage and cache (a separate
@@ -41,6 +48,12 @@ it is **ZT Browser**.
 - Always on: third-party cookies blocked, Global Privacy Control sent,
   pop-ups only after a tap (they open as tabs), web engine usage
   statistics off.
+- **Start page shortcuts**: pin sites, reorder them, and a "Most visited"
+  row from your history.
+- **Search suggestions** (off until you turn them on; addresses and
+  private tabs are never sent) and **your own search engines**.
+- **English and Hebrew**, with a right-to-left layout. The sign-in and
+  unlock screens come from Zero-Trust-Core and are English for now.
 - Can be the default browser; "Share to" and "Search in ZT Browser" for
   selected text.
 
@@ -66,6 +79,17 @@ settings and look as every Zero-Trust app.
 Requires Android 10 (API 29). Private tabs need Android System WebView with
 multi-profile support (version 123 or newer); on older WebView versions they
 still keep no history and no cache, but share cookies with normal tabs.
+
+## Texts and languages
+
+Every text the app shows is in `tool/l10n_strings.py`, in English and
+Hebrew. After changing it:
+
+```
+python3 tool/l10n_strings.py && flutter gen-l10n
+```
+
+`test/l10n_test.dart` fails when a text has no Hebrew translation.
 
 ## Updating the blocklists
 

@@ -44,7 +44,12 @@ const HtmlEscape _attr = HtmlEscape(HtmlEscapeMode.attribute);
 /// The reader view page: the article in a calm, readable layout that
 /// follows the phone's light or dark mode. Scripts are blocked by its
 /// content security policy, so only text, pictures and links remain.
-String readerHtml(Article a, {required String url, bool saved = false}) {
+String readerHtml(
+  Article a, {
+  required String url,
+  bool saved = false,
+  String savedLabel = 'Saved copy',
+}) {
   final String lang = _safeAttr(a.lang, 'en');
   final String dir = a.dir == 'rtl' ? 'rtl' : 'auto';
   final String host = Uri.tryParse(url)?.host ?? '';
@@ -78,7 +83,7 @@ blockquote { margin: 1rem 0; padding-left: 1rem; border-left: 3px solid var(--mu
 </style>
 </head>
 <body>
-${saved ? '<div class="saved">Saved copy</div>' : ''}
+${saved ? '<div class="saved" dir="auto">${_escape.convert(savedLabel)}</div>' : ''}
 <h1 dir="auto">${_escape.convert(a.title)}</h1>
 <div class="meta" dir="auto">${_escape.convert(meta.join(' · '))}${meta.isEmpty ? '' : ' · '}<a href="${_attr.convert(url)}">${_escape.convert(host)}</a></div>
 <article dir="auto">

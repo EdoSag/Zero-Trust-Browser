@@ -4,6 +4,8 @@ import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/pages/bookmarks_page.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/widgets/address_text.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
 /// History, newest first, grouped by day. End-to-end encrypted and synced.
@@ -19,27 +21,34 @@ class HistoryPage extends ConsumerStatefulWidget {
 class _HistoryPageState extends ConsumerState<HistoryPage> {
   String _query = '';
 
-  static String dayLabel(DateTime d, DateTime now, MaterialLocalizations l) {
+  AppL10n get l => context.l10n;
+
+  static String dayLabel(
+    DateTime d,
+    DateTime now,
+    MaterialLocalizations m,
+    AppL10n l,
+  ) {
     final DateTime day = DateTime(d.year, d.month, d.day);
     final DateTime today = DateTime(now.year, now.month, now.day);
     final int ago = today.difference(day).inDays;
-    if (ago == 0) return 'Today';
-    if (ago == 1) return 'Yesterday';
-    if (ago < 7) return '$ago days ago';
-    return l.formatMediumDate(d);
+    if (ago == 0) return l.today;
+    if (ago == 1) return l.yesterday;
+    if (ago < 7) return l.daysAgo(ago);
+    return m.formatMediumDate(d);
   }
 
   Future<void> _clear() async {
     final Duration? range = await showDialog<Duration?>(
       context: context,
       builder: (BuildContext d) => SimpleDialog(
-        title: const Text('Clear history'),
+        title: Text(l.clearHistory),
         children: <Widget>[
           for (final (String label, Duration? span) in <(String, Duration?)>[
-            ('Last hour', const Duration(hours: 1)),
-            ('Today', const Duration(hours: 24)),
-            ('Last 7 days', const Duration(days: 7)),
-            ('All history', const Duration(days: 365 * 100)),
+            (l.rangeLastHour, const Duration(hours: 1)),
+            (l.rangeLast24, const Duration(hours: 24)),
+            (l.rangeLast7Days, const Duration(days: 7)),
+            (l.rangeAll, const Duration(days: 365 * 100)),
           ])
             SimpleDialogOption(
               onPressed: () => Navigator.pop(d, span),
@@ -57,9 +66,9 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         if (h.lastVisit.isAfter(since)) h.id,
     ]);
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('History cleared on all your devices')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l.historyCleared)));
     }
   }
 
@@ -84,6 +93,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         h.lastVisit,
         now,
         MaterialLocalizations.of(context),
+        l,
       );
       if (day != lastDay) {
         lastDay = day;
@@ -98,14 +108,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
         ListTile(
           leading: SiteIcon(url: h.url),
           title: Text(h.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Text(
-            displayAddress(h.url),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
+          subtitle: AddressText(displayAddress(h.url)),
           onTap: () => widget.onOpen(h.url),
           trailing: IconButton(
-            tooltip: 'Delete',
+            tooltip: l.delete,
             icon: const Icon(Icons.close),
             onPressed: () =>
                 ref.read(browserDataProvider).deleteHistory(<String>[h.id]),
@@ -115,10 +121,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('History'),
+        title: Text(l.history),
         actions: <Widget>[
           IconButton(
-            tooltip: 'Clear history',
+            tooltip: l.clearHistory,
             icon: const Icon(Icons.delete_sweep_outlined),
             onPressed: _clear,
           ),
@@ -129,7 +135,7 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             child: SearchBar(
-              hintText: 'Search history',
+              hintText: l.searchHistory,
               leading: const Icon(Icons.search),
               elevation: const WidgetStatePropertyAll<double>(0),
               onChanged: (String v) => setState(() => _query = v),
@@ -142,12 +148,10 @@ class _HistoryPageState extends ConsumerState<HistoryPage> {
                       padding: const EdgeInsets.all(32),
                       child: Text(
                         settings.historyDays == 0
-                            ? 'History is off. Turn it on in Settings, under '
-                                  'Keep history.'
+                            ? l.historyOff
                             : q.isEmpty
-                            ? 'Pages you visit show here, end-to-end '
-                                  'encrypted. Private tabs are never saved.'
-                            : 'Nothing matches.',
+                            ? l.historyEmpty
+                            : l.nothingMatches,
                         textAlign: TextAlign.center,
                       ),
                     ),

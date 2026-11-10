@@ -8,21 +8,26 @@ import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/apply_settings.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/reader.dart';
+import 'package:zerotrust_browser/browser/search_suggestions.dart';
 import 'package:zerotrust_browser/browser/site_permissions.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/engine/tab_view.dart';
+import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/bookmarks_page.dart';
 import 'package:zerotrust_browser/pages/downloads_page.dart';
 import 'package:zerotrust_browser/pages/history_page.dart';
+import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
 import 'package:zerotrust_browser/pages/start_page.dart';
 import 'package:zerotrust_browser/pages/tabs_page.dart';
+import 'package:zerotrust_browser/widgets/address_text.dart';
 import 'package:zerotrust_browser/widgets/qr_sheet.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 
@@ -75,6 +80,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // What was blocked since the last save, before the app may be closed.
+      ref.read(privacyReportRecorderProvider).flush().ignore();
+    }
     if (state != AppLifecycleState.resumed) return;
     final int? days = _settings.closeTabsAfterDays;
     if (days != null) _tabs.closeUnused(days).ignore();
@@ -96,6 +105,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   TabsController get _tabs => ref.read(tabsProvider.notifier);
   BrowserSettings get _settings => ref.read(browserSettingsProvider);
+  AppL10n get l => context.l10n;
+
+  /// [url] without tracking tags, for copying and sharing.
+  String _clean(String url) => shareableUrl(url, _settings);
 
   void _pushPrivacy(BrowserSettings s) {
     applySettings(_engine, s).ignore();
@@ -186,8 +199,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       case 'download':
         _snack(
           e.get<bool>('started') == true
-              ? 'Downloading ${e.get<String>('name')}'
-              : "This file can't be downloaded",
+              ? l.downloadStarted(e.get<String>('name') ?? l.fileFallbackName)
+              : l.cantDownload,
         );
       case 'downloadDone':
         if (e.get<bool>('ok') == true) {
@@ -195,33 +208,35 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
             ..hideCurrentSnackBar()
             ..showSnackBar(
               SnackBar(
-                content: Text('Saved ${e.get<String>('name')} to Downloads'),
+                content: Text(
+                  l.savedToDownloads(
+                    e.get<String>('name') ?? l.fileFallbackName,
+                  ),
+                ),
                 // Flutter keeps a snackbar with an action open until it is tapped.
                 persist: false,
                 action: SnackBarAction(
-                  label: 'Show',
+                  label: l.show,
                   onPressed: () => _push(const DownloadsPage()),
                 ),
               ),
             );
         } else {
-          _snack("${e.get<String>('name')} couldn't be saved");
+          _snack(l.couldntSave(e.get<String>('name') ?? l.fileFallbackName));
         }
       case 'permission':
         await _askPermission(e);
       case 'httpsFailed':
         await _offerInsecure(e.get<String>('url') ?? '', tab);
       case 'sslError':
-        _snack(
-          "This site's security certificate isn't valid, so it was not opened.",
-        );
+        _snack(l.badCertificate);
       case 'find':
         final int count = e.get<int>('count') ?? 0;
         final int active = e.get<int>('active') ?? 0;
         setState(
           () => _findResult = count == 0
-              ? (_findText.text.isEmpty ? '' : 'No matches')
-              : '${active + 1} of $count',
+              ? (_findText.text.isEmpty ? '' : l.findNoMatches)
+              : l.findCount(active + 1, count),
         );
     }
   }
@@ -239,17 +254,16 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           children: <Widget>[
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-              child: Text(
+              child: AddressText(
                 target,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
                 style: Theme.of(sheet).textTheme.bodySmall,
               ),
             ),
             if (link != null && !private)
               ListTile(
                 leading: const Icon(Icons.tab_outlined),
-                title: const Text('Open in new tab'),
+                title: Text(l.openInNewTab),
                 onTap: () {
                   Navigator.pop(sheet);
                   _tabs.open(url: link);
@@ -258,7 +272,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
             if (link != null)
               ListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
-                title: const Text('Open in private tab'),
+                title: Text(l.openInPrivateTab),
                 onTap: () {
                   Navigator.pop(sheet);
                   _tabs.open(url: link, private: true);
@@ -267,7 +281,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
             if (image != null)
               ListTile(
                 leading: const Icon(Icons.image_outlined),
-                title: const Text('Open image in new tab'),
+                title: Text(l.openImageInNewTab),
                 onTap: () {
                   Navigator.pop(sheet);
                   _tabs.open(url: image, private: private);
@@ -275,20 +289,20 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
               ),
             ListTile(
               leading: const Icon(Icons.copy),
-              title: Text(link != null ? 'Copy link' : 'Copy image address'),
+              title: Text(link != null ? l.copyLink : l.copyImageAddress),
               onTap: () {
                 Navigator.pop(sheet);
-                Clipboard.setData(ClipboardData(text: target));
-                _snack('Copied');
+                Clipboard.setData(ClipboardData(text: _clean(target)));
+                _snack(l.copied);
               },
             ),
             ListTile(
               leading: const Icon(Icons.share_outlined),
-              title: const Text('Share'),
+              title: Text(l.share),
               onTap: () {
                 Navigator.pop(sheet);
                 SharePlus.instance.share(
-                  ShareParams(uri: Uri.tryParse(target)),
+                  ShareParams(uri: Uri.tryParse(_clean(target))),
                 );
               },
             ),
@@ -304,20 +318,20 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         await showDialog<bool>(
           context: context,
           builder: (BuildContext d) => AlertDialog(
-            title: const Text('Open in another app?'),
+            title: Text(l.openInAnotherAppTitle),
             content: Text(switch (scheme) {
-              'mailto' => 'This link writes an email in your mail app.',
-              'tel' => 'This link calls a number with your phone app.',
-              _ => 'This page wants to open another app on your phone.',
+              'mailto' => l.externalMail,
+              'tel' => l.externalTel,
+              _ => l.externalOther,
             }),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.pop(d, false),
-                child: const Text('Stay here'),
+                child: Text(l.stayHere),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(d, true),
-                child: const Text('Open'),
+                child: Text(l.open),
               ),
             ],
           ),
@@ -340,20 +354,16 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           context: context,
           builder: (BuildContext d) => AlertDialog(
             icon: const Icon(Icons.no_encryption_gmailerrorred_outlined),
-            title: const Text('Not a secure site'),
-            content: Text(
-              '$host doesn\'t offer a secure (HTTPS) connection. If you '
-              'continue, others on your network can see and change what you '
-              'send and receive on this site.',
-            ),
+            title: Text(l.notSecureTitle),
+            content: Text(l.notSecureBody(host)),
             actions: <Widget>[
               TextButton(
                 onPressed: () => Navigator.pop(d, true),
-                child: const Text('Continue anyway'),
+                child: Text(l.continueAnyway),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(d, false),
-                child: const Text('Go back'),
+                child: Text(l.goBack),
               ),
             ],
           ),
@@ -400,26 +410,23 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
               ? Icons.videocam_outlined
               : Icons.mic_none,
         ),
-        title: Text('Allow $host to use ${permissionPhrase(d.ask)}?'),
+        title: Text(l.permissionAsk(host, l.permissionPhrase(d.ask))),
         content: Text(
-          private
-              ? 'This private tab asks every time.'
-              : 'You can change this later in the site menu (the shield) '
-                    'or in Settings > Site permissions.',
+          private ? l.permissionPrivateNote : l.permissionChangeLater,
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.pop(c, 'block'),
-            child: const Text('Block'),
+            child: Text(l.block),
           ),
           if (!private)
             TextButton(
               onPressed: () => Navigator.pop(c, 'once'),
-              child: const Text('Only this time'),
+              child: Text(l.onlyThisTime),
             ),
           FilledButton(
             onPressed: () => Navigator.pop(c, private ? 'once' : 'allow'),
-            child: const Text('Allow'),
+            child: Text(l.allow),
           ),
         ],
       ),
@@ -448,16 +455,12 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final Article? a = Article.fromJson(await _engine.article(tab.id));
     if (!mounted) return;
     if (a == null) {
-      _snack(
-        tab.javascript
-            ? "This page can't be shown in reader view"
-            : 'Reader view needs JavaScript on for this site',
-      );
+      _snack(tab.javascript ? l.readerCant : l.readerNeedsJs);
       return;
     }
     await _engine.loadHtml(
       tab.id,
-      readerHtml(a, url: tab.url!),
+      readerHtml(a, url: tab.url!, savedLabel: l.savedCopy),
       baseUrl: tab.url!,
     );
   }
@@ -471,16 +474,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           .addToReadingList(
             url,
             a?.title.isNotEmpty == true ? a!.title : tab.label,
-            html: a == null ? null : readerHtml(a, url: url, saved: true),
+            html: a == null
+                ? null
+                : readerHtml(a, url: url, saved: true, savedLabel: l.savedCopy),
             excerpt: a?.excerpt,
           );
-      _snack(
-        a == null
-            ? 'Added to reading list'
-            : 'Added to reading list, saved to read offline',
-      );
+      _snack(a == null ? l.addedToReadingList : l.addedToReadingListOffline);
     } on Object {
-      _snack("Couldn't add to the reading list");
+      _snack(l.couldntAddReading);
     }
   }
 
@@ -495,22 +496,22 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       if (html == null) throw StateError('no copy');
       await _tabs.openHtml(html, item.url);
     } on Object {
-      _snack("The saved copy isn't available. Opening the page instead.");
+      _snack(l.savedCopyUnavailable);
       _openFromList(item.url, newTab: true);
     }
   }
 
   Future<void> _addShortcut(BrowserTab tab) async {
     final bool ok = await _engine.addShortcut(tab.url!, tab.label, tab.favicon);
-    if (!ok) _snack("Your home screen doesn't accept shortcuts");
+    if (!ok) _snack(l.noHomeShortcuts);
   }
 
   /// The fire button: close every tab and clear browsing data.
   Future<void> _fire() async {
-    const List<(String, Duration?)> ranges = <(String, Duration?)>[
-      ('Last hour', Duration(hours: 1)),
-      ('Last 24 hours', Duration(days: 1)),
-      ('All history', null),
+    final List<(String, Duration?)> ranges = <(String, Duration?)>[
+      (l.rangeLastHour, const Duration(hours: 1)),
+      (l.rangeLast24, const Duration(days: 1)),
+      (l.rangeAll, null),
     ];
     int range = 0;
     bool history = true;
@@ -520,23 +521,18 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           builder: (BuildContext c) => StatefulBuilder(
             builder: (BuildContext c, StateSetter set) => AlertDialog(
               icon: const Icon(Icons.local_fire_department_outlined),
-              title: const Text('Close all tabs and clear data?'),
+              title: Text(l.fireTitle),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    const Text(
-                      'Closes every tab, normal and private, and deletes '
-                      'cookies, site data and the cache on this phone. You '
-                      'are signed out of websites. Bookmarks, the reading '
-                      'list and downloads stay.',
-                    ),
+                    Text(l.fireBody),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       value: history,
                       onChanged: (bool? v) => set(() => history = v ?? true),
-                      title: const Text('Also delete history'),
+                      title: Text(l.fireAlsoHistory),
                     ),
                     if (history)
                       RadioGroup<int>(
@@ -559,11 +555,11 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.pop(c, false),
-                  child: const Text('Cancel'),
+                  child: Text(l.cancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(c, true),
-                  child: const Text('Clear'),
+                  child: Text(l.clear),
                 ),
               ],
             ),
@@ -581,12 +577,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       } else {
         await data.clearHistorySince(DateTime.now().subtract(d));
       }
+      // The report names the sites visited, like history does.
+      await ref.read(privacyReportRecorderProvider).clear();
     }
-    _snack('Tabs closed and browsing data cleared');
+    if (mounted) _snack(l.fireDone);
   }
 
   Future<void> _scanQr() async {
-    final String? text = await _engine.scanQr();
+    final String? text = await _engine.scanQr(prompt: l.qrPrompt);
     if (text == null || text.trim().isEmpty || !mounted) return;
     // Shown in the address bar first: a code can hold any address.
     _address.text = text.trim();
@@ -596,7 +594,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   }
 
   Future<void> _voiceSearch() async {
-    final String? text = await _engine.voiceSearch();
+    final String? text = await _engine.voiceSearch(prompt: l.voicePrompt);
     if (text == null || text.trim().isEmpty || !mounted) return;
     await go(text.trim());
   }
@@ -622,6 +620,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final BrowserData data = ref.read(browserDataProvider);
     final bool onPage = tab != null && !tab.isStartPage && !tab.crashed;
     final Bookmark? saved = onPage ? data.bookmarkFor(tab.url!) : null;
+    final bool pinned = onPage && _settings.isPinned(tab.url!);
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -644,7 +643,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: <Widget>[
                         IconButton(
-                          tooltip: 'Forward',
+                          tooltip: l.forward,
                           icon: const Icon(Icons.arrow_forward),
                           onPressed: tab.canGoForward
                               ? () => run(() => _engine.forward(tab.id))
@@ -652,35 +651,35 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                         ),
                         IconButton(
                           tooltip: saved == null
-                              ? 'Bookmark'
-                              : 'Remove bookmark',
+                              ? l.bookmarkAction
+                              : l.removeBookmark,
                           icon: Icon(
                             saved == null ? Icons.star_border : Icons.star,
                           ),
                           onPressed: () => run(() async {
                             if (saved == null) {
                               await data.addBookmark(tab.url!, tab.label);
-                              _snack('Bookmarked');
+                              _snack(l.bookmarked);
                             } else {
                               await data.removeBookmark(saved.id);
-                              _snack('Bookmark removed');
+                              _snack(l.bookmarkRemoved);
                             }
                           }),
                         ),
                         IconButton(
-                          tooltip: 'Share',
+                          tooltip: l.share,
                           icon: const Icon(Icons.share_outlined),
                           onPressed: () => run(
                             () => SharePlus.instance.share(
                               ShareParams(
-                                uri: Uri.parse(tab.url!),
+                                uri: Uri.parse(_clean(tab.url!)),
                                 subject: tab.label,
                               ),
                             ),
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Reload',
+                          tooltip: l.reload,
                           icon: const Icon(Icons.refresh),
                           onPressed: () => run(() => _engine.reload(tab.id)),
                         ),
@@ -690,36 +689,41 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 if (onPage) const Divider(),
                 ListTile(
                   leading: const Icon(Icons.add),
-                  title: const Text('New tab'),
+                  title: Text(l.newTab),
                   onTap: () => run(() => _tabs.open()),
                 ),
                 ListTile(
                   leading: const Icon(Icons.privacy_tip_outlined),
-                  title: const Text('New private tab'),
+                  title: Text(l.newPrivateTab),
                   onTap: () => run(() => _tabs.open(private: true)),
                 ),
                 ListTile(
                   leading: const Icon(Icons.bookmarks_outlined),
-                  title: const Text('Bookmarks'),
+                  title: Text(l.bookmarks),
                   onTap: () =>
                       run(() => _push(BookmarksPage(onOpen: _openFromList))),
                 ),
                 ListTile(
                   leading: const Icon(Icons.history),
-                  title: const Text('History'),
+                  title: Text(l.history),
                   onTap: () =>
                       run(() => _push(HistoryPage(onOpen: _openFromList))),
                 ),
                 ListTile(
                   leading: const Icon(Icons.chrome_reader_mode_outlined),
-                  title: const Text('Reading list'),
+                  title: Text(l.readingList),
                   onTap: () =>
                       run(() => _push(ReadingListPage(onOpen: _openReading))),
                 ),
                 ListTile(
                   leading: const Icon(Icons.download_outlined),
-                  title: const Text('Downloads'),
+                  title: Text(l.downloads),
                   onTap: () => run(() => _push(const DownloadsPage())),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.shield_outlined),
+                  title: Text(l.privacyReport),
+                  onTap: () => run(() => _push(const PrivacyReportPage())),
                 ),
                 if (onPage) const Divider(),
                 if (onPage)
@@ -729,9 +733,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                           ? Icons.web_outlined
                           : Icons.chrome_reader_mode_outlined,
                     ),
-                    title: Text(
-                      tab.reader ? 'Leave reader view' : 'Reader view',
-                    ),
+                    title: Text(tab.reader ? l.leaveReader : l.readerView),
                     onTap: () => run(() => _toggleReader(tab)),
                   ),
                 if (onPage)
@@ -739,53 +741,72 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                     leading: const Icon(Icons.bookmark_add_outlined),
                     title: Text(
                       data.readingFor(tab.url!) == null
-                          ? 'Add to reading list'
-                          : 'Save again to reading list',
+                          ? l.addToReadingList
+                          : l.saveAgainReadingList,
                     ),
                     onTap: () => run(() => _addToReadingList(tab)),
                   ),
                 if (onPage)
                   ListTile(
                     leading: const Icon(Icons.find_in_page_outlined),
-                    title: const Text('Find in page'),
+                    title: Text(l.findInPage),
                     onTap: () => run(_openFind),
                   ),
                 if (onPage)
                   ListTile(
                     leading: const Icon(Icons.print_outlined),
-                    title: const Text('Print or save as PDF'),
+                    title: Text(l.printOrPdf),
                     onTap: () =>
                         run(() => _engine.printPage(tab.id, tab.label)),
                   ),
                 if (onPage)
                   ListTile(
                     leading: const Icon(Icons.qr_code_2),
-                    title: const Text('Share as QR code'),
-                    onTap: () =>
-                        run(() => showQrSheet(context, tab.url!, tab.label)),
+                    title: Text(l.shareAsQr),
+                    onTap: () => run(
+                      () => showQrSheet(context, _clean(tab.url!), tab.label),
+                    ),
+                  ),
+                if (onPage && !tab.private)
+                  ListTile(
+                    leading: Icon(
+                      pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                    ),
+                    title: Text(pinned ? l.unpinFromStart : l.pinToStart),
+                    onTap: () => run(() async {
+                      final BrowserSettings s = _settings;
+                      await data.saveSettings(
+                        pinned
+                            ? s.withoutShortcut(tab.url!)
+                            : s.withShortcut(tab.url!, tab.label),
+                      );
+                      if (mounted) {
+                        _snack(pinned ? l.unpinnedFromStart : l.pinnedToStart);
+                      }
+                    }),
                   ),
                 if (onPage && !tab.private)
                   ListTile(
                     leading: const Icon(Icons.add_to_home_screen),
-                    title: const Text('Add to home screen'),
+                    title: Text(l.addToHomeScreen),
                     onTap: () => run(() => _addShortcut(tab)),
                   ),
                 if (onPage)
                   SwitchListTile(
                     secondary: const Icon(Icons.desktop_windows_outlined),
-                    title: const Text('Desktop site'),
+                    title: Text(l.desktopSite),
                     value: tab.desktop,
                     onChanged: (bool v) =>
                         run(() => _tabs.setDesktop(tab.id, v)),
                   ),
                 ListTile(
                   leading: const Icon(Icons.local_fire_department_outlined),
-                  title: const Text('Close all tabs and clear data'),
+                  title: Text(l.fireMenu),
                   onTap: () => run(_fire),
                 ),
                 ListTile(
                   leading: const Icon(Icons.settings_outlined),
-                  title: const Text('Settings'),
+                  title: Text(l.settings),
                   onTap: () => run(() => _push(const BrowserSettingsPage())),
                 ),
               ],
@@ -860,6 +881,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                       : null,
                   onVoice: _voice ? _voiceSearch : null,
                   onScan: _scanQr,
+                  engines: ref.watch(browserSettingsProvider).engines,
                 ),
                 if (tab != null && tab.loading && !_editing)
                   LinearProgressIndicator(
@@ -892,8 +914,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   Widget _content(BrowserTab? tab) {
     if (_editing) {
       return Suggestions(
-        query: _address.text,
         controller: _address,
+        private: tab?.private ?? false,
         onOpen: (String url) => go(url),
       );
     }
@@ -902,7 +924,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         child: FilledButton.icon(
           onPressed: () => _tabs.open(),
           icon: const Icon(Icons.add),
-          label: const Text('New tab'),
+          label: Text(l.newTab),
         ),
       );
     }
@@ -915,11 +937,11 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
             children: <Widget>[
               const Icon(Icons.sentiment_dissatisfied_outlined, size: 48),
               const SizedBox(height: 16),
-              const Text('This page stopped working.'),
+              Text(l.pageStopped, textAlign: TextAlign.center),
               const SizedBox(height: 16),
               FilledButton(
                 onPressed: () => _tabs.revive(tab.id),
-                child: const Text('Reload'),
+                child: Text(l.reload),
               ),
             ],
           ),
@@ -942,6 +964,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         private: tab.private,
         onOpen: (String url) => go(url),
         onSearch: () => _startEditing(tab),
+        onReport: () => _push(const PrivacyReportPage()),
       );
     }
     return TabView(key: ValueKey<String>(tab.id), tabId: tab.id);
@@ -958,8 +981,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
               child: TextField(
                 controller: _findText,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  hintText: 'Find in page',
+                decoration: InputDecoration(
+                  hintText: l.findInPage,
                   border: InputBorder.none,
                 ),
                 textInputAction: TextInputAction.search,
@@ -969,17 +992,17 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
             ),
             Text(_findResult, style: Theme.of(context).textTheme.bodySmall),
             IconButton(
-              tooltip: 'Previous',
+              tooltip: l.previous,
               icon: const Icon(Icons.keyboard_arrow_up),
               onPressed: () => _engine.findNext(tab.id, forward: false),
             ),
             IconButton(
-              tooltip: 'Next',
+              tooltip: l.next,
               icon: const Icon(Icons.keyboard_arrow_down),
               onPressed: () => _engine.findNext(tab.id),
             ),
             IconButton(
-              tooltip: 'Close',
+              tooltip: l.close,
               icon: const Icon(Icons.close),
               onPressed: () => _closeFind(tab),
             ),
@@ -1017,8 +1040,11 @@ class _AddressBar extends StatelessWidget {
     required this.onReader,
     required this.onVoice,
     required this.onScan,
+    required this.engines,
   });
 
+  /// To show the search words instead of a search page's address.
+  final List<SearchEngine> engines;
   final BrowserTab? tab;
   final bool editing;
   final TextEditingController controller;
@@ -1035,13 +1061,15 @@ class _AddressBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppL10n l = context.l10n;
     final ColorScheme scheme = Theme.of(context).colorScheme;
     final BrowserTab? t = tab;
     final bool private = t?.private ?? false;
+    final bool showsAddress = t != null && !t.isStartPage;
     final Widget leading;
     if (editing) {
       leading = IconButton(
-        tooltip: 'Cancel',
+        tooltip: l.cancel,
         icon: const Icon(Icons.arrow_back),
         onPressed: onCancel,
       );
@@ -1055,7 +1083,7 @@ class _AddressBar extends StatelessWidget {
       );
     } else {
       leading = IconButton(
-        tooltip: 'Site protection',
+        tooltip: l.siteProtection,
         onPressed: onShield,
         icon: Badge(
           isLabelVisible: t.blocked > 0,
@@ -1093,8 +1121,8 @@ class _AddressBar extends StatelessWidget {
                         // Typed addresses and searches stay out of the
                         // keyboard's learning.
                         enableIMEPersonalizedLearning: false,
-                        decoration: const InputDecoration(
-                          hintText: 'Search or type an address',
+                        decoration: InputDecoration(
+                          hintText: l.addressHint,
                           border: InputBorder.none,
                           isDense: true,
                         ),
@@ -1103,19 +1131,23 @@ class _AddressBar extends StatelessWidget {
                     : InkWell(
                         onTap: onTap,
                         child: Align(
-                          alignment: Alignment.centerLeft,
+                          alignment: AlignmentDirectional.centerStart,
                           child: Text(
-                            t == null || t.isStartPage
-                                ? (private
-                                      ? 'Private tab: search or type an address'
-                                      : 'Search or type an address')
-                                : displayAddress(t.url),
+                            showsAddress
+                                ? displayAddress(t.url, engines)
+                                : (private
+                                      ? l.addressHintPrivate
+                                      : l.addressHint),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
+                            // An address reads left to right in Hebrew too.
+                            textDirection: showsAddress
+                                ? TextDirection.ltr
+                                : null,
                             style: TextStyle(
-                              color: t == null || t.isStartPage
-                                  ? scheme.onSurfaceVariant
-                                  : scheme.onSurface,
+                              color: showsAddress
+                                  ? scheme.onSurface
+                                  : scheme.onSurfaceVariant,
                               fontSize: 16,
                             ),
                           ),
@@ -1131,40 +1163,37 @@ class _AddressBar extends StatelessWidget {
                           children: <Widget>[
                             if (onVoice != null)
                               IconButton(
-                                tooltip: 'Voice search',
+                                tooltip: l.voiceSearch,
                                 icon: const Icon(Icons.mic_none),
                                 onPressed: onVoice,
                               ),
                             IconButton(
-                              tooltip: 'Scan QR code',
+                              tooltip: l.scanQr,
                               icon: const Icon(Icons.qr_code_scanner),
                               onPressed: onScan,
                             ),
                           ],
                         )
                       : IconButton(
-                          tooltip: 'Clear',
+                          tooltip: l.clear,
                           icon: const Icon(Icons.close),
                           onPressed: controller.clear,
                         ),
                 )
               else if (onReader != null)
                 IconButton(
-                  tooltip: t?.reader == true
-                      ? 'Leave reader view'
-                      : 'Reader view',
+                  tooltip: t?.reader == true ? l.leaveReader : l.readerView,
                   isSelected: t?.reader == true,
                   icon: const Icon(Icons.chrome_reader_mode_outlined),
                   selectedIcon: const Icon(Icons.chrome_reader_mode),
                   onPressed: onReader,
                 )
               else if (private)
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Tooltip(
-                    message:
-                        'Private tab: no history, cookies cleared on close',
-                    child: Icon(Icons.visibility_off_outlined),
+                    message: l.privateTooltip,
+                    child: const Icon(Icons.visibility_off_outlined),
                   ),
                 )
               else
@@ -1198,6 +1227,7 @@ class _Toolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppL10n l = context.l10n;
     final ColorScheme scheme = Theme.of(context).colorScheme;
     return Material(
       color: scheme.surfaceContainer,
@@ -1207,22 +1237,22 @@ class _Toolbar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: <Widget>[
             IconButton(
-              tooltip: 'Back',
+              tooltip: l.back,
               icon: const Icon(Icons.arrow_back),
               onPressed: onBack,
             ),
             IconButton(
-              tooltip: 'Home',
+              tooltip: l.home,
               icon: const Icon(Icons.home_outlined),
               onPressed: onHome,
             ),
             IconButton(
-              tooltip: 'New tab',
+              tooltip: l.newTab,
               icon: const Icon(Icons.add_circle_outline),
               onPressed: onNewTab,
             ),
             IconButton(
-              tooltip: 'Tabs',
+              tooltip: l.tabs,
               onPressed: onTabs,
               icon: Container(
                 width: 24,
@@ -1242,7 +1272,7 @@ class _Toolbar extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Menu',
+              tooltip: l.menu,
               icon: const Icon(Icons.more_vert),
               onPressed: onMenu,
             ),
@@ -1253,25 +1283,83 @@ class _Toolbar extends StatelessWidget {
   }
 }
 
-/// Bookmarks and history matching what's typed in the address bar.
-class Suggestions extends ConsumerWidget {
+/// What the address bar offers while typing: a search for the words,
+/// the search engine's suggestions (when turned on), then matching
+/// bookmarks and history.
+class Suggestions extends ConsumerStatefulWidget {
   const Suggestions({
     super.key,
-    required this.query,
     required this.controller,
     required this.onOpen,
+    this.private = false,
   });
 
-  final String query;
   final TextEditingController controller;
   final ValueChanged<String> onOpen;
 
+  /// Typing in a private tab is never sent to the search engine.
+  final bool private;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<Suggestions> createState() => _SuggestionsState();
+}
+
+class _SuggestionsState extends ConsumerState<Suggestions> {
+  Timer? _debounce;
+  List<String> _remote = const <String>[];
+
+  /// What [_remote] answers, so stale answers are dropped.
+  String _remoteFor = '';
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_typed);
+    _typed();
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_typed);
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _typed() {
+    _debounce?.cancel();
+    final BrowserSettings s = ref.read(browserSettingsProvider);
+    final String text = widget.controller.text.trim();
+    if (widget.private ||
+        !s.searchSuggestions ||
+        s.engine.suggest == null ||
+        !SearchSuggestions.shouldAsk(text)) {
+      if (_remote.isNotEmpty) setState(() => _remote = const <String>[]);
+      _remoteFor = '';
+      return;
+    }
+    if (text == _remoteFor) return;
+    // Wait for a pause in typing: fewer requests, fewer half-words sent.
+    _debounce = Timer(const Duration(milliseconds: 250), () async {
+      final List<String> got = await ref
+          .read(searchSuggestionsProvider)
+          .fetch(s.engine, text);
+      if (!mounted || widget.controller.text.trim() != text) return;
+      setState(() {
+        _remote = got;
+        _remoteFor = text;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final AppL10n l = context.l10n;
+    final TextEditingController controller = widget.controller;
     return ListenableBuilder(
       listenable: controller,
       builder: (BuildContext context, _) {
-        final String q = controller.text.trim().toLowerCase();
+        final String typed = controller.text.trim();
+        final String q = typed.toLowerCase();
         final List<Bookmark> bookmarks =
             ref.watch(bookmarksProvider).value ?? const <Bookmark>[];
         final List<HistoryEntry> history =
@@ -1299,17 +1387,37 @@ class Suggestions extends ConsumerWidget {
                   ))
                 .take(8)
                 .toList();
-        final SearchEngine engine = ref.watch(browserSettingsProvider).engine;
+        final BrowserSettings s = ref.watch(browserSettingsProvider);
+        final SearchEngine engine = s.engine;
+        final List<String> remote = <String>[
+          for (final String r in _remote)
+            if (r.toLowerCase() != q) r,
+        ];
         return ListView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           children: <Widget>[
             if (q.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.search),
-                title: Text(controller.text.trim()),
-                subtitle: Text('Search with ${engine.name}'),
-                onTap: () =>
-                    onOpen(engine.searchUrl(controller.text.trim()).toString()),
+                title: Text(typed),
+                subtitle: Text(l.searchWith(engine.name)),
+                onTap: () => widget.onOpen(engine.searchUrl(typed).toString()),
+              ),
+            for (final String r in remote)
+              ListTile(
+                leading: const Icon(Icons.search),
+                title: Text(r, maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: IconButton(
+                  tooltip: l.editThisSearch,
+                  icon: const Icon(Icons.north_west, size: 18),
+                  onPressed: () {
+                    controller.text = '$r ';
+                    controller.selection = TextSelection.collapsed(
+                      offset: controller.text.length,
+                    );
+                  },
+                ),
+                onTap: () => widget.onOpen(engine.searchUrl(r).toString()),
               ),
             for (final Bookmark x in b)
               ListTile(
@@ -1319,13 +1427,9 @@ class Suggestions extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  displayAddress(x.url),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                subtitle: AddressText(displayAddress(x.url, s.engines)),
                 trailing: const Icon(Icons.star, size: 18),
-                onTap: () => onOpen(x.url),
+                onTap: () => widget.onOpen(x.url),
               ),
             for (final HistoryEntry x in h)
               ListTile(
@@ -1335,13 +1439,9 @@ class Suggestions extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(
-                  displayAddress(x.url),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                subtitle: AddressText(displayAddress(x.url, s.engines)),
                 trailing: const Icon(Icons.history, size: 18),
-                onTap: () => onOpen(x.url),
+                onTap: () => widget.onOpen(x.url),
               ),
           ],
         );

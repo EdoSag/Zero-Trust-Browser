@@ -91,6 +91,9 @@ class ZtTab(
 
     /** Hosts the user agreed to load over plain http in this tab. */
     private val insecureAllowed = HashSet<String>()
+
+    /** Links this tab removed tracking from since the last finished page. */
+    private val cleaned = HashSet<String>()
     private var stateQueued = false
     private var progress = 0
     private var loading = false
@@ -155,7 +158,7 @@ class ZtTab(
     // ---- Commands from Dart ------------------------------------------------
 
     fun load(url: String) {
-        val target = upgrade(url)
+        val target = upgrade(untracked(url))
         applyJavaScript(target)
         webView.loadUrl(target, privacyHeaders())
     }
@@ -301,6 +304,22 @@ class ZtTab(
     private fun privacyHeaders(): Map<String, String> = mapOf("Sec-GPC" to "1", "DNT" to "1")
 
     /** http:// becomes https:// when HTTPS-only is on, unless allowed. */
+    /**
+     * [url] without tracking tags and redirect wrappers, unless the user
+     * turned protection off for the site it leads to. A link this tab
+     * already cleaned once during this page load is left alone, so a site
+     * that keeps adding its tag back can't cause a loop.
+     */
+    private fun untracked(url: String): String {
+        if (!LinkCleaner.enabled) return url
+        val clean = LinkCleaner.clean(url)
+        if (clean == url) return url
+        if (Blocker.siteOf(LinkCleaner.hostOf(clean)) in Blocker.allowedSites) return url
+        if (!cleaned.add(url)) return url
+        if (cleaned.size > 50) cleaned.clear()
+        return clean
+    }
+
     private fun upgrade(url: String): String {
         if (!httpsOnly || !url.startsWith("http://")) return url
         val h = Uri.parse(url).host?.lowercase() ?: return url
@@ -359,12 +378,18 @@ class ZtTab(
             val url = request.url.toString()
             return when (request.url.scheme?.lowercase()) {
                 "https" -> {
-                    applyJavaScript(url)
-                    false
+                    val target = untracked(url)
+                    applyJavaScript(target)
+                    if (target == url) {
+                        false
+                    } else {
+                        view.loadUrl(target, privacyHeaders())
+                        true
+                    }
                 }
                 "about", "data", "blob", "javascript" -> false
                 "http" -> {
-                    val target = upgrade(url)
+                    val target = upgrade(untracked(url))
                     if (target == url) {
                         applyJavaScript(url)
                         false
@@ -409,6 +434,7 @@ class ZtTab(
 
         override fun onPageFinished(view: WebView, url: String) {
             loading = false
+            cleaned.clear()
             sendState()
             checkReaderable(view, url)
             if (!isPrivate && !inReader && (url.startsWith("http://") || url.startsWith("https://"))) {

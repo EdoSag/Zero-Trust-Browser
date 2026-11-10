@@ -203,6 +203,14 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         ZtTab.httpsOnly = call.argument<Boolean>("httpsOnly") ?: true
                         ZtTab.jsOffSites = sites(call.argument<List<String>>("javascriptOff"))
                         PageScripts.fingerprinting = call.argument<Boolean>("fingerprinting") ?: true
+                        LinkCleaner.enabled = call.argument<Boolean>("stripTracking") ?: true
+                        call.argument<List<String>>("trackingParams")?.let { LinkCleaner.params = it.toSet() }
+                        call.argument<List<String>>("trackingPrefixes")?.let { LinkCleaner.prefixes = it }
+                        call.argument<List<Map<String, String>>>("redirectWrappers")?.let { list ->
+                            LinkCleaner.wrappers = list.map {
+                                LinkCleaner.Wrapper(it["host"] ?: "", it["path"] ?: "/", it["param"] ?: "")
+                            }.filter { it.host.isNotEmpty() && it.param.isNotEmpty() }
+                        }
                         PageScripts.invalidate()
                         for (t in tabs.values) t.refreshScripts()
                         result.success(null)
@@ -264,9 +272,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         ),
                     )
                     "pickFile" -> pickFile(call.argument<List<String>>("mimeTypes") ?: listOf("*/*"), result)
-                    "scanQr" -> scanQr(result)
-                    "voiceAvailable" -> result.success(voiceIntent().resolveActivity(packageManager) != null)
-                    "voiceSearch" -> voiceSearch(result)
+                    "scanQr" -> scanQr(result, call.argument<String>("prompt"))
+                    "voiceAvailable" -> result.success(voiceIntent(null).resolveActivity(packageManager) != null)
+                    "voiceSearch" -> voiceSearch(result, call.argument<String>("prompt"))
                     "autofillStatus" -> result.success(autofillStatus())
                     "openAutofillSettings" -> {
                         openAutofillSettings()
@@ -674,30 +682,30 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         }
     }
 
-    private fun scanQr(result: MethodChannel.Result) {
+    private fun scanQr(result: MethodChannel.Result, prompt: String?) {
         waiting.remove(REQUEST_QR)?.success(null)
         waiting[REQUEST_QR] = result
         systemUi(true)
         IntentIntegrator(this)
             .setDesiredBarcodeFormats(IntentIntegrator.QR_CODE)
-            .setPrompt("Point at a QR code")
+            .setPrompt(prompt ?: "Point at a QR code")
             .setBeepEnabled(false)
             .setOrientationLocked(false)
             .setRequestCode(REQUEST_QR)
             .initiateScan()
     }
 
-    private fun voiceIntent(): Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+    private fun voiceIntent(prompt: String?): Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
         .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-        .putExtra(RecognizerIntent.EXTRA_PROMPT, "Search or say an address")
+        .putExtra(RecognizerIntent.EXTRA_PROMPT, prompt ?: "Search or say an address")
 
-    private fun voiceSearch(result: MethodChannel.Result) {
+    private fun voiceSearch(result: MethodChannel.Result, prompt: String?) {
         waiting.remove(REQUEST_VOICE)?.success(null)
         try {
             waiting[REQUEST_VOICE] = result
             @Suppress("DEPRECATION")
-            startActivityForResult(voiceIntent(), REQUEST_VOICE)
+            startActivityForResult(voiceIntent(prompt), REQUEST_VOICE)
             systemUi(true)
         } catch (e: ActivityNotFoundException) {
             waiting.remove(REQUEST_VOICE)
