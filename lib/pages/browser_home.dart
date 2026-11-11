@@ -54,6 +54,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   final FocusNode _addressFocus = FocusNode();
   final TextEditingController _findText = TextEditingController();
   StreamSubscription<TabPrompt>? _prompts;
+
+  /// The page being read aloud is in a private tab.
+  bool _readingPrivate = false;
   Completer<void>? _systemUi;
   bool _editing = false;
   bool _finding = false;
@@ -110,6 +113,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           ref.read(tabsProvider).private.isNotEmpty &&
           !_engine.systemUiOpen.value) {
         ref.read(privateLockProvider.notifier).lock();
+        // A private page read aloud would go on past the lock.
+        if (_readingPrivate && _engine.readAloud.value.active) {
+          _engine.readAloudStop().ignore();
+        }
       }
     }
     if (state != AppLifecycleState.resumed) return;
@@ -639,7 +646,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       title: a.title.isNotEmpty ? a.title : tab.label,
       language: a.lang,
       rate: _settings.readAloudRate,
+      private: tab.private,
     );
+    _readingPrivate = tab.private;
   }
 
   Future<void> _offerInsecure(String url, BrowserTab? tab) async {
@@ -1248,6 +1257,21 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       engines: settings.engines,
     );
 
+    // Locked private tabs (B29): nothing of the page shows, and none of its
+    // actions (menu, read aloud, reading list...) work until unlocked.
+    if (private && ref.watch(privateLockProvider)) {
+      return Theme(
+        data: theme,
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (bool didPop, Object? _) {
+            if (!didPop) _onBack(null);
+          },
+          child: Scaffold(body: SafeArea(child: _privateLocked())),
+        ),
+      );
+    }
+
     return Theme(
       data: theme,
       child: PopScope(
@@ -1348,6 +1372,11 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   .unlock(l.privateUnlockReason),
               icon: const Icon(Icons.lock_open),
               label: Text(l.unlock),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => _push(const TabsPage()),
+              child: Text(l.tabs),
             ),
           ],
         ),
