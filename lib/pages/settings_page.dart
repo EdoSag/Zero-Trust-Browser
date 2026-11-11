@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
-import 'package:zerotrust_browser/app/language.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/pages/block_rules_page.dart';
+import 'package:zerotrust_browser/pages/encrypted_dns_page.dart';
+import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/shortcuts_page.dart';
 import 'package:zerotrust_browser/pages/site_permissions_page.dart';
@@ -23,6 +27,10 @@ final _blocklistProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
 
 final _autofillProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
   (ref) => ref.read(browserEngineProvider).autofillStatus(),
+);
+
+final _lockAvailableProvider = FutureProvider.autoDispose<bool>(
+  (ref) => ref.read(privateLockProvider.notifier).available(),
 );
 
 /// The shared Zero-Trust settings screen, with the browser's own rows.
@@ -43,7 +51,11 @@ class BrowserSettingsPage extends ConsumerWidget {
     final Map<Object?, Object?> autofill =
         ref.watch(_autofillProvider).value ?? const <Object?, Object?>{};
     final String? passwordManager = autofill['service'] as String?;
-    final Locale? language = ref.watch(appLanguageProvider);
+    final Map<Object?, Object?> dns =
+        ref.watch(privateDnsProvider).value ?? const <Object?, Object?>{};
+    final bool lockAvailable = ref.watch(_lockAvailableProvider).value ?? false;
+    final int ownRules =
+        s.blockedHosts.length + s.unblockedHosts.length + s.filterLists.length;
 
     Future<void> save(BrowserSettings next) => data.saveSettings(next);
     void push(Widget page) => Navigator.of(
@@ -89,12 +101,6 @@ class BrowserSettingsPage extends ConsumerWidget {
               ? null
               : (bool v) => _setSuggestions(context, ref, v),
         ),
-        ListTile(
-          leading: const Icon(Icons.language),
-          title: Text(l.language),
-          subtitle: Text(_languageName(l, language)),
-          onTap: () => _pickLanguage(context, ref, language),
-        ),
         _Header(l.privacy),
         SwitchListTile(
           secondary: const Icon(Icons.shield_outlined),
@@ -139,6 +145,29 @@ class BrowserSettingsPage extends ConsumerWidget {
           value: s.httpsOnly,
           onChanged: (bool v) => save(s.copyWith(httpsOnly: v)),
         ),
+        ListTile(
+          leading: const Icon(Icons.dns_outlined),
+          title: Text(l.encryptedDns),
+          subtitle: Text(
+            dns['active'] == true
+                ? (dns['server'] is String
+                      ? l.encryptedDnsServer(dns['server']! as String)
+                      : l.encryptedDnsAutomatic)
+                : l.encryptedDnsOff,
+          ),
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const EncryptedDnsPage()),
+            );
+            ref.invalidate(privateDnsProvider);
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.translate),
+          title: Text(l.translationLanguages),
+          subtitle: Text(l.translationLanguagesSub),
+          onTap: () => push(const TranslationLanguagesPage()),
+        ),
         // Tap the row for the report; the switch turns counting on or off.
         ListTile(
           leading: const Icon(Icons.insights_outlined),
@@ -159,6 +188,14 @@ class BrowserSettingsPage extends ConsumerWidget {
                 : l.blocklistUpdatesSub,
           ),
           onTap: () => _checkBlocklist(context, ref),
+        ),
+        ListTile(
+          leading: const Icon(Icons.rule),
+          title: Text(l.blockRules),
+          subtitle: Text(
+            ownRules == 0 ? l.blockRulesSub : l.blockRulesCount(ownRules),
+          ),
+          onTap: () => push(const BlockRulesPage()),
         ),
         ListTile(
           leading: const Icon(Icons.admin_panel_settings_outlined),
@@ -239,6 +276,32 @@ class BrowserSettingsPage extends ConsumerWidget {
             ),
           ),
         ),
+        _Header(l.privateTabsSection),
+        SwitchListTile(
+          secondary: const Icon(Icons.screenshot_monitor_outlined),
+          title: Text(l.privateNoScreenshots),
+          subtitle: Text(l.privateNoScreenshotsSub),
+          value: s.privateNoScreenshots,
+          onChanged: (bool v) => save(s.copyWith(privateNoScreenshots: v)),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.filter_none),
+          title: Text(l.privateHideRecents),
+          subtitle: Text(l.privateHideRecentsSub),
+          value: s.privateHideRecents,
+          onChanged: (bool v) => save(s.copyWith(privateHideRecents: v)),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.lock_outline),
+          title: Text(l.privateLock),
+          subtitle: Text(
+            lockAvailable ? l.privateLockSub : l.privateLockUnavailable,
+          ),
+          value: s.privateLock && lockAvailable,
+          onChanged: lockAvailable
+              ? (bool v) => save(s.copyWith(privateLock: v))
+              : null,
+        ),
         _Header(l.pagesSection),
         ListTile(
           leading: const Icon(Icons.format_size),
@@ -252,6 +315,13 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(l.darkPagesSub),
           value: s.darkPages,
           onChanged: (bool v) => save(s.copyWith(darkPages: v)),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.headphones_outlined),
+          title: Text(l.backgroundPlay),
+          subtitle: Text(l.backgroundPlaySub),
+          value: s.backgroundPlay,
+          onChanged: (bool v) => save(s.copyWith(backgroundPlay: v)),
         ),
         _Header(l.tabsAndHistory),
         ListTile(
@@ -272,6 +342,29 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(l.clearCookiesSub),
           onTap: () => _clearSiteData(context, engine),
         ),
+        SwitchListTile(
+          secondary: const Icon(Icons.auto_delete_outlined),
+          title: Text(l.autoClearCookies),
+          subtitle: Text(l.autoClearCookiesSub),
+          value: s.autoClearCookies,
+          onChanged: (bool v) async {
+            await save(s.copyWith(autoClearCookies: v));
+            if (!v) await ref.read(cookieAutoClearProvider).forget();
+          },
+        ),
+        if (s.autoClearCookies && s.keepSignedIn.isNotEmpty)
+          ListTile(
+            leading: const Icon(Icons.how_to_reg_outlined),
+            title: Text(l.keptSignedIn),
+            subtitle: Text(s.keepSignedIn.join(', ')),
+            onTap: () => _editList(
+              context,
+              s.keepSignedIn,
+              l.keptSignedInExplain,
+              l.remove,
+              (List<String> rest) => save(s.copyWith(keepSignedIn: rest)),
+            ),
+          ),
         ListTile(
           leading: const Icon(Icons.gpp_good_outlined),
           title: Text(l.alwaysOn),
@@ -284,55 +377,6 @@ class BrowserSettingsPage extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  static String _languageName(AppL10n l, Locale? locale) =>
-      switch (locale?.languageCode) {
-        'en' => 'English',
-        'he' => 'עברית',
-        _ => l.languageSystem,
-      };
-
-  Future<void> _pickLanguage(
-    BuildContext context,
-    WidgetRef ref,
-    Locale? current,
-  ) async {
-    final AppL10n l = context.l10n;
-    const String system = 'system';
-    final String? picked = await showDialog<String>(
-      context: context,
-      builder: (BuildContext d) => SimpleDialog(
-        title: Text(l.language),
-        children: <Widget>[
-          RadioGroup<String>(
-            groupValue: current?.languageCode ?? system,
-            onChanged: (String? v) => Navigator.of(d).pop(v),
-            child: Column(
-              children: <Widget>[
-                RadioListTile<String>(
-                  value: system,
-                  title: Text(l.languageSystem),
-                ),
-                for (final Locale locale in appLocales)
-                  RadioListTile<String>(
-                    value: locale.languageCode,
-                    title: Text(_languageName(l, locale)),
-                  ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text(l.languageNote, style: Theme.of(d).textTheme.bodySmall),
-          ),
-        ],
-      ),
-    );
-    if (picked == null) return;
-    await ref
-        .read(appLanguageProvider.notifier)
-        .set(picked == system ? null : Locale(picked));
   }
 
   /// Suggestions send what is typed to the search engine: say so before

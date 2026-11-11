@@ -707,16 +707,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get language => 'Language';
-
-  @override
-  String get languageSystem => 'Phone language';
-
-  @override
-  String get languageNote =>
-      'Sign-in and account screens are shared by all Zero-Trust apps and are in English for now.';
-
-  @override
   String get startPageSection => 'Start page';
 
   @override
@@ -1097,6 +1087,462 @@ class AppL10nEn extends AppL10n {
   @override
   String get javascriptSub =>
       'Off makes many sites simpler and harder to track you on, but some stop working. It reloads.';
+
+  @override
+  String get unlock => 'Unlock';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get play => 'Play';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get stop => 'Stop';
+
+  @override
+  String get justNow => 'just now';
+
+  @override
+  String hoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hours ago',
+      one: '1 hour ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sendToDevice => 'Send to your devices';
+
+  @override
+  String get sendLinkToDevice => 'Send link to your devices';
+
+  @override
+  String get sendToDeviceNone =>
+      'No other devices yet. Sign in to ZT Browser with the same account on another phone or tablet, and it shows up here.';
+
+  @override
+  String lastActive(String when) {
+    return 'Last active $when';
+  }
+
+  @override
+  String sentToDevice(String name) {
+    return 'Sent to $name';
+  }
+
+  @override
+  String get couldntSend => 'Couldn\'t send. Try again.';
+
+  @override
+  String get sentToThisDevice => 'Sent to this device';
+
+  @override
+  String sentFrom(String name) {
+    return 'From $name';
+  }
+
+  @override
+  String sentFromSnack(String name, String title) {
+    return '$name sent: $title';
+  }
+
+  @override
+  String get newFolder => 'New folder';
+
+  @override
+  String get folderName => 'Folder name';
+
+  @override
+  String get renameFolder => 'Rename folder';
+
+  @override
+  String get deleteFolder => 'Delete folder';
+
+  @override
+  String deleteFolderKeeps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Its $count bookmarks move to the top level',
+      one: 'Its bookmark moves to the top level',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get topLevel => 'Top level (no folder)';
+
+  @override
+  String get folderEmpty => 'This folder is empty.';
+
+  @override
+  String nBookmarks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count bookmarks',
+      one: '1 bookmark',
+      zero: 'No bookmarks',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get folderOptions => 'Folder options';
+
+  @override
+  String get moveToFolder => 'Move to folder';
+
+  @override
+  String get autoClearCookies => 'Clear cookies when tabs close';
+
+  @override
+  String get autoClearCookiesSub =>
+      'When the last tab of a site closes, its cookies and site data are deleted, so it can\'t recognise you next time. Sites you keep signed in are skipped.';
+
+  @override
+  String get keptSignedIn => 'Kept signed in';
+
+  @override
+  String get keptSignedInExplain =>
+      'These sites keep their cookies when their tabs close.';
+
+  @override
+  String keepSignedInOn(String site) {
+    return 'Keep me signed in to $site';
+  }
+
+  @override
+  String get keepSignedInSub => 'Its cookies stay when its tabs close.';
+
+  @override
+  String get saveToZtNotes => 'Save to ZT Notes';
+
+  @override
+  String get saveToZtNotesSub => 'The selected text, or the page\'s link';
+
+  @override
+  String get readLaterInZtTasks => 'Read later in ZT Tasks';
+
+  @override
+  String get callWithZtPhone => 'Call with ZT Phone';
+
+  @override
+  String get saveToZtContacts => 'Save to ZT Contacts';
+
+  @override
+  String get openWithOtherApp => 'Open with another app';
+
+  @override
+  String get copyNumber => 'Copy number';
+
+  @override
+  String get appCouldntOpen => 'That app couldn\'t open this.';
+
+  @override
+  String get backgroundPlay => 'Keep playing in the background';
+
+  @override
+  String get backgroundPlaySub =>
+      'Audio and videos keep playing when you leave the app, with play and pause in the notification. A full-screen video shrinks to a small window.';
+
+  @override
+  String get mediaChannel => 'Playing media';
+
+  @override
+  String get readAloud => 'Read aloud';
+
+  @override
+  String get stopReadingAloud => 'Stop reading aloud';
+
+  @override
+  String get readingAloud => 'Reading aloud';
+
+  @override
+  String readAloudProgress(int part, int count) {
+    return 'Reading aloud · $part of $count';
+  }
+
+  @override
+  String get readAloudSpeed => 'Reading speed';
+
+  @override
+  String get readAloudCant => 'This page has no article to read aloud.';
+
+  @override
+  String get readAloudNoVoice =>
+      'No offline voice for this page\'s language. Add one in Android Settings > Text-to-speech, so the text never leaves your phone.';
+
+  @override
+  String get readAloudFailed => 'Reading aloud stopped.';
+
+  @override
+  String get privateTabsSection => 'Private tabs';
+
+  @override
+  String get privateNoScreenshots => 'Block screenshots';
+
+  @override
+  String get privateNoScreenshotsSub =>
+      'No screenshots or screen recording while a private tab is on screen.';
+
+  @override
+  String get privateHideRecents => 'Hide from recent apps';
+
+  @override
+  String get privateHideRecentsSub =>
+      'The recent apps screen shows a blank preview while private tabs are open.';
+
+  @override
+  String get privateLock => 'Lock private tabs';
+
+  @override
+  String get privateLockSub =>
+      'After you leave the app, private tabs need your fingerprint, face or screen lock again.';
+
+  @override
+  String get privateLockUnavailable =>
+      'Set a screen lock on your phone to use this.';
+
+  @override
+  String get privateLocked => 'Private tabs are locked.';
+
+  @override
+  String get privateUnlockReason => 'Unlock your private tabs';
+
+  @override
+  String get blockRules => 'Your block rules';
+
+  @override
+  String get blockRulesSub =>
+      'Block or allow a site yourself, add filter lists';
+
+  @override
+  String blockRulesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count rules and lists',
+      one: '1 rule or list',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get blockRulesExplain =>
+      'Your rules apply on every site where protection is on, and sync to your other devices, end-to-end encrypted.';
+
+  @override
+  String get alwaysBlock => 'Always block';
+
+  @override
+  String get neverBlock => 'Never block';
+
+  @override
+  String get addHostToBlock => 'Block a site or server';
+
+  @override
+  String get addHostToAllow => 'Allow a site or server';
+
+  @override
+  String get blockHostExplain =>
+      'Requests to it, and to every address under it, are blocked on all sites.';
+
+  @override
+  String get allowHostExplain =>
+      'Never blocked, even when a list has it. Useful when a list breaks a site you need.';
+
+  @override
+  String get notAHost => 'Type an address like ads.example.com';
+
+  @override
+  String get extraFilterLists => 'Extra filter lists';
+
+  @override
+  String get extraFilterListsExplain =>
+      'Hosts files or AdBlock domain lists. Each phone downloads them straight from their address once a week. Tap a list to update it now.';
+
+  @override
+  String get addFilterList => 'Add a filter list';
+
+  @override
+  String get addFilterListExplain =>
+      'The address of a hosts file or AdBlock list (https). The list\'s owner sees that your phone downloaded it, nothing more.';
+
+  @override
+  String get filterListNeedsHttps => 'Type an https:// address';
+
+  @override
+  String filterListAdded(String count) {
+    return 'List added: $count hosts blocked';
+  }
+
+  @override
+  String filterListUpdated(String count) {
+    return 'Updated: $count hosts';
+  }
+
+  @override
+  String get filterListFailed => 'Couldn\'t download the list';
+
+  @override
+  String get filterListNotYet => 'Not downloaded yet';
+
+  @override
+  String filterListStatus(String count, String date) {
+    return '$count hosts · $date';
+  }
+
+  @override
+  String get encryptedDns => 'Encrypted DNS';
+
+  @override
+  String get encryptedDnsOn => 'Encrypted DNS is on';
+
+  @override
+  String get encryptedDnsOff => 'Encrypted DNS is off';
+
+  @override
+  String encryptedDnsServer(String server) {
+    return 'On, with $server';
+  }
+
+  @override
+  String get encryptedDnsAutomatic => 'On, with your network\'s DNS';
+
+  @override
+  String get encryptedDnsOffSub =>
+      'Your network can see which sites you look up.';
+
+  @override
+  String get encryptedDnsExplain =>
+      'Before opening a site, your phone looks up its address (DNS). Without encryption, your Wi-Fi or mobile network sees every site you visit, even with HTTPS. Android\'s Private DNS encrypts these lookups for every app, ZT Browser included.';
+
+  @override
+  String get encryptedDnsSteps =>
+      'To turn it on: Android Settings > Network & internet > Private DNS > Private DNS provider hostname, then paste one of these:';
+
+  @override
+  String dnsBlocksAds(String name) {
+    return '$name, also blocks ads and trackers';
+  }
+
+  @override
+  String dnsBlocksMalware(String name) {
+    return '$name, also blocks malware sites';
+  }
+
+  @override
+  String get copyHostname => 'Copy hostname';
+
+  @override
+  String get openNetworkSettings => 'Open network settings';
+
+  @override
+  String get encryptedDnsVpnNote =>
+      'A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, Private DNS is the safest choice and needs no extra app.';
+
+  @override
+  String get translate => 'Translate';
+
+  @override
+  String get translatePage => 'Translate page';
+
+  @override
+  String get translatePageSub => 'On your phone; the text never leaves it';
+
+  @override
+  String get showOriginal => 'Show original';
+
+  @override
+  String get translateFrom => 'From';
+
+  @override
+  String get translateTo => 'To';
+
+  @override
+  String get translatePickLanguage =>
+      'Couldn\'t tell the page\'s language. Pick it here.';
+
+  @override
+  String get translateSameLanguage => 'Pick two different languages.';
+
+  @override
+  String get translateNoModel =>
+      'There\'s no translation between these languages yet.';
+
+  @override
+  String get translateOnDevice =>
+      'Translated on your phone with Firefox\'s translation engine. The page\'s text is never sent anywhere.';
+
+  @override
+  String translateDownloadExplain(String size) {
+    return 'The first time, the language files ($size MB) download from ZT Browser\'s releases on GitHub (Mozilla\'s Firefox models). After that, translation works offline. The page\'s text is never sent anywhere.';
+  }
+
+  @override
+  String translateDownloadAndTranslate(String size) {
+    return 'Download $size MB and translate';
+  }
+
+  @override
+  String get translateDownloadFailed =>
+      'Couldn\'t download the language files. Check the connection and try again.';
+
+  @override
+  String get translateListFailed =>
+      'Couldn\'t get the list of languages. Check the connection.';
+
+  @override
+  String get tryAgain => 'Try again';
+
+  @override
+  String get translateNeedsJs =>
+      'Translation needs JavaScript on for this site (site settings).';
+
+  @override
+  String get translateFailed => 'Translation stopped. Showing the original.';
+
+  @override
+  String translatingFrom(String language) {
+    return 'Translating from $language…';
+  }
+
+  @override
+  String translatedFrom(String language) {
+    return 'Translated from $language';
+  }
+
+  @override
+  String get translationLanguages => 'Translation languages';
+
+  @override
+  String get translationLanguagesSub =>
+      'Downloaded for translating on your phone';
+
+  @override
+  String get translationExplain =>
+      'ZT Browser translates pages on your phone, with Firefox\'s translation engine. Each language is downloaded once, from ZT Browser\'s releases on GitHub. The text of the pages you translate is never sent anywhere.';
+
+  @override
+  String get translationNoneYet =>
+      'No languages yet. They download the first time you translate a page.';
+
+  @override
+  String translationModelSize(String size) {
+    return '$size MB on the phone';
+  }
+
+  @override
+  String get translationCredit =>
+      'Translation engine: Bergamot (Firefox Translations). Language models: Mozilla. Both under the Mozilla Public License 2.0.';
 
   @override
   String qrFor(String url) {

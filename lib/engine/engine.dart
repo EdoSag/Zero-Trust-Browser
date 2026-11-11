@@ -42,6 +42,14 @@ class BrowserEngine {
 
   Stream<TabEvent> get events => _events.stream;
 
+  /// Where read aloud is: idle, speaking or paused, and which part.
+  final ValueNotifier<ReadAloudState> readAloud = ValueNotifier<ReadAloudState>(
+    const ReadAloudState(),
+  );
+
+  /// The app left the screen (home, recent apps, another app on top).
+  final StreamController<void> appHidden = StreamController<void>.broadcast();
+
   Future<Object?> _onCall(MethodCall call) async {
     switch (call.method) {
       case 'tabEvent':
@@ -54,6 +62,12 @@ class BrowserEngine {
         pendingLinks.value++;
       case 'systemUi':
         systemUiOpen.value = call.arguments == true;
+      case 'readAloud':
+        final Map<Object?, Object?> data =
+            (call.arguments as Map<Object?, Object?>?) ?? const {};
+        readAloud.value = ReadAloudState.fromMap(data);
+      case 'appHidden':
+        appHidden.add(null);
     }
     return null;
   }
@@ -272,6 +286,218 @@ class BrowserEngine {
 
   Future<void> openDefaultBrowserSettings() =>
       _call<void>('openDefaultBrowserSettings');
+
+  /// This phone's model ("Pixel 8"), the name other devices see.
+  Future<String> deviceName() async =>
+      await _call<String>('deviceName') ?? 'Android phone';
+
+  // ---- B24: cookie auto-clear ----------------------------------------------
+
+  /// Deletes cookies and site storage (local storage, IndexedDB, caches)
+  /// of these hosts and their sites, in normal tabs. Private tabs have
+  /// their own profile and are never touched.
+  Future<void> clearSiteData(List<String> hosts) =>
+      _call<void>('clearSiteData', <String, Object?>{'hosts': hosts});
+
+  // ---- B30: the user's own block rules --------------------------------------
+
+  /// Hosts the user blocks or never blocks, and a file of hosts from the
+  /// extra filter lists (one per line), or null for none.
+  Future<void> setUserRules({
+    required List<String> blocked,
+    required List<String> allowed,
+    String? listsFile,
+  }) => _call<void>('setUserRules', <String, Object?>{
+    'blocked': blocked,
+    'allowed': allowed,
+    'listsFile': listsFile,
+  });
+
+  /// How many hosts the extra filter lists add (once loaded).
+  Future<int> extraListSize() async => await _call<int>('extraListSize') ?? 0;
+
+  // ---- B17: encrypted DNS ------------------------------------------------
+
+  /// Android's Private DNS: active (bool), server (the provider's name when
+  /// the user set one, else null).
+  Future<Map<Object?, Object?>> privateDns() async =>
+      await _call<Map<Object?, Object?>>('privateDns') ??
+      const <Object?, Object?>{};
+
+  /// Android's network settings, where Private DNS is.
+  Future<void> openNetworkSettings() => _call<void>('openNetworkSettings');
+
+  // ---- B29: private tab extras ---------------------------------------------
+
+  /// [secure] blocks screenshots and screen recording; [hideRecents]
+  /// blanks the app's preview in recent apps.
+  Future<void> setWindowPrivacy({
+    required bool secure,
+    required bool hideRecents,
+  }) => _call<void>('setWindowPrivacy', <String, Object?>{
+    'secure': secure,
+    'hideRecents': hideRecents,
+  });
+
+  // ---- B25: the other ZT apps ----------------------------------------------
+
+  /// Which of [packages] are installed.
+  Future<Set<String>> installedApps(List<String> packages) async =>
+      (await _call<List<Object?>>('installedApps', <String, Object?>{
+                'packages': packages,
+              }) ??
+              const <Object?>[])
+          .whereType<String>()
+          .toSet();
+
+  /// Hands something to another app on the phone (nothing leaves it):
+  /// [action] is 'send' (text), 'dial' (a number) or 'contact' (a new
+  /// contact with this number). False when the app couldn't take it.
+  Future<bool> sendToApp({
+    required String package,
+    required String action,
+    String? text,
+    String? subject,
+    String? phone,
+  }) async =>
+      await _call<bool>('sendToApp', <String, Object?>{
+        'package': package,
+        'action': action,
+        'text': text,
+        'subject': subject,
+        'phone': phone,
+      }) ??
+      false;
+
+  /// The text selected on the page, or null.
+  Future<String?> selection(String tabId) async {
+    final String? raw = await _call<String>('selection', <String, Object?>{
+      'tabId': tabId,
+    });
+    if (raw == null || raw == 'null') return null;
+    try {
+      final Object? v = jsonDecode(raw);
+      return v is String && v.trim().isNotEmpty ? v.trim() : null;
+    } on FormatException {
+      return null;
+    }
+  }
+
+  // ---- B16: translation -----------------------------------------------------
+
+  /// The page's declared language (`lang`) and a sample of its text.
+  Future<({String lang, String sample})?> pageLanguage(String tabId) async {
+    final String? raw = await _call<String>('pageLanguage', <String, Object?>{
+      'tabId': tabId,
+    });
+    if (raw == null) return null;
+    try {
+      final Object? v = jsonDecode(raw);
+      if (v is! Map) return null;
+      return (
+        lang: v['lang'] as String? ?? '',
+        sample: v['sample'] as String? ?? '',
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Translates the page on the phone, with the models in [modelsDir].
+  /// False when the page's JavaScript is off.
+  Future<bool> translatePage(
+    String tabId,
+    String from,
+    String to,
+    String modelsDir,
+  ) async =>
+      await _call<bool>('translatePage', <String, Object?>{
+        'tabId': tabId,
+        'from': from,
+        'to': to,
+        'modelsDir': modelsDir,
+      }) ??
+      false;
+
+  Future<void> showOriginal(String tabId) =>
+      _call<void>('showOriginal', <String, Object?>{'tabId': tabId});
+
+  /// The installed models changed.
+  Future<void> translatorReset() => _call<void>('translatorReset');
+
+  // ---- B27: read aloud -----------------------------------------------------
+
+  /// Reads [parts] aloud with the phone's own text-to-speech, in
+  /// [language] (a BCP-47 tag like "he" or "en-US"), from part [from].
+  /// [title] shows in the notification.
+  Future<bool> readAloudStart({
+    required List<String> parts,
+    required String title,
+    String? language,
+    double rate = 1.0,
+    int from = 0,
+    bool private = false,
+  }) async =>
+      await _call<bool>('readAloudStart', <String, Object?>{
+        'parts': parts,
+        'title': title,
+        'private': private,
+        'language': language,
+        'rate': rate,
+        'from': from,
+      }) ??
+      false;
+
+  Future<void> readAloudPause() => _call<void>('readAloudPause');
+  Future<void> readAloudResume() => _call<void>('readAloudResume');
+  Future<void> readAloudStop() => _call<void>('readAloudStop');
+  Future<void> readAloudSkip(int by) =>
+      _call<void>('readAloudSkip', <String, Object?>{'by': by});
+  Future<void> readAloudRate(double rate) =>
+      _call<void>('readAloudRate', <String, Object?>{'rate': rate});
+
+  // ---- B26: background play ----------------------------------------------
+
+  /// Keep media playing in the background (with a notification), and the
+  /// notification's texts in the app's language.
+  Future<void> setMedia({
+    required bool backgroundPlay,
+    required Map<String, String> labels,
+  }) => _call<void>('setMedia', <String, Object?>{
+    'backgroundPlay': backgroundPlay,
+    'labels': labels,
+  });
+
+  /// Picture-in-picture for the video playing full screen now, if any.
+  Future<bool> pictureInPicture() async =>
+      await _call<bool>('pictureInPicture') ?? false;
+}
+
+/// Read aloud, as the engine reports it.
+class ReadAloudState {
+  const ReadAloudState({
+    this.status = 'idle',
+    this.part = 0,
+    this.parts = 0,
+    this.error,
+  });
+
+  /// idle, speaking, paused or done.
+  final String status;
+  final int part;
+  final int parts;
+
+  /// noVoice (no voice for the language), failed, or null.
+  final String? error;
+
+  bool get active => status == 'speaking' || status == 'paused';
+
+  static ReadAloudState fromMap(Map<Object?, Object?> m) => ReadAloudState(
+    status: m['status'] as String? ?? 'idle',
+    part: m['part'] as int? ?? 0,
+    parts: m['parts'] as int? ?? 0,
+    error: m['error'] as String?,
+  );
 }
 
 final browserEngineProvider = Provider<BrowserEngine>((ref) => BrowserEngine());

@@ -2,6 +2,7 @@ package dev.sagron.zerotrustbrowser
 
 import android.Manifest
 import android.app.DownloadManager
+import android.app.PictureInPictureParams
 import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
 import android.content.ComponentCallbacks2
@@ -16,6 +17,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
+import android.net.ConnectivityManager
 import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
@@ -25,12 +27,15 @@ import android.os.Handler
 import android.os.Looper
 import android.print.PrintAttributes
 import android.print.PrintManager
+import android.provider.ContactsContract
 import android.provider.Settings
+import android.util.Rational
 import android.speech.RecognizerIntent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.view.autofill.AutofillManager
 import android.webkit.CookieManager
 import android.webkit.URLUtil
@@ -86,10 +91,17 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     private val waiting = HashMap<Int, MethodChannel.Result>()
 
     private lateinit var downloads: Downloads
+    private lateinit var readAloud: ReadAloud
+    private var readAloudPrivate = false
+
+    /** B16: on-device translation, started the first time a page is translated. */
+    private val translator by lazy { Translator(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         downloads = Downloads(this)
+        readAloud = ReadAloud(this) { state -> onReadAloud(state) }
+        MediaHub.control = { command -> mediaControl(command) }
         pendingUrl = linkFrom(intent)
         pendingWidgetAction = SearchWidgetProvider.actionFrom(intent)
         Blocker.onLoaded = {
@@ -294,6 +306,99 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         openAutofillSettings()
                         result.success(null)
                     }
+                    "deviceName" -> result.success(deviceName())
+                    "clearSiteData" -> {
+                        SiteData.clear(call.argument<List<String>>("hosts") ?: emptyList()) {
+                            main.post { result.success(null) }
+                        }
+                    }
+                    "setUserRules" -> {
+                        Blocker.setUserRules(
+                            (call.argument<List<String>>("blocked") ?: emptyList()).map { it.lowercase() }.toSet(),
+                            (call.argument<List<String>>("allowed") ?: emptyList()).map { it.lowercase() }.toSet(),
+                            call.argument<String>("listsFile"),
+                        )
+                        result.success(null)
+                    }
+                    "extraListSize" -> result.success(Blocker.extraSize())
+                    "privateDns" -> result.success(privateDns())
+                    "openNetworkSettings" -> {
+                        openNetworkSettings()
+                        result.success(null)
+                    }
+                    "setWindowPrivacy" -> {
+                        setWindowPrivacy(
+                            call.argument<Boolean>("secure") ?: false,
+                            call.argument<Boolean>("hideRecents") ?: false,
+                        )
+                        result.success(null)
+                    }
+                    "installedApps" -> result.success(
+                        (call.argument<List<String>>("packages") ?: emptyList()).filter { isInstalled(it) },
+                    )
+                    "sendToApp" -> result.success(
+                        sendToApp(
+                            call.argument<String>("package") ?: "",
+                            call.argument<String>("action") ?: "",
+                            call.argument<String>("text"),
+                            call.argument<String>("subject"),
+                            call.argument<String>("phone"),
+                        ),
+                    )
+                    "selection" -> {
+                        if (tab == null) result.success(null) else tab.selection { result.success(it) }
+                    }
+                    "pageLanguage" -> {
+                        if (tab == null) result.success(null) else tab.pageLanguage { result.success(it) }
+                    }
+                    "translatePage" -> {
+                        val dir = call.argument<String>("modelsDir")
+                        val from = call.argument<String>("from")
+                        val to = call.argument<String>("to")
+                        if (tab == null || dir == null || from == null || to == null) {
+                            result.success(false)
+                        } else {
+                            translator.modelsDir = java.io.File(dir)
+                            result.success(tab.translatePage(translator, from, to))
+                        }
+                    }
+                    "showOriginal" -> {
+                        tab?.showOriginal()
+                        result.success(null)
+                    }
+                    "translatorReset" -> {
+                        translator.reset()
+                        result.success(null)
+                    }
+                    "readAloudStart" -> {
+                        // From a private tab: its title stays off the
+                        // notification and the lock screen.
+                        readAloudPrivate = call.argument<Boolean>("private") ?: false
+                        readAloud.start(
+                            call.argument<List<String>>("parts") ?: emptyList(),
+                            call.argument<String>("title") ?: "",
+                            call.argument<String>("language"),
+                            call.argument<Double>("rate") ?: 1.0,
+                            call.argument<Int>("from") ?: 0,
+                        )
+                        result.success(true)
+                    }
+                    "readAloudPause" -> { readAloud.pause(); result.success(null) }
+                    "readAloudResume" -> { readAloud.resume(); result.success(null) }
+                    "readAloudStop" -> { readAloud.stop(); result.success(null) }
+                    "readAloudSkip" -> { readAloud.skip(call.argument<Int>("by") ?: 1); result.success(null) }
+                    "readAloudRate" -> { readAloud.setRate(call.argument<Double>("rate") ?: 1.0); result.success(null) }
+                    "setMedia" -> {
+                        val keep = call.argument<Boolean>("backgroundPlay") ?: true
+                        call.argument<Map<String, String>>("labels")?.let { MediaHub.labels = it }
+                        if (keep != ZtTab.backgroundPlay) {
+                            ZtTab.backgroundPlay = keep
+                            for (t in tabs.values) t.refreshScripts()
+                            if (!keep && MediaHub.now?.source == "web") MediaHub.set(this, null)
+                        }
+                        result.success(null)
+                    }
+                    "pictureInPicture" -> result.success(enterPip())
                     else -> result.notImplemented()
                 }
             } catch (e: Exception) {
@@ -457,6 +562,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT),
         )
         setSystemBars(visible = false)
+        // Leaving the app with a video full screen shrinks it into a
+        // picture-in-picture window (B26).
+        updatePipParams(auto = true)
     }
 
     override fun hideFullscreen() {
@@ -464,6 +572,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         fullscreenView = null
         (window.decorView as FrameLayout).removeView(v)
         setSystemBars(visible = true)
+        updatePipParams(auto = false)
         fullscreenHidden?.invoke()
         fullscreenHidden = null
     }
@@ -763,6 +872,189 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         }
     }
 
+    // ---- Media: notification, background play, picture-in-picture (B26, B27) ----
+
+    override fun mediaChanged(tab: ZtTab, playing: Boolean, title: String?) {
+        val now = MediaHub.now
+        if (title == null) {
+            if (now?.source == "web" && now.tabId == tab.id) MediaHub.set(this, null)
+            return
+        }
+        if (!ZtTab.backgroundPlay) return
+        if (playing) {
+            if (readAloud.isSpeaking) readAloud.pause()
+            val site = Uri.parse(tab.webView.url ?: "").host?.removePrefix("www.") ?: ""
+            MediaHub.set(this, MediaHub.Now("web", tab.id, title, site, true, tab.isPrivate))
+        } else if (now?.source == "web" && now.tabId == tab.id) {
+            MediaHub.set(this, now.copy(playing = false))
+        }
+    }
+
+    private fun onReadAloud(state: Map<String, Any?>) {
+        channel?.invokeMethod("readAloud", state)
+        val now = MediaHub.now
+        when (state["status"]) {
+            "speaking" -> {
+                for (t in tabs.values) if (t.mediaPlaying) t.mediaControl("pause")
+                MediaHub.set(this, MediaHub.Now("speech", null, readAloud.currentTitle, "", true, readAloudPrivate))
+            }
+            "paused" -> if (now?.source == "speech") MediaHub.set(this, now.copy(playing = false))
+            else -> if (now?.source == "speech") MediaHub.set(this, null)
+        }
+    }
+
+    /** Play, pause or stop from the notification or the lock screen. */
+    private fun mediaControl(command: String) {
+        main.post {
+            val now = MediaHub.now ?: return@post
+            if (now.source == "speech") {
+                when (command) {
+                    "play" -> readAloud.resume()
+                    "pause" -> readAloud.pause()
+                    else -> readAloud.stop()
+                }
+                return@post
+            }
+            val tab = now.tabId?.let { tabs[it] }
+            when (command) {
+                "play", "pause" -> tab?.mediaControl(command)
+                else -> {
+                    tab?.mediaControl("pause")
+                    MediaHub.set(this, null)
+                }
+            }
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        channel?.invokeMethod("appHidden", null)
+        // Background play off: what plays stops when the app leaves.
+        if (!ZtTab.backgroundPlay && !isInPictureInPictureMode) {
+            for (t in tabs.values) if (t.mediaPlaying) t.mediaControl("pause")
+        }
+    }
+
+    private fun pipParams(auto: Boolean): PictureInPictureParams {
+        val b = PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) b.setAutoEnterEnabled(auto)
+        return b.build()
+    }
+
+    private fun updatePipParams(auto: Boolean) {
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) return
+        try {
+            setPictureInPictureParams(pipParams(auto))
+        } catch (e: Exception) {
+            // Not supported on this device.
+        }
+    }
+
+    /** The full-screen video, now in a small window; false when none. */
+    private fun enterPip(): Boolean {
+        if (fullscreenView == null) return false
+        if (!packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) return false
+        return try {
+            enterPictureInPictureMode(pipParams(auto = true))
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Android 12+ enters by itself (auto-enter); older ones here.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && fullscreenView != null) enterPip()
+    }
+
+    // ---- Private tabs: screenshots and recent apps (B29) ----------------
+
+    private fun setWindowPrivacy(secure: Boolean, hideRecents: Boolean) {
+        val blank = secure || (hideRecents && Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+        if (blank) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setRecentsScreenshotEnabled(!hideRecents)
+    }
+
+    // ---- Encrypted DNS (B17) ---------------------------------------------
+
+    /** Android's Private DNS on the current network. */
+    private fun privateDns(): Map<String, Any?> {
+        val cm = getSystemService(ConnectivityManager::class.java)
+        val props = try {
+            cm?.getLinkProperties(cm.activeNetwork)
+        } catch (e: Exception) {
+            null
+        }
+        val mode = try {
+            Settings.Global.getString(contentResolver, "private_dns_mode")
+        } catch (e: Exception) {
+            null
+        }
+        return mapOf(
+            "active" to (props?.isPrivateDnsActive == true),
+            "server" to props?.privateDnsServerName,
+            "mode" to mode,
+            "online" to (props != null),
+        )
+    }
+
+    private fun openNetworkSettings() {
+        for (intent in listOf(Intent(Settings.ACTION_WIRELESS_SETTINGS), Intent(Settings.ACTION_SETTINGS))) {
+            try {
+                startActivity(intent)
+                return
+            } catch (e: ActivityNotFoundException) {
+                // Try the next one.
+            }
+        }
+    }
+
+    // ---- The other ZT apps (B25) and this device --------------------------
+
+    private fun deviceName(): String {
+        val model = Build.MODEL ?: ""
+        val maker = Build.MANUFACTURER ?: ""
+        val name = if (model.startsWith(maker, ignoreCase = true)) model else "$maker $model"
+        return name.trim().replaceFirstChar { it.uppercase() }.ifEmpty { "Android phone" }
+    }
+
+    private fun isInstalled(pkg: String): Boolean = try {
+        packageManager.getPackageInfo(pkg, 0)
+        true
+    } catch (e: PackageManager.NameNotFoundException) {
+        false
+    }
+
+    /**
+     * Hands text or a number to another ZT app, on the phone only:
+     * "send" (shared text, ZT Notes or ZT Tasks), "dial" (ZT Phone's
+     * dialer) or "contact" (a new contact in ZT Contacts).
+     */
+    private fun sendToApp(pkg: String, action: String, text: String?, subject: String?, phone: String?): Boolean {
+        val intent = when (action) {
+            "send" -> Intent(Intent.ACTION_SEND).setType("text/plain").apply {
+                putExtra(Intent.EXTRA_TEXT, text ?: "")
+                if (subject != null) putExtra(Intent.EXTRA_SUBJECT, subject)
+            }
+            "dial" -> Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", phone ?: "", null))
+            "contact" -> Intent(ContactsContract.Intents.Insert.ACTION)
+                .setType(ContactsContract.RawContacts.CONTENT_TYPE)
+                .putExtra(ContactsContract.Intents.Insert.PHONE, phone ?: "")
+            else -> return false
+        }
+        intent.setPackage(pkg)
+        return try {
+            startActivity(intent)
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        }
+    }
+
     // ---- Engine ----------------------------------------------------------
 
     private fun deletePrivateProfileIfUnused() {
@@ -836,8 +1128,12 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     }
 
     override fun onDestroy() {
+        readAloud.shutdown()
+        translator.stop()
+        MediaHub.control = null
         for (t in tabs.values) t.destroy()
         tabs.clear()
+        MediaHub.set(this, null)
         deletePrivateProfileIfUnused()
         Blocker.onLoaded = null
         super.onDestroy()

@@ -8,11 +8,15 @@ import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/apply_settings.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/filter_lists.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
+import 'package:zerotrust_browser/browser/read_aloud.dart';
 import 'package:zerotrust_browser/browser/reader.dart';
 import 'package:zerotrust_browser/browser/search_suggestions.dart';
 import 'package:zerotrust_browser/browser/site_permissions.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
+import 'package:zerotrust_browser/browser/zt_apps.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
@@ -23,13 +27,17 @@ import 'package:zerotrust_browser/pages/downloads_page.dart';
 import 'package:zerotrust_browser/pages/history_page.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
+import 'package:zerotrust_browser/pages/send_tab_sheet.dart';
+import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
 import 'package:zerotrust_browser/pages/start_page.dart';
 import 'package:zerotrust_browser/pages/tabs_page.dart';
 import 'package:zerotrust_browser/widgets/address_text.dart';
 import 'package:zerotrust_browser/widgets/qr_sheet.dart';
+import 'package:zerotrust_browser/widgets/read_aloud_bar.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
+import 'package:zerotrust_browser/widgets/tab_strip.dart';
 
 /// The browser once unlocked: address bar, the current tab, toolbar.
 class BrowserHome extends ConsumerStatefulWidget {
@@ -46,12 +54,21 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   final FocusNode _addressFocus = FocusNode();
   final TextEditingController _findText = TextEditingController();
   StreamSubscription<TabPrompt>? _prompts;
+
+  /// The page being read aloud is in a private tab.
+  bool _readingPrivate = false;
   Completer<void>? _systemUi;
   bool _editing = false;
   bool _finding = false;
   String _findResult = '';
   bool _pruned = false;
   bool _voice = false;
+
+  /// What the window was last told about private tabs (B29).
+  (bool, bool)? _windowPrivacy;
+
+  /// Pages from other devices already announced (B23).
+  final Set<String> _announced = <String>{};
 
   @override
   void initState() {
@@ -63,14 +80,20 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     _prompts = ref.read(tabsProvider.notifier).prompts.listen(_onPrompt);
     _engine.pendingLinks.addListener(_openPendingLink);
     _engine.systemUiOpen.addListener(_onSystemUi);
+    _engine.readAloud.addListener(_onReadAloud);
     WidgetsBinding.instance.addPostFrameCallback((_) => _start());
   }
 
   Future<void> _start() async {
     _pushPrivacy(ref.read(browserSettingsProvider));
+    _pushMedia(ref.read(browserSettingsProvider));
     await ref
         .read(tabsProvider.notifier)
         .restoreIfEmpty(closeAfterDays: _settings.closeTabsAfterDays);
+    // Data of sites from last time that no restored tab shows (B24).
+    _tabs.sweepSiteData().ignore();
+    // The user's own rules and extra lists (B30), lists weekly.
+    ref.read(userBlockRulesProvider).refreshIfDue().ignore();
     await _openPendingLink();
     final bool voice = await _engine.voiceAvailable();
     if (mounted) setState(() => _voice = voice);
@@ -83,6 +106,24 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     if (state == AppLifecycleState.paused) {
       // What was blocked since the last save, before the app may be closed.
       ref.read(privacyReportRecorderProvider).flush().ignore();
+      _tabs.sweepSiteData().ignore();
+      // Private tabs need the phone's lock again (B29); not for a file
+      // picker or another screen the browser opened itself.
+      if (_settings.privateLock &&
+          ref.read(tabsProvider).private.isNotEmpty &&
+          !_engine.systemUiOpen.value) {
+        ref.read(privateLockProvider.notifier).lock();
+        // Fullscreen video sits above Flutter, so above the lock screen
+        // too: take a private tab's video down (also out of the small
+        // floating window).
+        if (ref.read(tabsProvider).current?.private ?? false) {
+          _engine.exitFullscreen().ignore();
+        }
+        // A private page read aloud would go on past the lock.
+        if (_readingPrivate && _engine.readAloud.value.active) {
+          _engine.readAloudStop().ignore();
+        }
+      }
     }
     if (state != AppLifecycleState.resumed) return;
     final int? days = _settings.closeTabsAfterDays;
@@ -96,6 +137,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     _prompts?.cancel();
     _engine.pendingLinks.removeListener(_openPendingLink);
     _engine.systemUiOpen.removeListener(_onSystemUi);
+    _engine.readAloud.removeListener(_onReadAloud);
     _systemUi?.complete();
     _address.dispose();
     _addressFocus.dispose();
@@ -112,6 +154,68 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   void _pushPrivacy(BrowserSettings s) {
     applySettings(_engine, s).ignore();
+  }
+
+  /// Background play and the media notification's texts (B26, B27).
+  void _pushMedia(BrowserSettings s) {
+    final AppL10n l = this.l;
+    _engine
+        .setMedia(
+          backgroundPlay: s.backgroundPlay,
+          labels: <String, String>{
+            'channel': l.mediaChannel,
+            'privateTab': l.privateTab,
+            'readingAloud': l.readingAloud,
+            'play': l.play,
+            'pause': l.pause,
+            'stop': l.stop,
+          },
+        )
+        .ignore();
+  }
+
+  /// Screenshots and the recent apps preview while private tabs are open
+  /// (B29); only sent when it changes.
+  void _updateWindowPrivacy(BrowserSettings s, TabsState tabs) {
+    final bool secure =
+        s.privateNoScreenshots && (tabs.current?.private ?? false);
+    final bool hide = s.privateHideRecents && tabs.private.isNotEmpty;
+    if (_windowPrivacy == (secure, hide)) return;
+    _windowPrivacy = (secure, hide);
+    _engine.setWindowPrivacy(secure: secure, hideRecents: hide).ignore();
+  }
+
+  void _onReadAloud() {
+    final ReadAloudState st = _engine.readAloud.value;
+    if (!mounted) return;
+    if (st.error == 'noVoice') {
+      _snack(l.readAloudNoVoice);
+    } else if (st.error == 'failed') {
+      _snack(l.readAloudFailed);
+    }
+    setState(() {});
+  }
+
+  /// Pages other devices sent here: announced once each (B23).
+  void _announceSent(List<SentTab> sent) {
+    for (final SentTab t in sent) {
+      if (!_announced.add(t.id)) continue;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l.sentFromSnack(t.fromName, t.title)),
+          // Flutter keeps a snackbar with an action open until it is tapped.
+          persist: false,
+          duration: const Duration(seconds: 8),
+          action: SnackBarAction(
+            label: l.open,
+            onPressed: () async {
+              await ref.read(browserDataProvider).dismissSentTab(t.id);
+              await _tabs.open(url: t.url);
+            },
+          ),
+        ),
+      );
+    }
   }
 
   /// The file picker leaves the app; auto-lock waits until it's back.
@@ -248,6 +352,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         } else {
           _snack(l.couldntSave(e.get<String>('name') ?? l.fileFallbackName));
         }
+      case 'translateFailed':
+        _snack(l.translateFailed);
       case 'permission':
         await _askPermission(e);
       case 'httpsFailed':
@@ -269,6 +375,12 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final String? target = link ?? image;
     if (target == null) return;
     final bool private = tab?.private ?? false;
+    final String? phone = phoneFromTel(link);
+    final Set<String> apps = phone == null ? const <String>{} : await _ztApps();
+    if (!mounted) return;
+    final bool web =
+        link != null &&
+        (link.startsWith('https://') || link.startsWith('http://'));
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -284,7 +396,25 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 style: Theme.of(sheet).textTheme.bodySmall,
               ),
             ),
-            if (link != null && !private)
+            if (phone != null && apps.contains(ZtApps.phone))
+              ListTile(
+                leading: const Icon(Icons.call_outlined),
+                title: Text(l.callWithZtPhone),
+                onTap: () {
+                  Navigator.pop(sheet);
+                  _toApp(ZtApps.phone, 'dial', phone: phone);
+                },
+              ),
+            if (phone != null && apps.contains(ZtApps.contacts))
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_outlined),
+                title: Text(l.saveToZtContacts),
+                onTap: () {
+                  Navigator.pop(sheet);
+                  _toApp(ZtApps.contacts, 'contact', phone: phone);
+                },
+              ),
+            if (link != null && web && !private)
               ListTile(
                 leading: const Icon(Icons.tab_outlined),
                 title: Text(l.openInNewTab),
@@ -293,13 +423,27 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   _tabs.open(url: link);
                 },
               ),
-            if (link != null)
+            if (link != null && web)
               ListTile(
                 leading: const Icon(Icons.privacy_tip_outlined),
                 title: Text(l.openInPrivateTab),
                 onTap: () {
                   Navigator.pop(sheet);
                   _tabs.open(url: link, private: true);
+                },
+              ),
+            if (link != null && web && !private)
+              ListTile(
+                leading: const Icon(Icons.devices_outlined),
+                title: Text(l.sendLinkToDevice),
+                onTap: () {
+                  Navigator.pop(sheet);
+                  showSendTabSheet(
+                    context,
+                    ref,
+                    url: _clean(link),
+                    title: _clean(link),
+                  );
                 },
               ),
             if (image != null)
@@ -338,6 +482,15 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   Future<void> _openExternal(String url, BrowserTab? tab) async {
     final String scheme = Uri.tryParse(url)?.scheme ?? '';
+    final String? phone = phoneFromTel(url);
+    if (phone != null) {
+      final Set<String> apps = await _ztApps();
+      if (!mounted) return;
+      if (apps.contains(ZtApps.phone) || apps.contains(ZtApps.contacts)) {
+        await _telChoice(url, phone, apps);
+        return;
+      }
+    }
     final bool ok =
         await showDialog<bool>(
           context: context,
@@ -368,6 +521,140 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     } else if (fallback == null && scheme == 'intent') {
       // Opened, or nothing could open it: nothing more to do here.
     }
+  }
+
+  /// A phone number on a page, with ZT Phone or ZT Contacts installed:
+  /// call it, save it, or use the phone's usual app (B25).
+  Future<void> _telChoice(String url, String phone, Set<String> apps) async {
+    final String? choice = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheet) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(
+                phone,
+                textDirection: TextDirection.ltr,
+                style: Theme.of(sheet).textTheme.titleLarge,
+              ),
+            ),
+            if (apps.contains(ZtApps.phone))
+              ListTile(
+                leading: const Icon(Icons.call_outlined),
+                title: Text(l.callWithZtPhone),
+                onTap: () => Navigator.pop(sheet, 'call'),
+              ),
+            if (apps.contains(ZtApps.contacts))
+              ListTile(
+                leading: const Icon(Icons.person_add_alt_outlined),
+                title: Text(l.saveToZtContacts),
+                onTap: () => Navigator.pop(sheet, 'contact'),
+              ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: Text(l.openWithOtherApp),
+              onTap: () => Navigator.pop(sheet, 'other'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.copy),
+              title: Text(l.copyNumber),
+              onTap: () => Navigator.pop(sheet, 'copy'),
+            ),
+          ],
+        ),
+      ),
+    );
+    switch (choice) {
+      case 'call':
+        await _toApp(ZtApps.phone, 'dial', phone: phone);
+      case 'contact':
+        await _toApp(ZtApps.contacts, 'contact', phone: phone);
+      case 'other':
+        await _engine.openExternal(url);
+      case 'copy':
+        await Clipboard.setData(ClipboardData(text: phone));
+        _snack(l.copied);
+    }
+  }
+
+  // ---- The other ZT apps (B25) ------------------------------------------
+
+  Future<Set<String>> _ztApps() async {
+    ref.invalidate(installedZtAppsProvider);
+    try {
+      return await ref.read(installedZtAppsProvider.future);
+    } on Object {
+      return const <String>{};
+    }
+  }
+
+  Future<void> _toApp(
+    String package,
+    String action, {
+    String? text,
+    String? subject,
+    String? phone,
+  }) async {
+    final bool ok = await _engine.sendToApp(
+      package: package,
+      action: action,
+      text: text,
+      subject: subject,
+      phone: phone,
+    );
+    if (!ok && mounted) _snack(l.appCouldntOpen);
+  }
+
+  /// The selected text (or the page's title and address) to ZT Notes.
+  Future<void> _saveToNotes(BrowserTab tab) async {
+    final String? selection = await _engine.selection(tab.id);
+    await _toApp(
+      ZtApps.notes,
+      'send',
+      subject: tab.label,
+      text: noteText(
+        title: tab.label,
+        url: _clean(tab.url!),
+        selection: selection,
+      ),
+    );
+  }
+
+  /// "Read later" as a task in ZT Tasks: the page's title, with its address.
+  Future<void> _readLaterInTasks(BrowserTab tab) async {
+    await _toApp(
+      ZtApps.tasks,
+      'send',
+      subject: tab.label,
+      text: '${tab.label}\n${_clean(tab.url!)}',
+    );
+  }
+
+  // ---- Read aloud (B27) -----------------------------------------------------
+
+  Future<void> _readAloud(BrowserTab tab) async {
+    final Article? a = Article.fromJson(await _engine.article(tab.id));
+    if (!mounted) return;
+    if (a == null) {
+      _snack(tab.javascript ? l.readAloudCant : l.readerNeedsJs);
+      return;
+    }
+    final List<String> parts = speechParts(a.content, title: a.title);
+    if (parts.isEmpty) {
+      _snack(l.readAloudCant);
+      return;
+    }
+    await _engine.readAloudStart(
+      parts: parts,
+      title: a.title.isNotEmpty ? a.title : tab.label,
+      language: a.lang,
+      rate: _settings.readAloudRate,
+      private: tab.private,
+    );
+    _readingPrivate = tab.private;
   }
 
   Future<void> _offerInsecure(String url, BrowserTab? tab) async {
@@ -645,6 +932,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final bool onPage = tab != null && !tab.isStartPage && !tab.crashed;
     final Bookmark? saved = onPage ? data.bookmarkFor(tab.url!) : null;
     final bool pinned = onPage && _settings.isPinned(tab.url!);
+    final Set<String> apps = onPage ? await _ztApps() : const <String>{};
+    if (!mounted) return;
+    final bool reading = _engine.readAloud.value.active;
     await showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
@@ -772,6 +1062,61 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   ),
                 if (onPage)
                   ListTile(
+                    leading: Icon(
+                      reading
+                          ? Icons.voice_over_off_outlined
+                          : Icons.record_voice_over_outlined,
+                    ),
+                    title: Text(reading ? l.stopReadingAloud : l.readAloud),
+                    onTap: () => run(
+                      () => reading ? _engine.readAloudStop() : _readAloud(tab),
+                    ),
+                  ),
+                if (onPage)
+                  ListTile(
+                    leading: const Icon(Icons.translate),
+                    title: Text(
+                      tab.translatedTo != null
+                          ? l.showOriginal
+                          : l.translatePage,
+                    ),
+                    subtitle: tab.translatedTo != null
+                        ? null
+                        : Text(l.translatePageSub),
+                    onTap: () => run(
+                      () => tab.translatedTo != null
+                          ? _engine.showOriginal(tab.id)
+                          : showTranslateSheet(context, ref, tab),
+                    ),
+                  ),
+                if (onPage && !tab.private)
+                  ListTile(
+                    leading: const Icon(Icons.devices_outlined),
+                    title: Text(l.sendToDevice),
+                    onTap: () => run(
+                      () => showSendTabSheet(
+                        context,
+                        ref,
+                        url: _clean(tab.url!),
+                        title: tab.label,
+                      ),
+                    ),
+                  ),
+                if (onPage && apps.contains(ZtApps.notes))
+                  ListTile(
+                    leading: const Icon(Icons.sticky_note_2_outlined),
+                    title: Text(l.saveToZtNotes),
+                    subtitle: Text(l.saveToZtNotesSub),
+                    onTap: () => run(() => _saveToNotes(tab)),
+                  ),
+                if (onPage && apps.contains(ZtApps.tasks))
+                  ListTile(
+                    leading: const Icon(Icons.task_alt),
+                    title: Text(l.readLaterInZtTasks),
+                    onTap: () => run(() => _readLaterInTasks(tab)),
+                  ),
+                if (onPage)
+                  ListTile(
                     leading: const Icon(Icons.find_in_page_outlined),
                     title: Text(l.findInPage),
                     onTap: () => run(_openFind),
@@ -856,8 +1201,24 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   @override
   Widget build(BuildContext context) {
-    ref.listen(browserSettingsProvider, (_, BrowserSettings next) {
+    ref.listen(browserSettingsProvider, (
+      BrowserSettings? prev,
+      BrowserSettings next,
+    ) {
       _pushPrivacy(next);
+      if (prev?.backgroundPlay != next.backgroundPlay) _pushMedia(next);
+      // Rules changed here or on another device (B30).
+      if (prev == null ||
+          !_same(prev.blockedHosts, next.blockedHosts) ||
+          !_same(prev.unblockedHosts, next.unblockedHosts) ||
+          !_same(prev.filterLists, next.filterLists)) {
+        ref.read(userBlockRulesProvider).refreshIfDue().ignore();
+      }
+    });
+    // Pages other devices sent here (B23).
+    ref.listen(sentToMeProvider, (_, AsyncValue<List<SentTab>> next) {
+      final List<SentTab>? sent = next.value;
+      if (sent != null && sent.isNotEmpty) _announceSent(sent);
     });
     // Sync runs while the browser is open.
     ref.watch(ztSyncControllerProvider);
@@ -870,10 +1231,52 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     });
 
     final TabsState tabs = ref.watch(tabsProvider);
+    final BrowserSettings settings = ref.watch(browserSettingsProvider);
     final BrowserTab? tab = tabs.current;
     final bool private = tab?.private ?? false;
     final ThemeData base = Theme.of(context);
     final ThemeData theme = private ? _privateTheme(base) : base;
+    // Tablets and unfolded foldables get a tab strip (B31).
+    final bool wide = MediaQuery.sizeOf(context).width >= 720;
+    final ReadAloudState reading = _engine.readAloud.value;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateWindowPrivacy(settings, tabs);
+    });
+
+    final Widget addressBar = _AddressBar(
+      tab: tab,
+      editing: _editing,
+      controller: _address,
+      focus: _addressFocus,
+      onTap: () => _startEditing(tab),
+      onSubmit: go,
+      onCancel: _stopEditing,
+      onShield: tab == null || tab.isStartPage
+          ? null
+          : () => showSiteSheet(context, ref, tab),
+      onReader:
+          tab != null && !tab.isStartPage && (tab.readerable || tab.reader)
+          ? () => _toggleReader(tab)
+          : null,
+      onVoice: _voice ? _voiceSearch : null,
+      onScan: _scanQr,
+      engines: settings.engines,
+    );
+
+    // Locked private tabs (B29): nothing of the page shows, and none of its
+    // actions (menu, read aloud, reading list...) work until unlocked.
+    if (private && ref.watch(privateLockProvider)) {
+      return Theme(
+        data: theme,
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (bool didPop, Object? _) {
+            if (!didPop) _onBack(null);
+          },
+          child: Scaffold(body: SafeArea(child: _privateLocked())),
+        ),
+      );
+    }
 
     return Theme(
       data: theme,
@@ -886,27 +1289,35 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           body: SafeArea(
             child: Column(
               children: <Widget>[
-                _AddressBar(
-                  tab: tab,
-                  editing: _editing,
-                  controller: _address,
-                  focus: _addressFocus,
-                  onTap: () => _startEditing(tab),
-                  onSubmit: go,
-                  onCancel: _stopEditing,
-                  onShield: tab == null || tab.isStartPage
-                      ? null
-                      : () => showSiteSheet(context, ref, tab),
-                  onReader:
-                      tab != null &&
-                          !tab.isStartPage &&
-                          (tab.readerable || tab.reader)
-                      ? () => _toggleReader(tab)
-                      : null,
-                  onVoice: _voice ? _voiceSearch : null,
-                  onScan: _scanQr,
-                  engines: ref.watch(browserSettingsProvider).engines,
-                ),
+                if (wide)
+                  TabStrip(
+                    tabs: private ? tabs.private : tabs.normal,
+                    currentId: tab?.id,
+                    onSelect: _tabs.select,
+                    onClose: (String id) => _tabs.close(id),
+                    onNew: () => _tabs.open(private: private),
+                    onOverview: () => _push(TabsPage(startPrivate: private)),
+                  ),
+                if (wide)
+                  _WideBar(
+                    tab: tab,
+                    addressBar: addressBar,
+                    onBack: tab != null && tab.canGoBack && !tab.isStartPage
+                        ? () => _engine.back(tab.id)
+                        : null,
+                    onForward: tab != null && tab.canGoForward
+                        ? () => _engine.forward(tab.id)
+                        : null,
+                    onReload: tab == null || tab.isStartPage
+                        ? null
+                        : () => tab.loading
+                              ? _engine.stop(tab.id)
+                              : _engine.reload(tab.id),
+                    onHome: () => go(_settings.engine.home),
+                    onMenu: () => _menu(tab),
+                  )
+                else
+                  addressBar,
                 if (tab != null && tab.loading && !_editing)
                   LinearProgressIndicator(
                     value: tab.progress <= 0 ? null : tab.progress / 100,
@@ -916,20 +1327,64 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   const SizedBox(height: 2),
                 Expanded(child: _content(tab)),
                 if (_finding && tab != null) _findBar(tab),
-                _Toolbar(
-                  tab: tab,
-                  tabCount: private ? tabs.private.length : tabs.normal.length,
-                  onBack: tab != null && tab.canGoBack && !tab.isStartPage
-                      ? () => _engine.back(tab.id)
-                      : null,
-                  onHome: () => go(_settings.engine.home),
-                  onNewTab: () => _tabs.open(private: private),
-                  onTabs: () => _push(TabsPage(startPrivate: private)),
-                  onMenu: () => _menu(tab),
-                ),
+                if (tab != null && tab.translatedTo != null && !_editing)
+                  TranslateBar(tab: tab),
+                if (reading.active) ReadAloudBar(state: reading),
+                if (!wide)
+                  _Toolbar(
+                    tab: tab,
+                    tabCount: private
+                        ? tabs.private.length
+                        : tabs.normal.length,
+                    onBack: tab != null && tab.canGoBack && !tab.isStartPage
+                        ? () => _engine.back(tab.id)
+                        : null,
+                    onHome: () => go(_settings.engine.home),
+                    onNewTab: () => _tabs.open(private: private),
+                    onTabs: () => _push(TabsPage(startPrivate: private)),
+                    onMenu: () => _menu(tab),
+                  ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  static bool _same(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  /// Private tabs behind the phone's lock (B29).
+  Widget _privateLocked() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.lock_outline, size: 48),
+            const SizedBox(height: 16),
+            Text(l.privateLocked, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => ref
+                  .read(privateLockProvider.notifier)
+                  .unlock(l.privateUnlockReason),
+              icon: const Icon(Icons.lock_open),
+              label: Text(l.unlock),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => _push(const TabsPage()),
+              child: Text(l.tabs),
+            ),
+          ],
         ),
       ),
     );
@@ -983,6 +1438,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       });
       return const Center(child: CircularProgressIndicator());
     }
+    if (tab.private && ref.watch(privateLockProvider)) return _privateLocked();
     if (tab.isStartPage) {
       return StartPage(
         private: tab.private,
@@ -1226,6 +1682,66 @@ class _AddressBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The navigation row on wide screens (B31): back, forward, reload and home
+/// beside the address bar, the menu at the end; no bottom toolbar.
+class _WideBar extends StatelessWidget {
+  const _WideBar({
+    required this.tab,
+    required this.addressBar,
+    required this.onBack,
+    required this.onForward,
+    required this.onReload,
+    required this.onHome,
+    required this.onMenu,
+  });
+
+  final BrowserTab? tab;
+  final Widget addressBar;
+  final VoidCallback? onBack;
+  final VoidCallback? onForward;
+  final VoidCallback? onReload;
+  final VoidCallback onHome;
+  final VoidCallback onMenu;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppL10n l = context.l10n;
+    final bool loading = tab?.loading ?? false;
+    return Row(
+      children: <Widget>[
+        const SizedBox(width: 4),
+        IconButton(
+          tooltip: l.back,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: onBack,
+        ),
+        IconButton(
+          tooltip: l.forward,
+          icon: const Icon(Icons.arrow_forward),
+          onPressed: onForward,
+        ),
+        IconButton(
+          tooltip: loading ? l.stop : l.reload,
+          icon: Icon(loading ? Icons.close : Icons.refresh),
+          onPressed: onReload,
+        ),
+        IconButton(
+          tooltip: l.home,
+          icon: const Icon(Icons.home_outlined),
+          onPressed: onHome,
+        ),
+        Expanded(child: addressBar),
+        IconButton(
+          tooltip: l.menu,
+          icon: const Icon(Icons.more_vert),
+          onPressed: onMenu,
+        ),
+        const SizedBox(width: 4),
+      ],
     );
   }
 }

@@ -24,12 +24,15 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebMessagePortCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONArray
+import org.json.JSONTokener
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.UUID
@@ -75,6 +78,12 @@ class ZtTab(
          * by both the user and Android.
          */
         fun askPermission(tab: ZtTab, origin: String, kinds: List<String>, answer: (Set<String>) -> Unit)
+
+        /**
+         * A page's audio or video started or paused (B26); [title] null
+         * when it is gone (new page, tab closed).
+         */
+        fun mediaChanged(tab: ZtTab, playing: Boolean, title: String?)
     }
 
     val webView: WebView = WebView(activity)
@@ -82,6 +91,12 @@ class ZtTab(
     private val blocked = AtomicInteger(0)
     private val defaultUserAgent: String
     private var startScript: ScriptHandler? = null
+    private var mediaScript: ScriptHandler? = null
+
+    /** The frame whose media played last, to pause or play it again. */
+    private var mediaFrame: JavaScriptReplyProxy? = null
+    var mediaPlaying = false
+        private set
 
     /** Host of the page now showing, read by the network thread. */
     @Volatile private var pageHost: String? = null
@@ -143,6 +158,7 @@ class ZtTab(
         applyUserAgent()
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
+        listenForMedia()
         refreshScripts()
         webView.webViewClient = Client()
         webView.webChromeClient = Chrome()
@@ -198,14 +214,196 @@ class ZtTab(
         }
     }
 
-    /** Re-adds the document-start script after a settings or list change. */
+    /** Re-adds the document-start scripts after a settings or list change. */
     fun refreshScripts() {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
         startScript?.remove()
         startScript = WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.documentStart(), setOf("*"))
+        mediaScript?.remove()
+        mediaScript = if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.media(backgroundPlay), setOf("*"))
+        } else {
+            null
+        }
+    }
+
+    /** Media events from every frame of the page (see [PageScripts.media]). */
+    private fun listenForMedia() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+        WebViewCompat.addWebMessageListener(webView, "ztMedia", setOf("*")) { _, message, _, _, reply ->
+            val data = message.data ?: return@addWebMessageListener
+            val json = try {
+                org.json.JSONObject(data)
+            } catch (e: Exception) {
+                return@addWebMessageListener
+            }
+            when (json.optString("s")) {
+                "play" -> {
+                    mediaFrame = reply
+                    mediaPlaying = true
+                    host.mediaChanged(this, true, json.optString("t").ifBlank { webView.title ?: "" })
+                }
+                "pause" -> if (reply == mediaFrame && mediaPlaying) {
+                    mediaPlaying = false
+                    host.mediaChanged(this, false, webView.title ?: "")
+                }
+            }
+        }
+    }
+
+    /** Pauses or plays again the media that played last ("pause", "play"). */
+    fun mediaControl(command: String) {
+        try {
+            mediaFrame?.postMessage(command)
+        } catch (e: Exception) {
+            // The frame is gone.
+        }
+    }
+
+    /** The selected text on the page (JSON string). */
+    fun selection(done: (String?) -> Unit) {
+        if (!webView.settings.javaScriptEnabled) {
+            done(null)
+            return
+        }
+        webView.evaluateJavascript(PageScripts.SELECTION) { done(it) }
     }
 
     /** The page as a Readability article (JSON string, or "null"). */
+    // ---- Translation (B16) --------------------------------------------------
+
+    /** Names this tab's translation state on its pages. */
+    private val translateKey = "__zt" + java.util.UUID.randomUUID().toString().replace("-", "").take(12)
+    private var translateGen = 0
+    private var translator: Translator? = null
+    private var translatedFrom: String? = null
+    private var translatedTo: String? = null
+    private var translating = false
+    private var translateDone = 0
+    private var translateTotal = 0
+
+    /** Keep translating pages of this site in this tab, as Firefox does. */
+    private var keepTranslating: Triple<String, String, String>? = null
+
+    /** The page's declared language and some of its text, as JSON. */
+    fun pageLanguage(done: (String?) -> Unit) {
+        if (!webView.settings.javaScriptEnabled) {
+            done(null)
+            return
+        }
+        webView.evaluateJavascript(PageScripts.PAGE_LANGUAGE) { raw -> done(decodeJsString(raw)) }
+    }
+
+    /**
+     * Translates the page on the phone with [with]: the text of each block
+     * goes to the translator, visible blocks first, and comes back into
+     * the same text nodes (links, buttons and layout stay as they are).
+     * Content added later is translated as it appears. False when the
+     * page's JavaScript is off (needed to read and write its text).
+     */
+    fun translatePage(with: Translator, from: String, to: String): Boolean {
+        if (!webView.settings.javaScriptEnabled) return false
+        if (translatedTo != null) restoreText()
+        val gen = ++translateGen
+        translator = with
+        translatedFrom = from
+        translatedTo = to
+        translating = true
+        translateDone = 0
+        translateTotal = 0
+        keepTranslating = pageHost?.let { Triple(Blocker.siteOf(it), from, to) }
+        sendState()
+        collectMore(gen)
+        return true
+    }
+
+    /** Back to the page's own text; stops translating this site. */
+    fun showOriginal() {
+        keepTranslating = null
+        restoreText()
+        sendState()
+    }
+
+    private fun restoreText() {
+        translateGen++
+        if (translatedTo != null) {
+            webView.evaluateJavascript(PageScripts.translate(activity, translateKey) + ".restore()", null)
+        }
+        translatedFrom = null
+        translatedTo = null
+        translating = false
+    }
+
+    private fun collectMore(gen: Int) {
+        val script = PageScripts.translate(activity, translateKey)
+        webView.evaluateJavascript("$script.collect(400)") { raw ->
+            if (gen != translateGen) return@evaluateJavascript
+            val groups = try {
+                JSONArray(decodeJsString(raw) ?: "[]")
+            } catch (e: Exception) {
+                JSONArray()
+            }
+            if (groups.length() == 0) {
+                translating = false
+                sendState()
+                watchForMore(gen)
+                return@evaluateJavascript
+            }
+            translating = true
+            translateTotal += groups.length()
+            queueState()
+            translateChunk(gen, groups, 0)
+        }
+    }
+
+    private fun translateChunk(gen: Int, groups: JSONArray, start: Int) {
+        val engine = translator ?: return
+        val from = translatedFrom ?: return
+        val to = translatedTo ?: return
+        val end = minOf(start + 12, groups.length())
+        val texts = (start until end).map { groups.getJSONArray(it).getString(1) }
+        engine.translate(from, to, texts, true) { out, error ->
+            if (gen != translateGen) return@translate
+            if (out == null || out.size != texts.size) {
+                restoreText()
+                keepTranslating = null
+                events("translateFailed", mapOf("error" to (error ?: "failed")))
+                sendState()
+                return@translate
+            }
+            val results = JSONArray()
+            for (i in out.indices) {
+                results.put(JSONArray().put(groups.getJSONArray(start + i).getInt(0)).put(out[i]))
+            }
+            webView.evaluateJavascript(
+                PageScripts.translate(activity, translateKey) + ".apply($results)",
+                null,
+            )
+            translateDone += end - start
+            queueState()
+            if (end < groups.length()) translateChunk(gen, groups, end) else collectMore(gen)
+        }
+    }
+
+    /** New content on a translated page (more results, comments): translate it too. */
+    private fun watchForMore(gen: Int) {
+        main.postDelayed({
+            if (gen != translateGen) return@postDelayed
+            webView.evaluateJavascript(PageScripts.translate(activity, translateKey) + ".dirty") { dirty ->
+                if (gen != translateGen) return@evaluateJavascript
+                if (dirty == "true") collectMore(gen) else watchForMore(gen)
+            }
+        }, 2500)
+    }
+
+    /** A string a script returned (evaluateJavascript gives it JSON-quoted). */
+    private fun decodeJsString(raw: String?): String? =
+        try {
+            JSONTokener(raw ?: "null").nextValue() as? String
+        } catch (e: Exception) {
+            null
+        }
+
     fun extractArticle(done: (String?) -> Unit) {
         if (!webView.settings.javaScriptEnabled) {
             done(null)
@@ -251,6 +449,9 @@ class ZtTab(
     }
 
     fun destroy() {
+        if (mediaFrame != null) host.mediaChanged(this, false, null)
+        mediaPlaying = false
+        mediaFrame = null
         (webView.parent as? ViewGroup)?.removeView(webView)
         webView.stopLoading()
         webView.destroy()
@@ -282,6 +483,11 @@ class ZtTab(
                 "readerable" to readerable,
                 "reader" to inReader,
                 "javascript" to webView.settings.javaScriptEnabled,
+                "translatedFrom" to translatedFrom,
+                "translatedTo" to translatedTo,
+                "translating" to translating,
+                "translateDone" to translateDone,
+                "translateTotal" to translateTotal,
             ),
         )
     }
@@ -411,6 +617,17 @@ class ZtTab(
 
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageHost = Uri.parse(url).host
+            // A new page: its translation (if any) starts again once loaded.
+            translateGen++
+            translatedFrom = null
+            translatedTo = null
+            translating = false
+            // A new page: what played on the old one has stopped.
+            if (mediaFrame != null) {
+                mediaPlaying = false
+                mediaFrame = null
+                host.mediaChanged(this@ZtTab, false, null)
+            }
             blocked.set(0)
             sslError = false
             loading = true
@@ -439,6 +656,17 @@ class ZtTab(
             cleaned.clear()
             sendState()
             checkReaderable(view, url)
+            // Translating this site in this tab: the next page is too.
+            val keep = keepTranslating
+            val engine = translator
+            val host = Uri.parse(url).host
+            if (keep != null && engine != null && host != null && translatedTo == null) {
+                if (Blocker.siteOf(host) == keep.first) {
+                    translatePage(engine, keep.second, keep.third)
+                } else {
+                    keepTranslating = null
+                }
+            }
             if (!isPrivate && !inReader && (url.startsWith("http://") || url.startsWith("https://"))) {
                 events("visited", mapOf("url" to url, "title" to view.title))
             }
@@ -589,6 +817,9 @@ class ZtTab(
 
         /** Sites (registrable domains) where JavaScript is off. */
         @Volatile var jsOffSites: Set<String> = emptySet()
+
+        /** Keep media playing in the background (B26), pushed from Dart. */
+        @Volatile var backgroundPlay = true
 
         /** Page text size in percent, and dark pages; pushed from Dart. */
         @Volatile var textZoom = 100

@@ -87,6 +87,55 @@ object PageScripts {
             "}).catch(function(){p.postMessage('error');});},true);})(" +
             JSONObject.quote(key) + "," + JSONObject.quote(url) + ");"
 
+    /** The text selected on the page (top frame), as a JSON string. */
+    const val SELECTION = "(function(){try{return String(window.getSelection()||'');}catch(e){return '';}})()"
+
+    /**
+     * Media playing in a frame (B26), reported to the app through the
+     * `ztMedia` listener, which the script then hides from the page. The app
+     * answers "play" or "pause" for the notification's buttons. With
+     * [keepPlaying], a frame that played media is told the page stays
+     * visible, so sites that pause in the background keep playing.
+     */
+    fun media(keepPlaying: Boolean): String = MEDIA_TEMPLATE.replace("%KEEP%", if (keepPlaying) "1" else "0")
+
+    private const val MEDIA_TEMPLATE = """(function(){
+var P=window.ztMedia;if(!P)return;
+try{delete window.ztMedia;}catch(e){}
+var KEEP=%KEEP%,last=null,vis=false;
+function send(o){try{P.postMessage(JSON.stringify(o));}catch(e){}}
+function keepVisible(){if(vis||!KEEP)return;vis=true;
+try{Object.defineProperty(Document.prototype,'hidden',{get:function(){return false},configurable:true});
+Object.defineProperty(Document.prototype,'visibilityState',{get:function(){return 'visible'},configurable:true});}catch(e){}
+['visibilitychange','webkitvisibilitychange'].forEach(function(n){
+window.addEventListener(n,function(e){e.stopImmediatePropagation();},true);});}
+document.addEventListener('play',function(e){var m=e.target;
+if(!(m instanceof HTMLMediaElement))return;last=m;keepVisible();
+send({s:'play',t:document.title||'',v:m.tagName==='VIDEO'});},true);
+function stopped(e){if(e.target===last)send({s:'pause'});}
+document.addEventListener('pause',stopped,true);
+document.addEventListener('ended',stopped,true);
+P.onmessage=function(e){if(!last)return;
+if(e.data==='pause')last.pause();else if(e.data==='play'){var r=last.play();if(r&&r.catch)r.catch(function(){});}};
+})();"""
+
+    private var translateSrc: String? = null
+
+    /**
+     * B16: the page side of translation (assets/translate/page.js), an
+     * expression giving an object with collect(max), apply(results),
+     * restore() and dirty. [key] names its state on the page.
+     */
+    fun translate(context: Context, key: String): String {
+        val src = translateSrc ?: asset(context, "assets/translate/page.js").trim().also { translateSrc = it }
+        return src.replace("__ZTKEY__", key)
+    }
+
+    /** The page's declared language and a sample of its text (B16). */
+    const val PAGE_LANGUAGE =
+        "JSON.stringify({lang:(document.documentElement.lang||'')," +
+            "sample:(document.body?document.body.innerText:'').slice(0,3000)})"
+
     private fun asset(context: Context, name: String): String {
         val key = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(name)
         return context.assets.open(key).bufferedReader().use { it.readText() }

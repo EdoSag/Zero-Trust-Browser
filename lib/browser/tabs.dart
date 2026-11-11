@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
+import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -32,6 +34,11 @@ class BrowserTab {
     this.readerable = false,
     this.reader = false,
     this.javascript = true,
+    this.translatedFrom,
+    this.translatedTo,
+    this.translating = false,
+    this.translateDone = 0,
+    this.translateTotal = 0,
   });
 
   final String id;
@@ -73,6 +80,15 @@ class BrowserTab {
   /// JavaScript on for this page's site.
   final bool javascript;
 
+  /// Shown translated (B16), from and to these languages; null when not.
+  final String? translatedFrom;
+  final String? translatedTo;
+
+  /// Still translating: [translateDone] of [translateTotal] blocks.
+  final bool translating;
+  final int translateDone;
+  final int translateTotal;
+
   bool get isStartPage => url == null || url!.isEmpty || url == 'about:blank';
 
   String get label =>
@@ -97,6 +113,11 @@ class BrowserTab {
     bool? readerable,
     bool? reader,
     bool? javascript,
+    String? Function()? translatedFrom,
+    String? Function()? translatedTo,
+    bool? translating,
+    int? translateDone,
+    int? translateTotal,
   }) => BrowserTab(
     id: id,
     private: private,
@@ -117,6 +138,13 @@ class BrowserTab {
     readerable: readerable ?? this.readerable,
     reader: reader ?? this.reader,
     javascript: javascript ?? this.javascript,
+    translatedFrom: translatedFrom != null
+        ? translatedFrom()
+        : this.translatedFrom,
+    translatedTo: translatedTo != null ? translatedTo() : this.translatedTo,
+    translating: translating ?? this.translating,
+    translateDone: translateDone ?? this.translateDone,
+    translateTotal: translateTotal ?? this.translateTotal,
   );
 }
 
@@ -280,7 +308,18 @@ class TabsController extends Notifier<TabsState> {
     await _engine.closeTab(id);
     if (current != null && current != id) await _ensureLive(current);
     _queueSave();
+    if (closing.private) {
+      if (state.private.isEmpty) ref.read(privateLockProvider.notifier).reset();
+    } else {
+      await sweepSiteData();
+    }
   }
+
+  /// B24: wipes data of sites no normal tab shows any more.
+  Future<void> sweepSiteData() => ref
+      .read(cookieAutoClearProvider)
+      .sweep(<String?>[for (final BrowserTab t in state.normal) t.url])
+      .catchError((Object _) {});
 
   Future<void> closeAll({required bool private}) async {
     for (final BrowserTab t in state.tabs.where(
@@ -317,6 +356,7 @@ class TabsController extends Notifier<TabsState> {
     }
     state = const TabsState();
     _saveTimer?.cancel();
+    ref.read(privateLockProvider.notifier).reset();
     await ref
         .read(browserDataProvider)
         .saveDeviceTabs(const <SavedTab>[])
@@ -331,6 +371,7 @@ class TabsController extends Notifier<TabsState> {
     }
     state = const TabsState();
     _restored = false;
+    ref.read(privateLockProvider.notifier).reset();
   }
 
   Future<void> load(String id, String url) async {
@@ -461,6 +502,11 @@ class TabsController extends Notifier<TabsState> {
             readerable: e.get<bool>('readerable'),
             reader: e.get<bool>('reader'),
             javascript: e.get<bool>('javascript'),
+            translatedFrom: () => e.get<String>('translatedFrom'),
+            translatedTo: () => e.get<String>('translatedTo'),
+            translating: e.get<bool>('translating'),
+            translateDone: e.get<int>('translateDone'),
+            translateTotal: e.get<int>('translateTotal'),
             clearFavicon: urlChanged && hostOf(url) != hostOf(tab.url),
           ),
         );
@@ -471,7 +517,10 @@ class TabsController extends Notifier<TabsState> {
             (BrowserTab t) => t.copyWith(lastUsed: DateTime.now()),
           );
         }
-        if (urlChanged && !tab.private) _queueSave();
+        if (urlChanged && !tab.private) {
+          _queueSave();
+          ref.read(cookieAutoClearProvider).visited(url).ignore();
+        }
       case 'favicon':
         final Uint8List? png = e.get<Uint8List>('png');
         if (png != null) {
@@ -485,6 +534,9 @@ class TabsController extends Notifier<TabsState> {
                 .read(browserDataProvider)
                 .recordVisit(url, e.get<String>('title'))
                 .ignore();
+            // A page opened by its address never "changes" the tab's
+            // address, so its site is noted here as well.
+            ref.read(cookieAutoClearProvider).visited(url).ignore();
           }
           _queueSave();
         }

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
@@ -44,6 +43,8 @@ Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).''',
       ),
     ),
   );
+  await migrateBrowserLanguage();
+  await ZtLanguageController.preload();
   await dotenv.load(fileName: '.env');
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
@@ -69,18 +70,11 @@ class ZeroTrustBrowserApp extends ConsumerWidget {
         theme: theme,
         darkTheme: darkTheme,
         themeMode: mode,
-        // English or Hebrew: the phone's language, unless one is chosen in
-        // Settings. The shared account screens (ZtL10n) are English only
-        // for now and stay English in Hebrew.
-        locale: ref.watch(appLanguageProvider),
-        localizationsDelegates: const [
-          AppL10n.delegate,
-          ZtL10n.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: appLocales,
+        // English (default) or Hebrew, from Settings → Appearance →
+        // Language, shared with every Zero-Trust app's core screens.
+        locale: ref.watch(ztLanguageProvider),
+        localizationsDelegates: const [AppL10n.delegate, ...ZtLanguages.delegates],
+        supportedLocales: ZtLanguages.supported,
         home: const AppGate(),
         // Any touch on any screen counts as activity for auto-lock.
         builder: (BuildContext context, Widget? child) => Listener(

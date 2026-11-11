@@ -1333,24 +1333,6 @@ abstract class AppL10n {
   /// **'Remove {name}'**
   String removeEngine(String name);
 
-  /// No description provided for @language.
-  ///
-  /// In en, this message translates to:
-  /// **'Language'**
-  String get language;
-
-  /// No description provided for @languageSystem.
-  ///
-  /// In en, this message translates to:
-  /// **'Phone language'**
-  String get languageSystem;
-
-  /// No description provided for @languageNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign-in and account screens are shared by all Zero-Trust apps and are in English for now.'**
-  String get languageNote;
-
   /// No description provided for @startPageSection.
   ///
   /// In en, this message translates to:
@@ -1938,6 +1920,726 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Off makes many sites simpler and harder to track you on, but some stop working. It reloads.'**
   String get javascriptSub;
+
+  /// No description provided for @unlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock'**
+  String get unlock;
+
+  /// No description provided for @dismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get dismiss;
+
+  /// No description provided for @play.
+  ///
+  /// In en, this message translates to:
+  /// **'Play'**
+  String get play;
+
+  /// No description provided for @pause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pause;
+
+  /// No description provided for @stop.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get stop;
+
+  /// No description provided for @justNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get justNow;
+
+  /// No description provided for @hoursAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 hour ago} other{{count} hours ago}}'**
+  String hoursAgo(int count);
+
+  /// No description provided for @sendToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to your devices'**
+  String get sendToDevice;
+
+  /// No description provided for @sendLinkToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Send link to your devices'**
+  String get sendLinkToDevice;
+
+  /// No description provided for @sendToDeviceNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No other devices yet. Sign in to ZT Browser with the same account on another phone or tablet, and it shows up here.'**
+  String get sendToDeviceNone;
+
+  /// No description provided for @lastActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Last active {when}'**
+  String lastActive(String when);
+
+  /// No description provided for @sentToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to {name}'**
+  String sentToDevice(String name);
+
+  /// No description provided for @couldntSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send. Try again.'**
+  String get couldntSend;
+
+  /// No description provided for @sentToThisDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to this device'**
+  String get sentToThisDevice;
+
+  /// No description provided for @sentFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {name}'**
+  String sentFrom(String name);
+
+  /// No description provided for @sentFromSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} sent: {title}'**
+  String sentFromSnack(String name, String title);
+
+  /// No description provided for @newFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'New folder'**
+  String get newFolder;
+
+  /// No description provided for @folderName.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder name'**
+  String get folderName;
+
+  /// No description provided for @renameFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename folder'**
+  String get renameFolder;
+
+  /// No description provided for @deleteFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete folder'**
+  String get deleteFolder;
+
+  /// No description provided for @deleteFolderKeeps.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Its bookmark moves to the top level} other{Its {count} bookmarks move to the top level}}'**
+  String deleteFolderKeeps(int count);
+
+  /// No description provided for @topLevel.
+  ///
+  /// In en, this message translates to:
+  /// **'Top level (no folder)'**
+  String get topLevel;
+
+  /// No description provided for @folderEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'This folder is empty.'**
+  String get folderEmpty;
+
+  /// No description provided for @nBookmarks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No bookmarks} =1{1 bookmark} other{{count} bookmarks}}'**
+  String nBookmarks(int count);
+
+  /// No description provided for @folderOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Folder options'**
+  String get folderOptions;
+
+  /// No description provided for @moveToFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to folder'**
+  String get moveToFolder;
+
+  /// No description provided for @autoClearCookies.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear cookies when tabs close'**
+  String get autoClearCookies;
+
+  /// No description provided for @autoClearCookiesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'When the last tab of a site closes, its cookies and site data are deleted, so it can\'t recognise you next time. Sites you keep signed in are skipped.'**
+  String get autoClearCookiesSub;
+
+  /// No description provided for @keptSignedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Kept signed in'**
+  String get keptSignedIn;
+
+  /// No description provided for @keptSignedInExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'These sites keep their cookies when their tabs close.'**
+  String get keptSignedInExplain;
+
+  /// No description provided for @keepSignedInOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep me signed in to {site}'**
+  String keepSignedInOn(String site);
+
+  /// No description provided for @keepSignedInSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Its cookies stay when its tabs close.'**
+  String get keepSignedInSub;
+
+  /// No description provided for @saveToZtNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to ZT Notes'**
+  String get saveToZtNotes;
+
+  /// No description provided for @saveToZtNotesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The selected text, or the page\'s link'**
+  String get saveToZtNotesSub;
+
+  /// No description provided for @readLaterInZtTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Read later in ZT Tasks'**
+  String get readLaterInZtTasks;
+
+  /// No description provided for @callWithZtPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Call with ZT Phone'**
+  String get callWithZtPhone;
+
+  /// No description provided for @saveToZtContacts.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to ZT Contacts'**
+  String get saveToZtContacts;
+
+  /// No description provided for @openWithOtherApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Open with another app'**
+  String get openWithOtherApp;
+
+  /// No description provided for @copyNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy number'**
+  String get copyNumber;
+
+  /// No description provided for @appCouldntOpen.
+  ///
+  /// In en, this message translates to:
+  /// **'That app couldn\'t open this.'**
+  String get appCouldntOpen;
+
+  /// No description provided for @backgroundPlay.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep playing in the background'**
+  String get backgroundPlay;
+
+  /// No description provided for @backgroundPlaySub.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio and videos keep playing when you leave the app, with play and pause in the notification. A full-screen video shrinks to a small window.'**
+  String get backgroundPlaySub;
+
+  /// No description provided for @mediaChannel.
+  ///
+  /// In en, this message translates to:
+  /// **'Playing media'**
+  String get mediaChannel;
+
+  /// No description provided for @readAloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Read aloud'**
+  String get readAloud;
+
+  /// No description provided for @stopReadingAloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop reading aloud'**
+  String get stopReadingAloud;
+
+  /// No description provided for @readingAloud.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading aloud'**
+  String get readingAloud;
+
+  /// No description provided for @readAloudProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading aloud · {part} of {count}'**
+  String readAloudProgress(int part, int count);
+
+  /// No description provided for @readAloudSpeed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading speed'**
+  String get readAloudSpeed;
+
+  /// No description provided for @readAloudCant.
+  ///
+  /// In en, this message translates to:
+  /// **'This page has no article to read aloud.'**
+  String get readAloudCant;
+
+  /// No description provided for @readAloudNoVoice.
+  ///
+  /// In en, this message translates to:
+  /// **'No offline voice for this page\'s language. Add one in Android Settings > Text-to-speech, so the text never leaves your phone.'**
+  String get readAloudNoVoice;
+
+  /// No description provided for @readAloudFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading aloud stopped.'**
+  String get readAloudFailed;
+
+  /// No description provided for @privateTabsSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Private tabs'**
+  String get privateTabsSection;
+
+  /// No description provided for @privateNoScreenshots.
+  ///
+  /// In en, this message translates to:
+  /// **'Block screenshots'**
+  String get privateNoScreenshots;
+
+  /// No description provided for @privateNoScreenshotsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'No screenshots or screen recording while a private tab is on screen.'**
+  String get privateNoScreenshotsSub;
+
+  /// No description provided for @privateHideRecents.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from recent apps'**
+  String get privateHideRecents;
+
+  /// No description provided for @privateHideRecentsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The recent apps screen shows a blank preview while private tabs are open.'**
+  String get privateHideRecentsSub;
+
+  /// No description provided for @privateLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Lock private tabs'**
+  String get privateLock;
+
+  /// No description provided for @privateLockSub.
+  ///
+  /// In en, this message translates to:
+  /// **'After you leave the app, private tabs need your fingerprint, face or screen lock again.'**
+  String get privateLockSub;
+
+  /// No description provided for @privateLockUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a screen lock on your phone to use this.'**
+  String get privateLockUnavailable;
+
+  /// No description provided for @privateLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Private tabs are locked.'**
+  String get privateLocked;
+
+  /// No description provided for @privateUnlockReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock your private tabs'**
+  String get privateUnlockReason;
+
+  /// No description provided for @blockRules.
+  ///
+  /// In en, this message translates to:
+  /// **'Your block rules'**
+  String get blockRules;
+
+  /// No description provided for @blockRulesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Block or allow a site yourself, add filter lists'**
+  String get blockRulesSub;
+
+  /// No description provided for @blockRulesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 rule or list} other{{count} rules and lists}}'**
+  String blockRulesCount(int count);
+
+  /// No description provided for @blockRulesExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Your rules apply on every site where protection is on, and sync to your other devices, end-to-end encrypted.'**
+  String get blockRulesExplain;
+
+  /// No description provided for @alwaysBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Always block'**
+  String get alwaysBlock;
+
+  /// No description provided for @neverBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Never block'**
+  String get neverBlock;
+
+  /// No description provided for @addHostToBlock.
+  ///
+  /// In en, this message translates to:
+  /// **'Block a site or server'**
+  String get addHostToBlock;
+
+  /// No description provided for @addHostToAllow.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow a site or server'**
+  String get addHostToAllow;
+
+  /// No description provided for @blockHostExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Requests to it, and to every address under it, are blocked on all sites.'**
+  String get blockHostExplain;
+
+  /// No description provided for @allowHostExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Never blocked, even when a list has it. Useful when a list breaks a site you need.'**
+  String get allowHostExplain;
+
+  /// No description provided for @notAHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Type an address like ads.example.com'**
+  String get notAHost;
+
+  /// No description provided for @extraFilterLists.
+  ///
+  /// In en, this message translates to:
+  /// **'Extra filter lists'**
+  String get extraFilterLists;
+
+  /// No description provided for @extraFilterListsExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Hosts files or AdBlock domain lists. Each phone downloads them straight from their address once a week. Tap a list to update it now.'**
+  String get extraFilterListsExplain;
+
+  /// No description provided for @addFilterList.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a filter list'**
+  String get addFilterList;
+
+  /// No description provided for @addFilterListExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'The address of a hosts file or AdBlock list (https). The list\'s owner sees that your phone downloaded it, nothing more.'**
+  String get addFilterListExplain;
+
+  /// No description provided for @filterListNeedsHttps.
+  ///
+  /// In en, this message translates to:
+  /// **'Type an https:// address'**
+  String get filterListNeedsHttps;
+
+  /// No description provided for @filterListAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'List added: {count} hosts blocked'**
+  String filterListAdded(String count);
+
+  /// No description provided for @filterListUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated: {count} hosts'**
+  String filterListUpdated(String count);
+
+  /// No description provided for @filterListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the list'**
+  String get filterListFailed;
+
+  /// No description provided for @filterListNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not downloaded yet'**
+  String get filterListNotYet;
+
+  /// No description provided for @filterListStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} hosts · {date}'**
+  String filterListStatus(String count, String date);
+
+  /// No description provided for @encryptedDns.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted DNS'**
+  String get encryptedDns;
+
+  /// No description provided for @encryptedDnsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted DNS is on'**
+  String get encryptedDnsOn;
+
+  /// No description provided for @encryptedDnsOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted DNS is off'**
+  String get encryptedDnsOff;
+
+  /// No description provided for @encryptedDnsServer.
+  ///
+  /// In en, this message translates to:
+  /// **'On, with {server}'**
+  String encryptedDnsServer(String server);
+
+  /// No description provided for @encryptedDnsAutomatic.
+  ///
+  /// In en, this message translates to:
+  /// **'On, with your network\'s DNS'**
+  String get encryptedDnsAutomatic;
+
+  /// No description provided for @encryptedDnsOffSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Your network can see which sites you look up.'**
+  String get encryptedDnsOffSub;
+
+  /// No description provided for @encryptedDnsExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Before opening a site, your phone looks up its address (DNS). Without encryption, your Wi-Fi or mobile network sees every site you visit, even with HTTPS. Android\'s Private DNS encrypts these lookups for every app, ZT Browser included.'**
+  String get encryptedDnsExplain;
+
+  /// No description provided for @encryptedDnsSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'To turn it on: Android Settings > Network & internet > Private DNS > Private DNS provider hostname, then paste one of these:'**
+  String get encryptedDnsSteps;
+
+  /// No description provided for @dnsBlocksAds.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, also blocks ads and trackers'**
+  String dnsBlocksAds(String name);
+
+  /// No description provided for @dnsBlocksMalware.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, also blocks malware sites'**
+  String dnsBlocksMalware(String name);
+
+  /// No description provided for @copyHostname.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy hostname'**
+  String get copyHostname;
+
+  /// No description provided for @openNetworkSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Open network settings'**
+  String get openNetworkSettings;
+
+  /// No description provided for @encryptedDnsVpnNote.
+  ///
+  /// In en, this message translates to:
+  /// **'A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, Private DNS is the safest choice and needs no extra app.'**
+  String get encryptedDnsVpnNote;
+
+  /// No description provided for @translate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get translate;
+
+  /// No description provided for @translatePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate page'**
+  String get translatePage;
+
+  /// No description provided for @translatePageSub.
+  ///
+  /// In en, this message translates to:
+  /// **'On your phone; the text never leaves it'**
+  String get translatePageSub;
+
+  /// No description provided for @showOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Show original'**
+  String get showOriginal;
+
+  /// No description provided for @translateFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get translateFrom;
+
+  /// No description provided for @translateTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get translateTo;
+
+  /// No description provided for @translatePickLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t tell the page\'s language. Pick it here.'**
+  String get translatePickLanguage;
+
+  /// No description provided for @translateSameLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick two different languages.'**
+  String get translateSameLanguage;
+
+  /// No description provided for @translateNoModel.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no translation between these languages yet.'**
+  String get translateNoModel;
+
+  /// No description provided for @translateOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated on your phone with Firefox\'s translation engine. The page\'s text is never sent anywhere.'**
+  String get translateOnDevice;
+
+  /// No description provided for @translateDownloadExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'The first time, the language files ({size} MB) download from ZT Browser\'s releases on GitHub (Mozilla\'s Firefox models). After that, translation works offline. The page\'s text is never sent anywhere.'**
+  String translateDownloadExplain(String size);
+
+  /// No description provided for @translateDownloadAndTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Download {size} MB and translate'**
+  String translateDownloadAndTranslate(String size);
+
+  /// No description provided for @translateDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the language files. Check the connection and try again.'**
+  String get translateDownloadFailed;
+
+  /// No description provided for @translateListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get the list of languages. Check the connection.'**
+  String get translateListFailed;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tryAgain;
+
+  /// No description provided for @translateNeedsJs.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation needs JavaScript on for this site (site settings).'**
+  String get translateNeedsJs;
+
+  /// No description provided for @translateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation stopped. Showing the original.'**
+  String get translateFailed;
+
+  /// No description provided for @translatingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating from {language}…'**
+  String translatingFrom(String language);
+
+  /// No description provided for @translatedFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated from {language}'**
+  String translatedFrom(String language);
+
+  /// No description provided for @translationLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation languages'**
+  String get translationLanguages;
+
+  /// No description provided for @translationLanguagesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded for translating on your phone'**
+  String get translationLanguagesSub;
+
+  /// No description provided for @translationExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Browser translates pages on your phone, with Firefox\'s translation engine. Each language is downloaded once, from ZT Browser\'s releases on GitHub. The text of the pages you translate is never sent anywhere.'**
+  String get translationExplain;
+
+  /// No description provided for @translationNoneYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No languages yet. They download the first time you translate a page.'**
+  String get translationNoneYet;
+
+  /// No description provided for @translationModelSize.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} MB on the phone'**
+  String translationModelSize(String size);
+
+  /// No description provided for @translationCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation engine: Bergamot (Firefox Translations). Language models: Mozilla. Both under the Mozilla Public License 2.0.'**
+  String get translationCredit;
 
   /// No description provided for @qrFor.
   ///

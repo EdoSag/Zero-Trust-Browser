@@ -23,6 +23,7 @@ class Bookmark {
     required this.title,
     required this.createdAt,
     this.folder,
+    this.position,
   });
 
   final String id;
@@ -33,12 +34,22 @@ class Bookmark {
   /// Folder name, or null for the top level.
   final String? folder;
 
-  Bookmark copyWith({String? url, String? title, String? folder}) => Bookmark(
+  /// The user's order within its folder (dragged into place); null until
+  /// moved, and those come after the ordered ones, newest first.
+  final double? position;
+
+  Bookmark copyWith({
+    String? url,
+    String? title,
+    String? Function()? folder,
+    double? position,
+  }) => Bookmark(
     id: id,
     url: url ?? this.url,
     title: title ?? this.title,
     createdAt: createdAt,
-    folder: folder ?? this.folder,
+    folder: folder != null ? folder() : this.folder,
+    position: position ?? this.position,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -46,7 +57,18 @@ class Bookmark {
     'title': title,
     'createdAt': createdAt.millisecondsSinceEpoch,
     'folder': folder,
+    if (position != null) 'position': position,
   };
+
+  /// Ordered ones first (by position), then the rest newest first.
+  static int compare(Bookmark a, Bookmark b) {
+    final double? x = a.position;
+    final double? y = b.position;
+    if (x != null && y != null) return x.compareTo(y);
+    if (x != null) return -1;
+    if (y != null) return 1;
+    return b.createdAt.compareTo(a.createdAt);
+  }
 
   static Bookmark fromJson(String id, Map<String, Object?> j, DateTime at) =>
       Bookmark(
@@ -54,7 +76,10 @@ class Bookmark {
         url: j['url'] as String? ?? '',
         title: j['title'] as String? ?? '',
         createdAt: _ms(j['createdAt'], at),
-        folder: j['folder'] as String?,
+        folder: (j['folder'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['folder']! as String).trim(),
+        position: (j['position'] as num?)?.toDouble(),
       );
 }
 
@@ -160,6 +185,49 @@ class DeviceTabs {
             if (t is Map) SavedTab.fromJson(t),
         ],
         updatedAt: _ms(j['updatedAt'], at),
+      );
+}
+
+/// A page sent from one of the account's devices to another. Synced and
+/// end-to-end encrypted like everything else; deleted once opened or
+/// dismissed on the receiving device.
+class SentTab {
+  const SentTab({
+    required this.id,
+    required this.url,
+    required this.title,
+    required this.fromDevice,
+    required this.fromName,
+    required this.toDevice,
+    required this.sentAt,
+  });
+
+  final String id;
+  final String url;
+  final String title;
+  final String fromDevice;
+  final String fromName;
+  final String toDevice;
+  final DateTime sentAt;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'url': url,
+    'title': title,
+    'fromDevice': fromDevice,
+    'fromName': fromName,
+    'toDevice': toDevice,
+    'sentAt': sentAt.millisecondsSinceEpoch,
+  };
+
+  static SentTab fromJson(String id, Map<String, Object?> j, DateTime at) =>
+      SentTab(
+        id: id,
+        url: j['url'] as String? ?? '',
+        title: j['title'] as String? ?? '',
+        fromDevice: j['fromDevice'] as String? ?? '',
+        fromName: j['fromName'] as String? ?? 'Another device',
+        toDevice: j['toDevice'] as String? ?? '',
+        sentAt: _ms(j['sentAt'], at),
       );
 }
 
@@ -353,6 +421,17 @@ class BrowserSettings {
     this.showMostVisited = true,
     this.hiddenTopSites = const <String>[],
     this.privacyReport = true,
+    this.autoClearCookies = false,
+    this.keepSignedIn = const <String>[],
+    this.privateNoScreenshots = true,
+    this.privateHideRecents = true,
+    this.privateLock = false,
+    this.blockedHosts = const <String>[],
+    this.unblockedHosts = const <String>[],
+    this.filterLists = const <String>[],
+    this.bookmarkFolders = const <String>[],
+    this.backgroundPlay = true,
+    this.readAloudRate = 1.0,
   });
 
   static const String itemId = 'browser-settings';
@@ -413,6 +492,59 @@ class BrowserSettings {
 
   /// Count blocked trackers per site for the privacy report.
   final bool privacyReport;
+
+  /// Wipe a site's cookies and site data once no tab shows it any more.
+  final bool autoClearCookies;
+
+  /// Sites (like `example.com`) kept signed in: auto-clear skips them.
+  final List<String> keepSignedIn;
+
+  /// No screenshots or screen recording while a private tab is on screen.
+  final bool privateNoScreenshots;
+
+  /// Blank preview in the recent apps screen while private tabs are open.
+  final bool privateHideRecents;
+
+  /// Private tabs need the phone's fingerprint, face or screen lock again
+  /// after leaving the app.
+  final bool privateLock;
+
+  /// Hosts the user blocks on every site (and the domains under them).
+  final List<String> blockedHosts;
+
+  /// Hosts never blocked, even when a list has them.
+  final List<String> unblockedHosts;
+
+  /// Extra filter lists (hosts files or AdBlock domain lists) by address.
+  final List<String> filterLists;
+
+  /// Bookmark folders in the user's order (empty ones too).
+  final List<String> bookmarkFolders;
+
+  /// Keep audio and video playing with the app in the background, with
+  /// play and pause in the notification.
+  final bool backgroundPlay;
+
+  /// Read aloud speed (1.0 is normal).
+  final double readAloudRate;
+
+  static const List<double> readAloudRates = <double>[
+    0.75,
+    1.0,
+    1.25,
+    1.5,
+    2.0,
+  ];
+
+  /// Whether auto-clear leaves [site] signed in.
+  bool keepsSignedIn(String site) => keepSignedIn.contains(site);
+
+  /// Folders in the user's order, then any only bookmarks name.
+  List<String> foldersWith(Iterable<Bookmark> bookmarks) => <String>{
+    ...bookmarkFolders,
+    for (final Bookmark b in bookmarks)
+      if (b.folder != null) b.folder!,
+  }.toList();
 
   static const List<int?> historyChoices = <int?>[0, 7, 30, 90, 365, null];
   static const List<int?> closeTabsChoices = <int?>[null, 1, 7, 14, 30];
@@ -507,6 +639,17 @@ class BrowserSettings {
     bool? showMostVisited,
     List<String>? hiddenTopSites,
     bool? privacyReport,
+    bool? autoClearCookies,
+    List<String>? keepSignedIn,
+    bool? privateNoScreenshots,
+    bool? privateHideRecents,
+    bool? privateLock,
+    List<String>? blockedHosts,
+    List<String>? unblockedHosts,
+    List<String>? filterLists,
+    List<String>? bookmarkFolders,
+    bool? backgroundPlay,
+    double? readAloudRate,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -530,6 +673,17 @@ class BrowserSettings {
     showMostVisited: showMostVisited ?? this.showMostVisited,
     hiddenTopSites: hiddenTopSites ?? this.hiddenTopSites,
     privacyReport: privacyReport ?? this.privacyReport,
+    autoClearCookies: autoClearCookies ?? this.autoClearCookies,
+    keepSignedIn: keepSignedIn ?? this.keepSignedIn,
+    privateNoScreenshots: privateNoScreenshots ?? this.privateNoScreenshots,
+    privateHideRecents: privateHideRecents ?? this.privateHideRecents,
+    privateLock: privateLock ?? this.privateLock,
+    blockedHosts: blockedHosts ?? this.blockedHosts,
+    unblockedHosts: unblockedHosts ?? this.unblockedHosts,
+    filterLists: filterLists ?? this.filterLists,
+    bookmarkFolders: bookmarkFolders ?? this.bookmarkFolders,
+    backgroundPlay: backgroundPlay ?? this.backgroundPlay,
+    readAloudRate: readAloudRate ?? this.readAloudRate,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -559,6 +713,17 @@ class BrowserSettings {
     'showMostVisited': showMostVisited,
     'hiddenTopSites': hiddenTopSites,
     'privacyReport': privacyReport,
+    'autoClearCookies': autoClearCookies,
+    'keepSignedIn': keepSignedIn,
+    'privateNoScreenshots': privateNoScreenshots,
+    'privateHideRecents': privateHideRecents,
+    'privateLock': privateLock,
+    'blockedHosts': blockedHosts,
+    'unblockedHosts': unblockedHosts,
+    'filterLists': filterLists,
+    'bookmarkFolders': bookmarkFolders,
+    'backgroundPlay': backgroundPlay,
+    'readAloudRate': readAloudRate,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -574,6 +739,7 @@ class BrowserSettings {
     final Object? days = j['historyDays'];
     final Object? close = j['closeTabsAfterDays'];
     final Object? zoom = j['textZoom'];
+    final Object? rate = j['readAloudRate'];
     final Map<String, Map<String, bool>> perms = <String, Map<String, bool>>{};
     final Object? rawPerms = j['sitePermissions'];
     if (rawPerms is Map) {
@@ -617,6 +783,19 @@ class BrowserSettings {
       showMostVisited: j['showMostVisited'] as bool? ?? true,
       hiddenTopSites: _strings(j['hiddenTopSites']),
       privacyReport: j['privacyReport'] as bool? ?? true,
+      autoClearCookies: j['autoClearCookies'] as bool? ?? false,
+      keepSignedIn: _strings(j['keepSignedIn']),
+      privateNoScreenshots: j['privateNoScreenshots'] as bool? ?? true,
+      privateHideRecents: j['privateHideRecents'] as bool? ?? true,
+      privateLock: j['privateLock'] as bool? ?? false,
+      blockedHosts: _strings(j['blockedHosts']),
+      unblockedHosts: _strings(j['unblockedHosts']),
+      filterLists: _strings(j['filterLists']),
+      bookmarkFolders: _strings(j['bookmarkFolders']),
+      backgroundPlay: j['backgroundPlay'] as bool? ?? true,
+      readAloudRate: rate is num && rate >= 0.5 && rate <= 3
+          ? rate.toDouble()
+          : 1.0,
     );
   }
 }
@@ -711,6 +890,13 @@ abstract final class BrowserCollections {
     fromJson: ReadingItem.fromJson,
     toJson: (ReadingItem r) => r.toJson(),
     idOf: (ReadingItem r) => r.id,
+  );
+
+  static final ZtCollection<SentTab> sentTabs = ZtCollection<SentTab>(
+    kind: 'sent-tab',
+    fromJson: SentTab.fromJson,
+    toJson: (SentTab t) => t.toJson(),
+    idOf: (SentTab t) => t.id,
   );
 
   static final ZtCollection<BrowserSettings> settings =

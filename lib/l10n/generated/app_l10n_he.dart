@@ -706,16 +706,6 @@ class AppL10nHe extends AppL10n {
   }
 
   @override
-  String get language => 'שפה';
-
-  @override
-  String get languageSystem => 'שפת הטלפון';
-
-  @override
-  String get languageNote =>
-      'מסכי הכניסה והחשבון משותפים לכל אפליקציות Zero-Trust ומוצגים בינתיים באנגלית.';
-
-  @override
   String get startPageSection => 'דף הפתיחה';
 
   @override
@@ -1092,6 +1082,459 @@ class AppL10nHe extends AppL10n {
   @override
   String get javascriptSub =>
       'כיבוי הופך אתרים רבים לפשוטים יותר ומקשה לעקוב אחריך, אבל חלקם מפסיקים לעבוד. הדף ייטען מחדש.';
+
+  @override
+  String get unlock => 'ביטול נעילה';
+
+  @override
+  String get dismiss => 'התעלמות';
+
+  @override
+  String get play => 'הפעלה';
+
+  @override
+  String get pause => 'השהיה';
+
+  @override
+  String get stop => 'עצירה';
+
+  @override
+  String get justNow => 'עכשיו';
+
+  @override
+  String hoursAgo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'לפני $count שעות',
+      one: 'לפני שעה',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sendToDevice => 'שליחה למכשירים שלך';
+
+  @override
+  String get sendLinkToDevice => 'שליחת הקישור למכשירים שלך';
+
+  @override
+  String get sendToDeviceNone =>
+      'עדיין אין מכשירים אחרים. אחרי התחברות ל-ZT Browser עם אותו חשבון בטלפון או בטאבלט אחר, הוא יופיע כאן.';
+
+  @override
+  String lastActive(String when) {
+    return 'פעיל לאחרונה $when';
+  }
+
+  @override
+  String sentToDevice(String name) {
+    return 'נשלח אל $name';
+  }
+
+  @override
+  String get couldntSend => 'השליחה נכשלה. אפשר לנסות שוב.';
+
+  @override
+  String get sentToThisDevice => 'נשלחו למכשיר הזה';
+
+  @override
+  String sentFrom(String name) {
+    return 'מ-$name';
+  }
+
+  @override
+  String sentFromSnack(String name, String title) {
+    return '$name שלח/ה: $title';
+  }
+
+  @override
+  String get newFolder => 'תיקייה חדשה';
+
+  @override
+  String get folderName => 'שם התיקייה';
+
+  @override
+  String get renameFolder => 'שינוי שם התיקייה';
+
+  @override
+  String get deleteFolder => 'מחיקת התיקייה';
+
+  @override
+  String deleteFolderKeeps(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count הסימניות שבה יעברו לרמה העליונה',
+      one: 'הסימנייה שבה תעבור לרמה העליונה',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get topLevel => 'רמה עליונה (בלי תיקייה)';
+
+  @override
+  String get folderEmpty => 'התיקייה הזאת ריקה.';
+
+  @override
+  String nBookmarks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סימניות',
+      one: 'סימנייה אחת',
+      zero: 'אין סימניות',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get folderOptions => 'אפשרויות התיקייה';
+
+  @override
+  String get moveToFolder => 'העברה לתיקייה';
+
+  @override
+  String get autoClearCookies => 'ניקוי קובצי Cookie כשכרטיסיות נסגרות';
+
+  @override
+  String get autoClearCookiesSub =>
+      'כשהכרטיסייה האחרונה של אתר נסגרת, קובצי ה-Cookie ונתוני האתר שלו נמחקים, כך שהוא לא יזהה אותך בפעם הבאה. אתרים שבחרת להישאר מחובר/ת אליהם לא נמחקים.';
+
+  @override
+  String get keptSignedIn => 'נשארים מחוברים';
+
+  @override
+  String get keptSignedInExplain =>
+      'האתרים האלה שומרים את קובצי ה-Cookie שלהם כשהכרטיסיות שלהם נסגרות.';
+
+  @override
+  String keepSignedInOn(String site) {
+    return 'להישאר מחובר/ת ל-$site';
+  }
+
+  @override
+  String get keepSignedInSub =>
+      'קובצי ה-Cookie שלו נשמרים כשהכרטיסיות שלו נסגרות.';
+
+  @override
+  String get saveToZtNotes => 'שמירה ב-ZT Notes';
+
+  @override
+  String get saveToZtNotesSub => 'הטקסט המסומן, או הקישור לדף';
+
+  @override
+  String get readLaterInZtTasks => 'לקריאה מאוחר יותר ב-ZT Tasks';
+
+  @override
+  String get callWithZtPhone => 'חיוג עם ZT Phone';
+
+  @override
+  String get saveToZtContacts => 'שמירה ב-ZT Contacts';
+
+  @override
+  String get openWithOtherApp => 'פתיחה באפליקציה אחרת';
+
+  @override
+  String get copyNumber => 'העתקת המספר';
+
+  @override
+  String get appCouldntOpen => 'האפליקציה לא הצליחה לפתוח את זה.';
+
+  @override
+  String get backgroundPlay => 'המשך ניגון ברקע';
+
+  @override
+  String get backgroundPlaySub =>
+      'אודיו ווידאו ממשיכים להתנגן כשיוצאים מהאפליקציה, עם הפעלה והשהיה בהתראה. סרטון במסך מלא מוקטן לחלון קטן.';
+
+  @override
+  String get mediaChannel => 'ניגון מדיה';
+
+  @override
+  String get readAloud => 'הקראה';
+
+  @override
+  String get stopReadingAloud => 'עצירת ההקראה';
+
+  @override
+  String get readingAloud => 'בהקראה';
+
+  @override
+  String readAloudProgress(int part, int count) {
+    return 'בהקראה · $part מתוך $count';
+  }
+
+  @override
+  String get readAloudSpeed => 'מהירות ההקראה';
+
+  @override
+  String get readAloudCant => 'אין בדף הזה מאמר להקראה.';
+
+  @override
+  String get readAloudNoVoice =>
+      'אין קול לא מקוון לשפה של הדף הזה. אפשר להוסיף קול בהגדרות Android > המרת טקסט לדיבור, כדי שהטקסט לא ייצא מהטלפון.';
+
+  @override
+  String get readAloudFailed => 'ההקראה נעצרה.';
+
+  @override
+  String get privateTabsSection => 'כרטיסיות פרטיות';
+
+  @override
+  String get privateNoScreenshots => 'חסימת צילומי מסך';
+
+  @override
+  String get privateNoScreenshotsSub =>
+      'אין צילומי מסך או הקלטת מסך כשכרטיסייה פרטית מוצגת.';
+
+  @override
+  String get privateHideRecents => 'הסתרה מהאפליקציות האחרונות';
+
+  @override
+  String get privateHideRecentsSub =>
+      'מסך האפליקציות האחרונות מציג תצוגה ריקה כשכרטיסיות פרטיות פתוחות.';
+
+  @override
+  String get privateLock => 'נעילת כרטיסיות פרטיות';
+
+  @override
+  String get privateLockSub =>
+      'אחרי יציאה מהאפליקציה, צריך שוב טביעת אצבע, פנים או נעילת מסך כדי לראות כרטיסיות פרטיות.';
+
+  @override
+  String get privateLockUnavailable =>
+      'כדי להשתמש בזה צריך להגדיר נעילת מסך בטלפון.';
+
+  @override
+  String get privateLocked => 'הכרטיסיות הפרטיות נעולות.';
+
+  @override
+  String get privateUnlockReason => 'ביטול הנעילה של הכרטיסיות הפרטיות';
+
+  @override
+  String get blockRules => 'כללי החסימה שלך';
+
+  @override
+  String get blockRulesSub => 'חסימה או התרה של אתר בעצמך, הוספת רשימות סינון';
+
+  @override
+  String blockRulesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count כללים ורשימות',
+      one: 'כלל או רשימה אחת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get blockRulesExplain =>
+      'הכללים שלך חלים בכל אתר שבו ההגנה פועלת, ומסונכרנים למכשירים האחרים שלך בהצפנה מקצה לקצה.';
+
+  @override
+  String get alwaysBlock => 'תמיד לחסום';
+
+  @override
+  String get neverBlock => 'אף פעם לא לחסום';
+
+  @override
+  String get addHostToBlock => 'חסימת אתר או שרת';
+
+  @override
+  String get addHostToAllow => 'התרת אתר או שרת';
+
+  @override
+  String get blockHostExplain =>
+      'בקשות אליו, ולכל כתובת שתחתיו, ייחסמו בכל האתרים.';
+
+  @override
+  String get allowHostExplain =>
+      'לא ייחסם אף פעם, גם אם הוא ברשימה. שימושי כשרשימה שוברת אתר שצריך.';
+
+  @override
+  String get notAHost => 'יש להקליד כתובת כמו ads.example.com';
+
+  @override
+  String get extraFilterLists => 'רשימות סינון נוספות';
+
+  @override
+  String get extraFilterListsExplain =>
+      'קובצי hosts או רשימות דומיינים של AdBlock. כל טלפון מוריד אותן ישירות מהכתובת שלהן פעם בשבוע. הקשה על רשימה מעדכנת אותה מיד.';
+
+  @override
+  String get addFilterList => 'הוספת רשימת סינון';
+
+  @override
+  String get addFilterListExplain =>
+      'הכתובת של קובץ hosts או רשימת AdBlock (https). בעל הרשימה רואה רק שהטלפון שלך הוריד אותה.';
+
+  @override
+  String get filterListNeedsHttps => 'יש להקליד כתובת https://';
+
+  @override
+  String filterListAdded(String count) {
+    return 'הרשימה נוספה: $count שרתים חסומים';
+  }
+
+  @override
+  String filterListUpdated(String count) {
+    return 'עודכן: $count שרתים';
+  }
+
+  @override
+  String get filterListFailed => 'לא ניתן היה להוריד את הרשימה';
+
+  @override
+  String get filterListNotYet => 'עוד לא הורדה';
+
+  @override
+  String filterListStatus(String count, String date) {
+    return '$count שרתים · $date';
+  }
+
+  @override
+  String get encryptedDns => 'DNS מוצפן';
+
+  @override
+  String get encryptedDnsOn => 'DNS מוצפן פועל';
+
+  @override
+  String get encryptedDnsOff => 'DNS מוצפן כבוי';
+
+  @override
+  String encryptedDnsServer(String server) {
+    return 'פועל, דרך $server';
+  }
+
+  @override
+  String get encryptedDnsAutomatic => 'פועל, דרך ה-DNS של הרשת';
+
+  @override
+  String get encryptedDnsOffSub => 'הרשת שלך יכולה לראות לאילו אתרים פנית.';
+
+  @override
+  String get encryptedDnsExplain =>
+      'לפני פתיחת אתר, הטלפון מחפש את הכתובת שלו (DNS). בלי הצפנה, רשת ה-Wi-Fi או הסלולר רואה כל אתר שביקרת בו, גם עם HTTPS. ה-DNS הפרטי של Android מצפין את החיפושים האלה לכל האפליקציות, כולל ZT Browser.';
+
+  @override
+  String get encryptedDnsSteps =>
+      'כדי להפעיל: הגדרות Android > רשת ואינטרנט > DNS פרטי > שם המארח של ספק ה-DNS הפרטי, ואז להדביק אחד מאלה:';
+
+  @override
+  String dnsBlocksAds(String name) {
+    return '$name, חוסם גם פרסומות ומעקב';
+  }
+
+  @override
+  String dnsBlocksMalware(String name) {
+    return '$name, חוסם גם אתרים זדוניים';
+  }
+
+  @override
+  String get copyHostname => 'העתקת שם המארח';
+
+  @override
+  String get openNetworkSettings => 'פתיחת הגדרות הרשת';
+
+  @override
+  String get encryptedDnsVpnNote =>
+      'ZT VPN, אם יגיע, יוסיף DNS מוצפן לכל אפליקציה. עד אז, DNS פרטי הוא האפשרות הבטוחה ביותר ולא דורש אפליקציה נוספת.';
+
+  @override
+  String get translate => 'תרגום';
+
+  @override
+  String get translatePage => 'תרגום הדף';
+
+  @override
+  String get translatePageSub => 'בטלפון שלך; הטקסט לא יוצא ממנו';
+
+  @override
+  String get showOriginal => 'הצגת המקור';
+
+  @override
+  String get translateFrom => 'משפה';
+
+  @override
+  String get translateTo => 'לשפה';
+
+  @override
+  String get translatePickLanguage =>
+      'לא ניתן היה לזהות את שפת הדף. אפשר לבחור אותה כאן.';
+
+  @override
+  String get translateSameLanguage => 'יש לבחור שתי שפות שונות.';
+
+  @override
+  String get translateNoModel => 'עדיין אין תרגום בין השפות האלה.';
+
+  @override
+  String get translateOnDevice =>
+      'התרגום נעשה בטלפון שלך עם מנוע התרגום של Firefox. הטקסט של הדף לא נשלח לשום מקום.';
+
+  @override
+  String translateDownloadExplain(String size) {
+    return 'בפעם הראשונה, קובצי השפה ($size MB) יורדים מהגרסאות של ZT Browser ב-GitHub (המודלים של Firefox מבית Mozilla). אחר כך התרגום עובד בלי אינטרנט. הטקסט של הדף לא נשלח לשום מקום.';
+  }
+
+  @override
+  String translateDownloadAndTranslate(String size) {
+    return 'הורדת $size MB ותרגום';
+  }
+
+  @override
+  String get translateDownloadFailed =>
+      'לא ניתן היה להוריד את קובצי השפה. כדאי לבדוק את החיבור ולנסות שוב.';
+
+  @override
+  String get translateListFailed =>
+      'לא ניתן היה לקבל את רשימת השפות. כדאי לבדוק את החיבור.';
+
+  @override
+  String get tryAgain => 'ניסיון חוזר';
+
+  @override
+  String get translateNeedsJs =>
+      'תרגום דורש JavaScript פעיל באתר הזה (הגדרות האתר).';
+
+  @override
+  String get translateFailed => 'התרגום נעצר. מוצג המקור.';
+
+  @override
+  String translatingFrom(String language) {
+    return 'מתרגם מהשפה $language…';
+  }
+
+  @override
+  String translatedFrom(String language) {
+    return 'תורגם מהשפה $language';
+  }
+
+  @override
+  String get translationLanguages => 'שפות לתרגום';
+
+  @override
+  String get translationLanguagesSub => 'הורדו לתרגום בטלפון שלך';
+
+  @override
+  String get translationExplain =>
+      'ZT Browser מתרגם דפים בטלפון שלך, עם מנוע התרגום של Firefox. כל שפה יורדת פעם אחת, מהגרסאות של ZT Browser ב-GitHub. הטקסט של הדפים שמתרגמים לא נשלח לשום מקום.';
+
+  @override
+  String get translationNoneYet =>
+      'עדיין אין שפות. הן יורדות בפעם הראשונה שמתרגמים דף.';
+
+  @override
+  String translationModelSize(String size) {
+    return '$size MB בטלפון';
+  }
+
+  @override
+  String get translationCredit =>
+      'מנוע התרגום: Bergamot (Firefox Translations). מודלי השפה: Mozilla. שניהם ברישיון Mozilla Public License 2.0.';
 
   @override
   String qrFor(String url) {
