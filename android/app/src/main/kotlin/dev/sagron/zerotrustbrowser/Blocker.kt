@@ -45,6 +45,61 @@ object Blocker {
     /** Sites (registrable domains) where the user turned protection off. */
     @Volatile var allowedSites: Set<String> = emptySet()
 
+    /** The user's own rules (B30): hosts always blocked, and never blocked. */
+    @Volatile var userBlocked: Set<String> = emptySet()
+    @Volatile var userAllowed: Set<String> = emptySet()
+
+    /** Hosts from the user's extra filter lists, read from a file. */
+    @Volatile private var extraHosts: Set<String> = emptySet()
+    @Volatile private var extraFile: String? = null
+
+    /** How many hosts the extra lists add. */
+    fun extraSize(): Int = extraHosts.size
+
+    /**
+     * Sets the user's rules; [listsFile] (one host per line) is read off the
+     * main thread when it changed.
+     */
+    fun setUserRules(blocked: Set<String>, allowed: Set<String>, listsFile: String?) {
+        userBlocked = blocked
+        userAllowed = allowed
+        if (listsFile == null) {
+            extraFile = null
+            extraHosts = emptySet()
+            return
+        }
+        val file = File(listsFile)
+        val stamp = listsFile + ":" + file.lastModified() + ":" + file.length()
+        if (stamp == extraFile) return
+        extraFile = stamp
+        loader.execute {
+            try {
+                val set = HashSet<String>()
+                file.bufferedReader().use { r ->
+                    r.forEachLine { line ->
+                        val h = line.trim()
+                        if (h.isNotEmpty()) set.add(h)
+                    }
+                }
+                extraHosts = set
+            } catch (e: Exception) {
+                android.util.Log.e("ZtBrowser", "Filter lists not loaded", e)
+            }
+        }
+    }
+
+    /** [host] or a domain above it is in [set]. */
+    private fun listed(host: String, set: Set<String>): Boolean {
+        if (set.isEmpty()) return false
+        var d = host
+        while (true) {
+            if (d in set) return true
+            val dot = d.indexOf('.')
+            if (dot < 0) return false
+            d = d.substring(dot + 1)
+        }
+    }
+
     /** Called on the main thread when a list has loaded, to refresh tabs. */
     @Volatile var onLoaded: (() -> Unit)? = null
 
@@ -166,6 +221,9 @@ object Blocker {
         val h = host.lowercase()
         val page = pageHost?.lowercase()
         if (page != null && siteOf(page) in allowedSites) return false
+        // The user's own "never block" wins over every list.
+        if (listed(h, userAllowed)) return false
+        if (listed(h, userBlocked) || listed(h, extraHosts)) return true
         val sameSite = page != null && siteOf(page) == siteOf(h)
         var d = h
         while (true) {

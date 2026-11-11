@@ -5,18 +5,19 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/data/models.dart';
+import 'package:zerotrust_browser/engine/engine.dart';
 
 Stream<List<T>> _watch<T>(Ref ref, ZtCollection<T> c) async* {
   final LocalItemStore store = await ref.watch(ztLocalStoreProvider.future);
   yield* c.watch(store as ZtLocalStore);
 }
 
-/// Bookmarks, newest first.
+/// Bookmarks in the user's order (dragged ones first, then newest first).
 final bookmarksProvider = StreamProvider<List<Bookmark>>((ref) {
-  return _watch(ref, BrowserCollections.bookmarks).map(
-    (List<Bookmark> l) =>
-        l..sort((Bookmark a, Bookmark b) => b.createdAt.compareTo(a.createdAt)),
-  );
+  return _watch(
+    ref,
+    BrowserCollections.bookmarks,
+  ).map((List<Bookmark> l) => l..sort(Bookmark.compare));
 });
 
 /// History, most recent visit first.
@@ -42,6 +43,33 @@ final otherDevicesTabsProvider = StreamProvider<List<DeviceTabs>>((ref) async* {
           ),
   );
 });
+
+/// The account's other devices that run ZT Browser (any that ever saved
+/// its open tabs), most recently active first. For "Send to device".
+final otherDevicesProvider = StreamProvider<List<DeviceTabs>>((ref) async* {
+  final String me = await ref.watch(ztDeviceIdProvider.future);
+  yield* _watch(ref, BrowserCollections.deviceTabs).map(
+    (List<DeviceTabs> all) =>
+        all.where((DeviceTabs d) => d.deviceId != me).toList()..sort(
+          (DeviceTabs a, DeviceTabs b) => b.updatedAt.compareTo(a.updatedAt),
+        ),
+  );
+});
+
+/// Pages other devices sent to this one, oldest first.
+final sentToMeProvider = StreamProvider<List<SentTab>>((ref) async* {
+  final String me = await ref.watch(ztDeviceIdProvider.future);
+  yield* _watch(ref, BrowserCollections.sentTabs).map(
+    (List<SentTab> all) =>
+        all.where((SentTab t) => t.toDevice == me).toList()
+          ..sort((SentTab a, SentTab b) => a.sentAt.compareTo(b.sentAt)),
+  );
+});
+
+/// This phone's name for other devices ("Pixel 8"), from the engine.
+final deviceNameProvider = FutureProvider<String>(
+  (ref) async => await ref.read(browserEngineProvider).deviceName(),
+);
 
 /// The reading list, unread first, then newest.
 final readingListProvider = StreamProvider<List<ReadingItem>>((ref) {
@@ -132,6 +160,115 @@ class BrowserData {
   Future<void> removeBookmark(String id) async {
     final (SyncController sync, _) = await _open();
     await BrowserCollections.bookmarks.delete(sync, id);
+  }
+
+  /// Saves [ordered] (one folder's bookmarks, in the order the user dragged
+  /// them into) with positions 0, 1, 2...; only changed ones are written.
+  Future<void> reorderBookmarks(List<Bookmark> ordered) async {
+    final (SyncController sync, LocalItemStore store) = await _open();
+    for (int i = 0; i < ordered.length; i++) {
+      final Bookmark b = ordered[i];
+      if (b.position == i.toDouble()) continue;
+      await BrowserCollections.bookmarks.save(
+        sync,
+        store,
+        b.copyWith(position: i.toDouble()),
+      );
+    }
+  }
+
+  /// Moves a bookmark into [folder] (null: the top level), at its end.
+  Future<void> moveBookmark(Bookmark b, String? folder) async {
+    final List<Bookmark> all = ref.read(bookmarksProvider).value ?? const [];
+    double last = -1;
+    for (final Bookmark x in all) {
+      if (x.folder == folder && x.position != null && x.position! > last) {
+        last = x.position!;
+      }
+    }
+    await saveBookmark(b.copyWith(folder: () => folder, position: last + 1));
+  }
+
+  /// Adds an (empty) folder to the list, at its end.
+  Future<void> addFolder(String name) async {
+    final String n = name.trim();
+    if (n.isEmpty) return;
+    final BrowserSettings s = ref.read(browserSettingsProvider);
+    final List<Bookmark> all = ref.read(bookmarksProvider).value ?? const [];
+    final List<String> folders = s.foldersWith(all);
+    if (folders.contains(n)) return;
+    await saveSettings(s.copyWith(bookmarkFolders: <String>[...folders, n]));
+  }
+
+  /// Renames a folder, and moves its bookmarks along.
+  Future<void> renameFolder(String from, String to) async {
+    final String n = to.trim();
+    if (n.isEmpty || n == from) return;
+    final BrowserSettings s = ref.read(browserSettingsProvider);
+    final List<Bookmark> all = ref.read(bookmarksProvider).value ?? const [];
+    await saveSettings(
+      s.copyWith(
+        bookmarkFolders: <String>[
+          for (final String f in s.foldersWith(all))
+            if (f == from) n else if (f != n) f,
+        ],
+      ),
+    );
+    for (final Bookmark b in all) {
+      if (b.folder == from) await saveBookmark(b.copyWith(folder: () => n));
+    }
+  }
+
+  /// Removes a folder; its bookmarks move to the top level.
+  Future<void> deleteFolder(String name) async {
+    final BrowserSettings s = ref.read(browserSettingsProvider);
+    final List<Bookmark> all = ref.read(bookmarksProvider).value ?? const [];
+    await saveSettings(
+      s.copyWith(
+        bookmarkFolders: <String>[
+          for (final String f in s.foldersWith(all))
+            if (f != name) f,
+        ],
+      ),
+    );
+    for (final Bookmark b in all) {
+      if (b.folder == name) await moveBookmark(b, null);
+    }
+  }
+
+  /// Saves the folders in the order the user dragged them into.
+  Future<void> reorderFolders(List<String> ordered) async {
+    final BrowserSettings s = ref.read(browserSettingsProvider);
+    await saveSettings(s.copyWith(bookmarkFolders: ordered));
+  }
+
+  // ---- Send to device -----------------------------------------------------
+
+  /// Sends a page to another of the account's devices: it shows up there
+  /// the next time ZT Browser syncs. End-to-end encrypted, like history.
+  Future<void> sendTab(DeviceTabs to, String url, String title) async {
+    final String me = await ref.read(ztDeviceIdProvider.future);
+    final String name = await ref.read(deviceNameProvider.future);
+    final (SyncController sync, LocalItemStore store) = await _open();
+    await BrowserCollections.sentTabs.save(
+      sync,
+      store,
+      SentTab(
+        id: newItemId(),
+        url: url,
+        title: title.trim().isEmpty ? url : title.trim(),
+        fromDevice: me,
+        fromName: name,
+        toDevice: to.deviceId,
+        sentAt: DateTime.now(),
+      ),
+    );
+  }
+
+  /// A received page was opened or dismissed: it's gone everywhere.
+  Future<void> dismissSentTab(String id) async {
+    final (SyncController sync, _) = await _open();
+    await BrowserCollections.sentTabs.delete(sync, id);
   }
 
   // ---- History ------------------------------------------------------------
@@ -297,13 +434,21 @@ class BrowserData {
       store,
       'tabs-$deviceId',
     );
-    if (old != null && _sameTabs(old.tabs, tabs)) return;
+    String name = 'Android phone';
+    try {
+      name = await ref.read(deviceNameProvider.future);
+    } on Object {
+      name = old?.deviceName ?? name;
+    }
+    if (old != null && old.deviceName == name && _sameTabs(old.tabs, tabs)) {
+      return;
+    }
     await BrowserCollections.deviceTabs.save(
       sync,
       store,
       DeviceTabs(
         deviceId: deviceId,
-        deviceName: old?.deviceName ?? 'Android phone',
+        deviceName: name,
         tabs: tabs,
         updatedAt: DateTime.now(),
       ),

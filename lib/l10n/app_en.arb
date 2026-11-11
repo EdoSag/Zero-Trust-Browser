@@ -605,6 +605,222 @@
     }
   },
   "javascriptSub": "Off makes many sites simpler and harder to track you on, but some stop working. It reloads.",
+  "unlock": "Unlock",
+  "dismiss": "Dismiss",
+  "play": "Play",
+  "pause": "Pause",
+  "stop": "Stop",
+  "justNow": "just now",
+  "hoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "sendToDevice": "Send to your devices",
+  "sendLinkToDevice": "Send link to your devices",
+  "sendToDeviceNone": "No other devices yet. Sign in to ZT Browser with the same account on another phone or tablet, and it shows up here.",
+  "lastActive": "Last active {when}",
+  "@lastActive": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "sentToDevice": "Sent to {name}",
+  "@sentToDevice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntSend": "Couldn't send. Try again.",
+  "sentToThisDevice": "Sent to this device",
+  "sentFrom": "From {name}",
+  "@sentFrom": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sentFromSnack": "{name} sent: {title}",
+  "@sentFromSnack": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "newFolder": "New folder",
+  "folderName": "Folder name",
+  "renameFolder": "Rename folder",
+  "deleteFolder": "Delete folder",
+  "deleteFolderKeeps": "{count, plural, =1{Its bookmark moves to the top level} other{Its {count} bookmarks move to the top level}}",
+  "@deleteFolderKeeps": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "topLevel": "Top level (no folder)",
+  "folderEmpty": "This folder is empty.",
+  "nBookmarks": "{count, plural, =0{No bookmarks} =1{1 bookmark} other{{count} bookmarks}}",
+  "@nBookmarks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "folderOptions": "Folder options",
+  "moveToFolder": "Move to folder",
+  "autoClearCookies": "Clear cookies when tabs close",
+  "autoClearCookiesSub": "When the last tab of a site closes, its cookies and site data are deleted, so it can't recognise you next time. Sites you keep signed in are skipped.",
+  "keptSignedIn": "Kept signed in",
+  "keptSignedInExplain": "These sites keep their cookies when their tabs close.",
+  "keepSignedInOn": "Keep me signed in to {site}",
+  "@keepSignedInOn": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "keepSignedInSub": "Its cookies stay when its tabs close.",
+  "saveToZtNotes": "Save to ZT Notes",
+  "saveToZtNotesSub": "The selected text, or the page's link",
+  "readLaterInZtTasks": "Read later in ZT Tasks",
+  "callWithZtPhone": "Call with ZT Phone",
+  "saveToZtContacts": "Save to ZT Contacts",
+  "openWithOtherApp": "Open with another app",
+  "copyNumber": "Copy number",
+  "appCouldntOpen": "That app couldn't open this.",
+  "backgroundPlay": "Keep playing in the background",
+  "backgroundPlaySub": "Audio and videos keep playing when you leave the app, with play and pause in the notification. A full-screen video shrinks to a small window.",
+  "mediaChannel": "Playing media",
+  "readAloud": "Read aloud",
+  "stopReadingAloud": "Stop reading aloud",
+  "readingAloud": "Reading aloud",
+  "readAloudProgress": "Reading aloud · {part} of {count}",
+  "@readAloudProgress": {
+    "placeholders": {
+      "part": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "readAloudSpeed": "Reading speed",
+  "readAloudCant": "This page has no article to read aloud.",
+  "readAloudNoVoice": "No offline voice for this page's language. Add one in Android Settings > Text-to-speech, so the text never leaves your phone.",
+  "readAloudFailed": "Reading aloud stopped.",
+  "privateTabsSection": "Private tabs",
+  "privateNoScreenshots": "Block screenshots",
+  "privateNoScreenshotsSub": "No screenshots or screen recording while a private tab is on screen.",
+  "privateHideRecents": "Hide from recent apps",
+  "privateHideRecentsSub": "The recent apps screen shows a blank preview while private tabs are open.",
+  "privateLock": "Lock private tabs",
+  "privateLockSub": "After you leave the app, private tabs need your fingerprint, face or screen lock again.",
+  "privateLockUnavailable": "Set a screen lock on your phone to use this.",
+  "privateLocked": "Private tabs are locked.",
+  "privateUnlockReason": "Unlock your private tabs",
+  "blockRules": "Your block rules",
+  "blockRulesSub": "Block or allow a site yourself, add filter lists",
+  "blockRulesCount": "{count, plural, =1{1 rule or list} other{{count} rules and lists}}",
+  "@blockRulesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "blockRulesExplain": "Your rules apply on every site where protection is on, and sync to your other devices, end-to-end encrypted.",
+  "alwaysBlock": "Always block",
+  "neverBlock": "Never block",
+  "addHostToBlock": "Block a site or server",
+  "addHostToAllow": "Allow a site or server",
+  "blockHostExplain": "Requests to it, and to every address under it, are blocked on all sites.",
+  "allowHostExplain": "Never blocked, even when a list has it. Useful when a list breaks a site you need.",
+  "notAHost": "Type an address like ads.example.com",
+  "extraFilterLists": "Extra filter lists",
+  "extraFilterListsExplain": "Hosts files or AdBlock domain lists. Each phone downloads them straight from their address once a week. Tap a list to update it now.",
+  "addFilterList": "Add a filter list",
+  "addFilterListExplain": "The address of a hosts file or AdBlock list (https). The list's owner sees that your phone downloaded it, nothing more.",
+  "filterListNeedsHttps": "Type an https:// address",
+  "filterListAdded": "List added: {count} hosts blocked",
+  "@filterListAdded": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "filterListUpdated": "Updated: {count} hosts",
+  "@filterListUpdated": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "filterListFailed": "Couldn't download the list",
+  "filterListNotYet": "Not downloaded yet",
+  "filterListStatus": "{count} hosts · {date}",
+  "@filterListStatus": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "encryptedDns": "Encrypted DNS",
+  "encryptedDnsOn": "Encrypted DNS is on",
+  "encryptedDnsOff": "Encrypted DNS is off",
+  "encryptedDnsServer": "On, with {server}",
+  "@encryptedDnsServer": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
+  "encryptedDnsAutomatic": "On, with your network's DNS",
+  "encryptedDnsOffSub": "Your network can see which sites you look up.",
+  "encryptedDnsExplain": "Before opening a site, your phone looks up its address (DNS). Without encryption, your Wi-Fi or mobile network sees every site you visit, even with HTTPS. Android's Private DNS encrypts these lookups for every app, ZT Browser included.",
+  "encryptedDnsSteps": "To turn it on: Android Settings > Network & internet > Private DNS > Private DNS provider hostname, then paste one of these:",
+  "dnsBlocksAds": "{name}, also blocks ads and trackers",
+  "@dnsBlocksAds": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "dnsBlocksMalware": "{name}, also blocks malware sites",
+  "@dnsBlocksMalware": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "copyHostname": "Copy hostname",
+  "openNetworkSettings": "Open network settings",
+  "encryptedDnsVpnNote": "A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, Private DNS is the safest choice and needs no extra app.",
   "qrFor": "QR code for {url}",
   "@qrFor": {
     "placeholders": {

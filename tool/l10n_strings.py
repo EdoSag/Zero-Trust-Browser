@@ -607,6 +607,212 @@ S = [
      "כיבוי הופך אתרים רבים לפשוטים יותר ומקשה לעקוב אחריך, אבל חלקם "
      "מפסיקים לעבוד. הדף ייטען מחדש."),
 
+    # ---- 0.4: B17, B23-B27, B29-B31 ----
+    ("unlock", "Unlock", "ביטול נעילה"),
+    ("dismiss", "Dismiss", "התעלמות"),
+    ("play", "Play", "הפעלה"),
+    ("pause", "Pause", "השהיה"),
+    ("stop", "Stop", "עצירה"),
+    ("justNow", "just now", "עכשיו"),
+    ("hoursAgo", "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
+     "{count, plural, =1{לפני שעה} other{לפני {count} שעות}}"),
+
+    # B23 send tab
+    ("sendToDevice", "Send to your devices", "שליחה למכשירים שלך"),
+    ("sendLinkToDevice", "Send link to your devices", "שליחת הקישור למכשירים שלך"),
+    ("sendToDeviceNone",
+     "No other devices yet. Sign in to ZT Browser with the same account on "
+     "another phone or tablet, and it shows up here.",
+     "עדיין אין מכשירים אחרים. אחרי התחברות ל-ZT Browser עם אותו חשבון "
+     "בטלפון או בטאבלט אחר, הוא יופיע כאן."),
+    ("lastActive", "Last active {when}", "פעיל לאחרונה {when}"),
+    ("sentToDevice", "Sent to {name}", "נשלח אל {name}"),
+    ("couldntSend", "Couldn't send. Try again.", "השליחה נכשלה. אפשר לנסות שוב."),
+    ("sentToThisDevice", "Sent to this device", "נשלחו למכשיר הזה"),
+    ("sentFrom", "From {name}", "מ-{name}"),
+    ("sentFromSnack", "{name} sent: {title}", "{name} שלח/ה: {title}"),
+
+    # B23 bookmark folders
+    ("newFolder", "New folder", "תיקייה חדשה"),
+    ("folderName", "Folder name", "שם התיקייה"),
+    ("renameFolder", "Rename folder", "שינוי שם התיקייה"),
+    ("deleteFolder", "Delete folder", "מחיקת התיקייה"),
+    ("deleteFolderKeeps",
+     "{count, plural, =1{Its bookmark moves to the top level} other{Its {count} bookmarks move to the top level}}",
+     "{count, plural, =1{הסימנייה שבה תעבור לרמה העליונה} other{{count} הסימניות שבה יעברו לרמה העליונה}}"),
+    ("topLevel", "Top level (no folder)", "רמה עליונה (בלי תיקייה)"),
+    ("folderEmpty", "This folder is empty.", "התיקייה הזאת ריקה."),
+    ("nBookmarks", "{count, plural, =0{No bookmarks} =1{1 bookmark} other{{count} bookmarks}}",
+     "{count, plural, =0{אין סימניות} =1{סימנייה אחת} other{{count} סימניות}}"),
+    ("folderOptions", "Folder options", "אפשרויות התיקייה"),
+    ("moveToFolder", "Move to folder", "העברה לתיקייה"),
+
+    # B24 cookie auto-clear
+    ("autoClearCookies", "Clear cookies when tabs close",
+     "ניקוי קובצי Cookie כשכרטיסיות נסגרות"),
+    ("autoClearCookiesSub",
+     "When the last tab of a site closes, its cookies and site data are "
+     "deleted, so it can't recognise you next time. Sites you keep signed "
+     "in are skipped.",
+     "כשהכרטיסייה האחרונה של אתר נסגרת, קובצי ה-Cookie ונתוני האתר שלו "
+     "נמחקים, כך שהוא לא יזהה אותך בפעם הבאה. אתרים שבחרת להישאר מחובר/ת "
+     "אליהם לא נמחקים."),
+    ("keptSignedIn", "Kept signed in", "נשארים מחוברים"),
+    ("keptSignedInExplain",
+     "These sites keep their cookies when their tabs close.",
+     "האתרים האלה שומרים את קובצי ה-Cookie שלהם כשהכרטיסיות שלהם נסגרות."),
+    ("keepSignedInOn", "Keep me signed in to {site}", "להישאר מחובר/ת ל-{site}"),
+    ("keepSignedInSub",
+     "Its cookies stay when its tabs close.",
+     "קובצי ה-Cookie שלו נשמרים כשהכרטיסיות שלו נסגרות."),
+
+    # B25 other ZT apps
+    ("saveToZtNotes", "Save to ZT Notes", "שמירה ב-ZT Notes"),
+    ("saveToZtNotesSub", "The selected text, or the page's link",
+     "הטקסט המסומן, או הקישור לדף"),
+    ("readLaterInZtTasks", "Read later in ZT Tasks", "לקריאה מאוחר יותר ב-ZT Tasks"),
+    ("callWithZtPhone", "Call with ZT Phone", "חיוג עם ZT Phone"),
+    ("saveToZtContacts", "Save to ZT Contacts", "שמירה ב-ZT Contacts"),
+    ("openWithOtherApp", "Open with another app", "פתיחה באפליקציה אחרת"),
+    ("copyNumber", "Copy number", "העתקת המספר"),
+    ("appCouldntOpen", "That app couldn't open this.", "האפליקציה לא הצליחה לפתוח את זה."),
+
+    # B26 background play
+    ("backgroundPlay", "Keep playing in the background",
+     "המשך ניגון ברקע"),
+    ("backgroundPlaySub",
+     "Audio and videos keep playing when you leave the app, with play and "
+     "pause in the notification. A full-screen video shrinks to a small "
+     "window.",
+     "אודיו ווידאו ממשיכים להתנגן כשיוצאים מהאפליקציה, עם הפעלה והשהיה "
+     "בהתראה. סרטון במסך מלא מוקטן לחלון קטן."),
+    ("mediaChannel", "Playing media", "ניגון מדיה"),
+
+    # B27 read aloud
+    ("readAloud", "Read aloud", "הקראה"),
+    ("stopReadingAloud", "Stop reading aloud", "עצירת ההקראה"),
+    ("readingAloud", "Reading aloud", "בהקראה"),
+    ("readAloudProgress", "Reading aloud · {part} of {count}",
+     "בהקראה · {part} מתוך {count}"),
+    ("readAloudSpeed", "Reading speed", "מהירות ההקראה"),
+    ("readAloudCant",
+     "This page has no article to read aloud.",
+     "אין בדף הזה מאמר להקראה."),
+    ("readAloudNoVoice",
+     "No offline voice for this page's language. Add one in Android "
+     "Settings > Text-to-speech, so the text never leaves your phone.",
+     "אין קול לא מקוון לשפה של הדף הזה. אפשר להוסיף קול בהגדרות Android "
+     "> המרת טקסט לדיבור, כדי שהטקסט לא ייצא מהטלפון."),
+    ("readAloudFailed", "Reading aloud stopped.", "ההקראה נעצרה."),
+
+    # B29 private tab extras
+    ("privateTabsSection", "Private tabs", "כרטיסיות פרטיות"),
+    ("privateNoScreenshots", "Block screenshots", "חסימת צילומי מסך"),
+    ("privateNoScreenshotsSub",
+     "No screenshots or screen recording while a private tab is on screen.",
+     "אין צילומי מסך או הקלטת מסך כשכרטיסייה פרטית מוצגת."),
+    ("privateHideRecents", "Hide from recent apps",
+     "הסתרה מהאפליקציות האחרונות"),
+    ("privateHideRecentsSub",
+     "The recent apps screen shows a blank preview while private tabs are "
+     "open.",
+     "מסך האפליקציות האחרונות מציג תצוגה ריקה כשכרטיסיות פרטיות פתוחות."),
+    ("privateLock", "Lock private tabs", "נעילת כרטיסיות פרטיות"),
+    ("privateLockSub",
+     "After you leave the app, private tabs need your fingerprint, face or "
+     "screen lock again.",
+     "אחרי יציאה מהאפליקציה, צריך שוב טביעת אצבע, פנים או נעילת מסך כדי "
+     "לראות כרטיסיות פרטיות."),
+    ("privateLockUnavailable",
+     "Set a screen lock on your phone to use this.",
+     "כדי להשתמש בזה צריך להגדיר נעילת מסך בטלפון."),
+    ("privateLocked", "Private tabs are locked.", "הכרטיסיות הפרטיות נעולות."),
+    ("privateUnlockReason", "Unlock your private tabs",
+     "ביטול הנעילה של הכרטיסיות הפרטיות"),
+
+    # B30 own block rules
+    ("blockRules", "Your block rules", "כללי החסימה שלך"),
+    ("blockRulesSub", "Block or allow a site yourself, add filter lists",
+     "חסימה או התרה של אתר בעצמך, הוספת רשימות סינון"),
+    ("blockRulesCount",
+     "{count, plural, =1{1 rule or list} other{{count} rules and lists}}",
+     "{count, plural, =1{כלל או רשימה אחת} other{{count} כללים ורשימות}}"),
+    ("blockRulesExplain",
+     "Your rules apply on every site where protection is on, and sync to "
+     "your other devices, end-to-end encrypted.",
+     "הכללים שלך חלים בכל אתר שבו ההגנה פועלת, ומסונכרנים למכשירים האחרים "
+     "שלך בהצפנה מקצה לקצה."),
+    ("alwaysBlock", "Always block", "תמיד לחסום"),
+    ("neverBlock", "Never block", "אף פעם לא לחסום"),
+    ("addHostToBlock", "Block a site or server", "חסימת אתר או שרת"),
+    ("addHostToAllow", "Allow a site or server", "התרת אתר או שרת"),
+    ("blockHostExplain",
+     "Requests to it, and to every address under it, are blocked on all "
+     "sites.",
+     "בקשות אליו, ולכל כתובת שתחתיו, ייחסמו בכל האתרים."),
+    ("allowHostExplain",
+     "Never blocked, even when a list has it. Useful when a list breaks a "
+     "site you need.",
+     "לא ייחסם אף פעם, גם אם הוא ברשימה. שימושי כשרשימה שוברת אתר שצריך."),
+    ("notAHost", "Type an address like ads.example.com",
+     "יש להקליד כתובת כמו ads.example.com"),
+    ("extraFilterLists", "Extra filter lists", "רשימות סינון נוספות"),
+    ("extraFilterListsExplain",
+     "Hosts files or AdBlock domain lists. Each phone downloads them "
+     "straight from their address once a week. Tap a list to update it now.",
+     "קובצי hosts או רשימות דומיינים של AdBlock. כל טלפון מוריד אותן ישירות "
+     "מהכתובת שלהן פעם בשבוע. הקשה על רשימה מעדכנת אותה מיד."),
+    ("addFilterList", "Add a filter list", "הוספת רשימת סינון"),
+    ("addFilterListExplain",
+     "The address of a hosts file or AdBlock list (https). The list's owner "
+     "sees that your phone downloaded it, nothing more.",
+     "הכתובת של קובץ hosts או רשימת AdBlock (https). בעל הרשימה רואה רק "
+     "שהטלפון שלך הוריד אותה."),
+    ("filterListNeedsHttps", "Type an https:// address",
+     "יש להקליד כתובת https://"),
+    ("filterListAdded", "List added: {count} hosts blocked",
+     "הרשימה נוספה: {count} שרתים חסומים"),
+    ("filterListUpdated", "Updated: {count} hosts", "עודכן: {count} שרתים"),
+    ("filterListFailed", "Couldn't download the list",
+     "לא ניתן היה להוריד את הרשימה"),
+    ("filterListNotYet", "Not downloaded yet", "עוד לא הורדה"),
+    ("filterListStatus", "{count} hosts · {date}", "{count} שרתים · {date}"),
+
+    # B17 encrypted DNS
+    ("encryptedDns", "Encrypted DNS", "DNS מוצפן"),
+    ("encryptedDnsOn", "Encrypted DNS is on", "DNS מוצפן פועל"),
+    ("encryptedDnsOff", "Encrypted DNS is off", "DNS מוצפן כבוי"),
+    ("encryptedDnsServer", "On, with {server}", "פועל, דרך {server}"),
+    ("encryptedDnsAutomatic", "On, with your network's DNS",
+     "פועל, דרך ה-DNS של הרשת"),
+    ("encryptedDnsOffSub",
+     "Your network can see which sites you look up.",
+     "הרשת שלך יכולה לראות לאילו אתרים פנית."),
+    ("encryptedDnsExplain",
+     "Before opening a site, your phone looks up its address (DNS). Without "
+     "encryption, your Wi-Fi or mobile network sees every site you visit, "
+     "even with HTTPS. Android's Private DNS encrypts these lookups for "
+     "every app, ZT Browser included.",
+     "לפני פתיחת אתר, הטלפון מחפש את הכתובת שלו (DNS). בלי הצפנה, רשת ה-Wi-Fi "
+     "או הסלולר רואה כל אתר שביקרת בו, גם עם HTTPS. ה-DNS הפרטי של Android "
+     "מצפין את החיפושים האלה לכל האפליקציות, כולל ZT Browser."),
+    ("encryptedDnsSteps",
+     "To turn it on: Android Settings > Network & internet > Private DNS > "
+     "Private DNS provider hostname, then paste one of these:",
+     "כדי להפעיל: הגדרות Android > רשת ואינטרנט > DNS פרטי > שם המארח של ספק "
+     "ה-DNS הפרטי, ואז להדביק אחד מאלה:"),
+    ("dnsBlocksAds", "{name}, also blocks ads and trackers",
+     "{name}, חוסם גם פרסומות ומעקב"),
+    ("dnsBlocksMalware", "{name}, also blocks malware sites",
+     "{name}, חוסם גם אתרים זדוניים"),
+    ("copyHostname", "Copy hostname", "העתקת שם המארח"),
+    ("openNetworkSettings", "Open network settings", "פתיחת הגדרות הרשת"),
+    ("encryptedDnsVpnNote",
+     "A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, "
+     "Private DNS is the safest choice and needs no extra app.",
+     "ZT VPN, אם יגיע, יוסיף DNS מוצפן לכל אפליקציה. עד אז, DNS פרטי הוא "
+     "האפשרות הבטוחה ביותר ולא דורש אפליקציה נוספת."),
+
     # ---- QR ----
     ("qrFor", "QR code for {url}", "קוד QR עבור {url}"),
     ("shareLink", "Share link", "שיתוף הקישור"),
@@ -623,6 +829,7 @@ INT_PLACEHOLDERS = {
     "privateCount": ["count"],
     "reportMonth": ["days", "count"],
     "reportCountOnSite": ["count"],
+    "readAloudProgress": ["part", "count"],
 }
 
 

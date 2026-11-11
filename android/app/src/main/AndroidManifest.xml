@@ -13,6 +13,12 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- Whether Android's Private DNS (encrypted DNS) is on (B17). -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Audio and read aloud keep playing with the app in the background,
+         with play and pause in the notification (B26, B27). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <uses-feature android:name="android.hardware.location" android:required="false"/>
     <uses-feature android:name="android.hardware.microphone" android:required="false"/>
@@ -37,6 +43,8 @@
             android:theme="@style/LaunchTheme"
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
+            android:supportsPictureInPicture="true"
+            android:resizeableActivity="true"
             android:windowSoftInputMode="adjustResize">
             <meta-data
               android:name="io.flutter.embedding.android.NormalTheme"
@@ -81,6 +89,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Media notification: page audio and read aloud (B26, B27). -->
+        <service
+            android:name=".MediaService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
         <!-- Home screen search bar widget (W12). -->
         <receiver
             android:name=".SearchWidgetProvider"
@@ -112,5 +125,14 @@
         <intent>
             <action android:name="android.service.autofill.AutofillService"/>
         </intent>
+        <!-- Read aloud: the phone's text-to-speech engines. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
+        <!-- Save to the other ZT apps (B25), only when installed. -->
+        <package android:name="dev.sagron.zerotrustnotes"/>
+        <package android:name="dev.sagron.zerotrusttasks"/>
+        <package android:name="dev.sagron.zerotrustphone"/>
+        <package android:name="dev.sagron.zerotrustcontacts"/>
     </queries>
 </manifest>

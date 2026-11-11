@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
@@ -13,6 +14,18 @@ class _Counted extends PrivacyReportRecorder {
 
   @override
   void add(String site, int count, {DateTime? now}) => seen.add((site, count));
+}
+
+/// Cookie auto-clear is off in these tests (it reads the account's
+/// settings store, which isn't there).
+class _NoAutoClear extends CookieAutoClear {
+  _NoAutoClear(super.ref);
+
+  @override
+  Future<void> visited(String? url) async {}
+
+  @override
+  Future<void> sweep(Iterable<String?> openUrls) async {}
 }
 
 void main() {
@@ -35,6 +48,7 @@ void main() {
       overrides: [
         browserEngineProvider.overrideWithValue(BrowserEngine(channel)),
         privacyReportRecorderProvider.overrideWith(_Counted.new),
+        cookieAutoClearProvider.overrideWith(_NoAutoClear.new),
       ],
     );
     addTearDown(c.dispose);

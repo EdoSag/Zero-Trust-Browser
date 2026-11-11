@@ -24,6 +24,7 @@ import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.JavaScriptReplyProxy
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebMessageCompat
 import androidx.webkit.WebMessagePortCompat
@@ -75,6 +76,12 @@ class ZtTab(
          * by both the user and Android.
          */
         fun askPermission(tab: ZtTab, origin: String, kinds: List<String>, answer: (Set<String>) -> Unit)
+
+        /**
+         * A page's audio or video started or paused (B26); [title] null
+         * when it is gone (new page, tab closed).
+         */
+        fun mediaChanged(tab: ZtTab, playing: Boolean, title: String?)
     }
 
     val webView: WebView = WebView(activity)
@@ -82,6 +89,12 @@ class ZtTab(
     private val blocked = AtomicInteger(0)
     private val defaultUserAgent: String
     private var startScript: ScriptHandler? = null
+    private var mediaScript: ScriptHandler? = null
+
+    /** The frame whose media played last, to pause or play it again. */
+    private var mediaFrame: JavaScriptReplyProxy? = null
+    var mediaPlaying = false
+        private set
 
     /** Host of the page now showing, read by the network thread. */
     @Volatile private var pageHost: String? = null
@@ -143,6 +156,7 @@ class ZtTab(
         applyUserAgent()
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
+        listenForMedia()
         refreshScripts()
         webView.webViewClient = Client()
         webView.webChromeClient = Chrome()
@@ -198,11 +212,59 @@ class ZtTab(
         }
     }
 
-    /** Re-adds the document-start script after a settings or list change. */
+    /** Re-adds the document-start scripts after a settings or list change. */
     fun refreshScripts() {
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
         startScript?.remove()
         startScript = WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.documentStart(), setOf("*"))
+        mediaScript?.remove()
+        mediaScript = if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
+            WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.media(backgroundPlay), setOf("*"))
+        } else {
+            null
+        }
+    }
+
+    /** Media events from every frame of the page (see [PageScripts.media]). */
+    private fun listenForMedia() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+        WebViewCompat.addWebMessageListener(webView, "ztMedia", setOf("*")) { _, message, _, _, reply ->
+            val data = message.data ?: return@addWebMessageListener
+            val json = try {
+                org.json.JSONObject(data)
+            } catch (e: Exception) {
+                return@addWebMessageListener
+            }
+            when (json.optString("s")) {
+                "play" -> {
+                    mediaFrame = reply
+                    mediaPlaying = true
+                    host.mediaChanged(this, true, json.optString("t").ifBlank { webView.title ?: "" })
+                }
+                "pause" -> if (reply == mediaFrame && mediaPlaying) {
+                    mediaPlaying = false
+                    host.mediaChanged(this, false, webView.title ?: "")
+                }
+            }
+        }
+    }
+
+    /** Pauses or plays again the media that played last ("pause", "play"). */
+    fun mediaControl(command: String) {
+        try {
+            mediaFrame?.postMessage(command)
+        } catch (e: Exception) {
+            // The frame is gone.
+        }
+    }
+
+    /** The selected text on the page (JSON string). */
+    fun selection(done: (String?) -> Unit) {
+        if (!webView.settings.javaScriptEnabled) {
+            done(null)
+            return
+        }
+        webView.evaluateJavascript(PageScripts.SELECTION) { done(it) }
     }
 
     /** The page as a Readability article (JSON string, or "null"). */
@@ -251,6 +313,9 @@ class ZtTab(
     }
 
     fun destroy() {
+        if (mediaFrame != null) host.mediaChanged(this, false, null)
+        mediaPlaying = false
+        mediaFrame = null
         (webView.parent as? ViewGroup)?.removeView(webView)
         webView.stopLoading()
         webView.destroy()
@@ -411,6 +476,12 @@ class ZtTab(
 
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageHost = Uri.parse(url).host
+            // A new page: what played on the old one has stopped.
+            if (mediaFrame != null) {
+                mediaPlaying = false
+                mediaFrame = null
+                host.mediaChanged(this@ZtTab, false, null)
+            }
             blocked.set(0)
             sslError = false
             loading = true
@@ -589,6 +660,9 @@ class ZtTab(
 
         /** Sites (registrable domains) where JavaScript is off. */
         @Volatile var jsOffSites: Set<String> = emptySet()
+
+        /** Keep media playing in the background (B26), pushed from Dart. */
+        @Volatile var backgroundPlay = true
 
         /** Page text size in percent, and dark pages; pushed from Dart. */
         @Volatile var textZoom = 100

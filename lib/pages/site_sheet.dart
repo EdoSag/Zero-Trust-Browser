@@ -88,6 +88,27 @@ Future<void> showSiteSheet(
                     title: Text(l.trackerBlockingOff),
                     subtitle: Text(l.turnOnInSettings),
                   ),
+                if (s.autoClearCookies && !live.private)
+                  SwitchListTile(
+                    secondary: const Icon(Icons.how_to_reg_outlined),
+                    title: Text(l.keepSignedInOn(site)),
+                    subtitle: Text(l.keepSignedInSub),
+                    value: s.keepsSignedIn(site),
+                    onChanged: (bool on) async {
+                      await ref
+                          .read(browserDataProvider)
+                          .saveSettings(
+                            s.copyWith(
+                              keepSignedIn: <String>[
+                                ...s.keepSignedIn.where(
+                                  (String x) => x != site,
+                                ),
+                                if (on) site,
+                              ],
+                            ),
+                          );
+                    },
+                  ),
                 SwitchListTile(
                   secondary: const Icon(Icons.code),
                   title: Text(l.javascriptOn(site)),

@@ -80,3 +80,38 @@ String? webAddress(String input) {
   if (u == null || u.host.isEmpty || !_looksLikeHost(u.host)) return null;
   return url;
 }
+
+/// The registrable domain ("site") of [host], the same rule as the engine's
+/// `Blocker.siteOf`: the last two labels, or three for two-letter country
+/// domains with a short second level (`bbc.co.uk`, `ynet.co.il`).
+String siteOf(String host) {
+  final String h = host.toLowerCase().replaceAll(RegExp(r'\.+$'), '');
+  final List<String> labels = h.split('.');
+  if (labels.length <= 2) return h;
+  final String tld = labels[labels.length - 1];
+  final String second = labels[labels.length - 2];
+  final int keep = tld.length == 2 && second.length <= 3 ? 3 : 2;
+  return labels.sublist(labels.length - keep).join('.');
+}
+
+/// A host the user typed for a block or allow rule, cleaned up: no scheme,
+/// path, port or leading `*.`/`www.`-free dots. Null when it isn't a host.
+String? cleanHostRule(String input) {
+  String t = input.trim().toLowerCase();
+  if (t.isEmpty) return null;
+  final int scheme = t.indexOf('://');
+  if (scheme >= 0) t = t.substring(scheme + 3);
+  for (final String stop in <String>['/', '?', '#', ':']) {
+    final int i = t.indexOf(stop);
+    if (i >= 0) t = t.substring(0, i);
+  }
+  if (t.startsWith('*.')) t = t.substring(2);
+  if (t.startsWith('||')) t = t.substring(2);
+  t = t.replaceAll(RegExp(r'\^$'), '').replaceAll(RegExp(r'^\.+|\.+$'), '');
+  if (!RegExp(
+    r'^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$',
+  ).hasMatch(t)) {
+    return null;
+  }
+  return t;
+}
