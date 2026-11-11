@@ -534,6 +534,9 @@ class TabsController extends Notifier<TabsState> {
                 .read(browserDataProvider)
                 .recordVisit(url, e.get<String>('title'))
                 .ignore();
+            // A page opened by its address never "changes" the tab's
+            // address, so its site is noted here as well.
+            ref.read(cookieAutoClearProvider).visited(url).ignore();
           }
           _queueSave();
         }
