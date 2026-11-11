@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/browser/address.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -172,6 +173,9 @@ class _TabsPageState extends ConsumerState<TabsPage>
     final TabsState state = ref.watch(tabsProvider);
     final List<DeviceTabs> others =
         ref.watch(otherDevicesTabsProvider).value ?? const <DeviceTabs>[];
+    final List<SentTab> sent =
+        ref.watch(sentToMeProvider).value ?? const <SentTab>[];
+    final bool privateLocked = ref.watch(privateLockProvider);
     return Scaffold(
       appBar: AppBar(
         title: _searching
@@ -213,7 +217,13 @@ class _TabsPageState extends ConsumerState<TabsPage>
           tabs: <Widget>[
             Tab(text: l.tabsCount(state.normal.length)),
             Tab(text: l.privateCount(state.private.length)),
-            Tab(text: l.otherDevices),
+            Tab(
+              child: Badge(
+                isLabelVisible: sent.isNotEmpty,
+                label: Text('${sent.length}'),
+                child: Text(l.otherDevices),
+              ),
+            ),
           ],
         ),
       ),
@@ -231,8 +241,11 @@ class _TabsPageState extends ConsumerState<TabsPage>
         controller: _tabs,
         children: <Widget>[
           _list(state.normal, state.currentId, l.noOpenTabs, groups: true),
-          _list(state.private, state.currentId, l.privateTabsExplain),
-          _otherDevices(others),
+          if (privateLocked && state.private.isNotEmpty)
+            _locked()
+          else
+            _list(state.private, state.currentId, l.privateTabsExplain),
+          _otherDevices(others, sent),
         ],
       ),
     );
@@ -355,8 +368,33 @@ class _TabsPageState extends ConsumerState<TabsPage>
     );
   }
 
-  Widget _otherDevices(List<DeviceTabs> others) {
-    if (others.isEmpty) {
+  /// Private tabs behind the phone's lock (B29).
+  Widget _locked() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.lock_outline, size: 48),
+            const SizedBox(height: 16),
+            Text(l.privateLocked, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => ref
+                  .read(privateLockProvider.notifier)
+                  .unlock(l.privateUnlockReason),
+              icon: const Icon(Icons.lock_open),
+              label: Text(l.unlock),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _otherDevices(List<DeviceTabs> others, List<SentTab> sent) {
+    if (others.isEmpty && sent.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -368,7 +406,38 @@ class _TabsPageState extends ConsumerState<TabsPage>
     return ListView(
       padding: const EdgeInsets.all(12),
       children: <Widget>[
-        for (final DeviceTabs d in others) ...<Widget>[
+        if (sent.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
+            child: Text(
+              l.sentToThisDevice,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+        for (final SentTab t in sent)
+          ListTile(
+            leading: SiteIcon(url: t.url),
+            title: Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Text(
+              l.sentFrom(t.fromName),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            trailing: IconButton(
+              tooltip: l.dismiss,
+              icon: const Icon(Icons.close),
+              onPressed: () =>
+                  ref.read(browserDataProvider).dismissSentTab(t.id),
+            ),
+            onTap: () async {
+              await ref.read(browserDataProvider).dismissSentTab(t.id);
+              await _controller.open(url: t.url);
+              if (mounted) Navigator.of(context).pop();
+            },
+          ),
+        for (final DeviceTabs d in others.where(
+          (DeviceTabs d) => d.tabs.isNotEmpty,
+        )) ...<Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
             child: Text(

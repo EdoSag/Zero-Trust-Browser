@@ -4,6 +4,8 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
+import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -280,7 +282,18 @@ class TabsController extends Notifier<TabsState> {
     await _engine.closeTab(id);
     if (current != null && current != id) await _ensureLive(current);
     _queueSave();
+    if (closing.private) {
+      if (state.private.isEmpty) ref.read(privateLockProvider.notifier).reset();
+    } else {
+      await sweepSiteData();
+    }
   }
+
+  /// B24: wipes data of sites no normal tab shows any more.
+  Future<void> sweepSiteData() => ref
+      .read(cookieAutoClearProvider)
+      .sweep(<String?>[for (final BrowserTab t in state.normal) t.url])
+      .catchError((Object _) {});
 
   Future<void> closeAll({required bool private}) async {
     for (final BrowserTab t in state.tabs.where(
@@ -317,6 +330,7 @@ class TabsController extends Notifier<TabsState> {
     }
     state = const TabsState();
     _saveTimer?.cancel();
+    ref.read(privateLockProvider.notifier).reset();
     await ref
         .read(browserDataProvider)
         .saveDeviceTabs(const <SavedTab>[])
@@ -331,6 +345,7 @@ class TabsController extends Notifier<TabsState> {
     }
     state = const TabsState();
     _restored = false;
+    ref.read(privateLockProvider.notifier).reset();
   }
 
   Future<void> load(String id, String url) async {
@@ -471,7 +486,10 @@ class TabsController extends Notifier<TabsState> {
             (BrowserTab t) => t.copyWith(lastUsed: DateTime.now()),
           );
         }
-        if (urlChanged && !tab.private) _queueSave();
+        if (urlChanged && !tab.private) {
+          _queueSave();
+          ref.read(cookieAutoClearProvider).visited(url).ignore();
+        }
       case 'favicon':
         final Uint8List? png = e.get<Uint8List>('png');
         if (png != null) {

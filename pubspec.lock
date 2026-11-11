@@ -422,7 +422,7 @@ packages:
     source: hosted
     version: "1.0.1"
   local_auth:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: local_auth
       sha256: ecf24edf2283c509ecd217e3595f6f71034b68888d28ad1dae6bfa0857b816ac
