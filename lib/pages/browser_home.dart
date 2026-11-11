@@ -113,6 +113,12 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           ref.read(tabsProvider).private.isNotEmpty &&
           !_engine.systemUiOpen.value) {
         ref.read(privateLockProvider.notifier).lock();
+        // Fullscreen video sits above Flutter, so above the lock screen
+        // too: take a private tab's video down (also out of the small
+        // floating window).
+        if (ref.read(tabsProvider).current?.private ?? false) {
+          _engine.exitFullscreen().ignore();
+        }
         // A private page read aloud would go on past the lock.
         if (_readingPrivate && _engine.readAloud.value.active) {
           _engine.readAloudStop().ignore();
