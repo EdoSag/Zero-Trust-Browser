@@ -706,16 +706,6 @@ class AppL10nHe extends AppL10n {
   }
 
   @override
-  String get language => 'שפה';
-
-  @override
-  String get languageSystem => 'שפת הטלפון';
-
-  @override
-  String get languageNote =>
-      'מסכי הכניסה והחשבון משותפים לכל אפליקציות Zero-Trust ומוצגים בינתיים באנגלית.';
-
-  @override
   String get startPageSection => 'דף הפתיחה';
 
   @override

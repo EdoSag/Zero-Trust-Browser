@@ -707,16 +707,6 @@ class AppL10nEn extends AppL10n {
   }
 
   @override
-  String get language => 'Language';
-
-  @override
-  String get languageSystem => 'Phone language';
-
-  @override
-  String get languageNote =>
-      'Sign-in and account screens are shared by all Zero-Trust apps and are in English for now.';
-
-  @override
   String get startPageSection => 'Start page';
 
   @override

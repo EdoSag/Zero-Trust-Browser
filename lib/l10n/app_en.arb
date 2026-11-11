@@ -358,9 +358,6 @@
       }
     }
   },
-  "language": "Language",
-  "languageSystem": "Phone language",
-  "languageNote": "Sign-in and account screens are shared by all Zero-Trust apps and are in English for now.",
   "startPageSection": "Start page",
   "showMostVisited": "Show most visited sites",
   "showMostVisitedSub": "From your history, on the start page",
