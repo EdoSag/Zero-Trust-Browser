@@ -77,7 +77,16 @@ class _TranslateSheetState extends ConsumerState<_TranslateSheet> {
     setState(() => _failed = false);
     try {
       final List<TranslationModel> have = await models.installed();
-      final ModelManifest m = await models.manifest();
+      ModelManifest m;
+      try {
+        m = await models.manifest();
+      } on Object {
+        // Offline: the languages already on the phone still work.
+        if (have.isEmpty) rethrow;
+        m = ModelManifest(<String, TranslationModel>{
+          for (final TranslationModel x in have) x.pair: x,
+        });
+      }
       if (!mounted) return;
       setState(() {
         _manifest = m;
