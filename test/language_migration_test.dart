@@ -7,11 +7,16 @@ void main() {
   Future<(String?, SharedPreferences)> migrate(
     Map<String, Object> old, {
     String? core,
+    bool onboarded = false,
+    String? deviceId,
   }) async {
     SharedPreferences.setMockInitialValues(old);
     final InMemoryPreferencesStore store = InMemoryPreferencesStore();
     if (core != null) await store.write('language', core);
-    await migrateBrowserLanguage(store);
+    if (onboarded) await store.write('onboarding_seen', 'true');
+    final InMemoryDeviceIdStore ids = InMemoryDeviceIdStore();
+    if (deviceId != null) await ids.write(deviceId);
+    await migrateBrowserLanguage(store, ids);
     return (await store.read('language'), await SharedPreferences.getInstance());
   }
 
@@ -29,6 +34,12 @@ void main() {
       <String, Object>{'zt_browser.blocklist_checked_at': 1},
     );
     expect(v, 'phone');
+  });
+
+  test('an install whose list check never succeeded still keeps the phone',
+      () async {
+    expect((await migrate(<String, Object>{}, onboarded: true)).$1, 'phone');
+    expect((await migrate(<String, Object>{}, deviceId: 'abc')).$1, 'phone');
   });
 
   test('a new install gets the core default', () async {
