@@ -12,6 +12,7 @@ import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/block_rules_page.dart';
 import 'package:zerotrust_browser/pages/encrypted_dns_page.dart';
+import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/shortcuts_page.dart';
 import 'package:zerotrust_browser/pages/site_permissions_page.dart';
@@ -160,6 +161,12 @@ class BrowserSettingsPage extends ConsumerWidget {
             );
             ref.invalidate(privateDnsProvider);
           },
+        ),
+        ListTile(
+          leading: const Icon(Icons.translate),
+          title: Text(l.translationLanguages),
+          subtitle: Text(l.translationLanguagesSub),
+          onTap: () => push(const TranslationLanguagesPage()),
         ),
         // Tap the row for the report; the switch turns counting on or off.
         ListTile(

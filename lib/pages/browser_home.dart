@@ -28,6 +28,7 @@ import 'package:zerotrust_browser/pages/history_page.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/send_tab_sheet.dart';
+import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
 import 'package:zerotrust_browser/pages/start_page.dart';
@@ -345,6 +346,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         } else {
           _snack(l.couldntSave(e.get<String>('name') ?? l.fileFallbackName));
         }
+      case 'translateFailed':
+        _snack(l.translateFailed);
       case 'permission':
         await _askPermission(e);
       case 'httpsFailed':
@@ -1063,6 +1066,23 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                       () => reading ? _engine.readAloudStop() : _readAloud(tab),
                     ),
                   ),
+                if (onPage)
+                  ListTile(
+                    leading: const Icon(Icons.translate),
+                    title: Text(
+                      tab.translatedTo != null
+                          ? l.showOriginal
+                          : l.translatePage,
+                    ),
+                    subtitle: tab.translatedTo != null
+                        ? null
+                        : Text(l.translatePageSub),
+                    onTap: () => run(
+                      () => tab.translatedTo != null
+                          ? _engine.showOriginal(tab.id)
+                          : showTranslateSheet(context, ref, tab),
+                    ),
+                  ),
                 if (onPage && !tab.private)
                   ListTile(
                     leading: const Icon(Icons.devices_outlined),
@@ -1301,6 +1321,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   const SizedBox(height: 2),
                 Expanded(child: _content(tab)),
                 if (_finding && tab != null) _findBar(tab),
+                if (tab != null && tab.translatedTo != null && !_editing)
+                  TranslateBar(tab: tab),
                 if (reading.active) ReadAloudBar(state: reading),
                 if (!wide)
                   _Toolbar(

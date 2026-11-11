@@ -1450,6 +1450,101 @@ class AppL10nEn extends AppL10n {
       'A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, Private DNS is the safest choice and needs no extra app.';
 
   @override
+  String get translate => 'Translate';
+
+  @override
+  String get translatePage => 'Translate page';
+
+  @override
+  String get translatePageSub => 'On your phone; the text never leaves it';
+
+  @override
+  String get showOriginal => 'Show original';
+
+  @override
+  String get translateFrom => 'From';
+
+  @override
+  String get translateTo => 'To';
+
+  @override
+  String get translatePickLanguage =>
+      'Couldn\'t tell the page\'s language. Pick it here.';
+
+  @override
+  String get translateSameLanguage => 'Pick two different languages.';
+
+  @override
+  String get translateNoModel =>
+      'There\'s no translation between these languages yet.';
+
+  @override
+  String get translateOnDevice =>
+      'Translated on your phone with Firefox\'s translation engine. The page\'s text is never sent anywhere.';
+
+  @override
+  String translateDownloadExplain(String size) {
+    return 'The first time, the language files ($size MB) download from ZT Browser\'s releases on GitHub (Mozilla\'s Firefox models). After that, translation works offline. The page\'s text is never sent anywhere.';
+  }
+
+  @override
+  String translateDownloadAndTranslate(String size) {
+    return 'Download $size MB and translate';
+  }
+
+  @override
+  String get translateDownloadFailed =>
+      'Couldn\'t download the language files. Check the connection and try again.';
+
+  @override
+  String get translateListFailed =>
+      'Couldn\'t get the list of languages. Check the connection.';
+
+  @override
+  String get tryAgain => 'Try again';
+
+  @override
+  String get translateNeedsJs =>
+      'Translation needs JavaScript on for this site (site settings).';
+
+  @override
+  String get translateFailed => 'Translation stopped. Showing the original.';
+
+  @override
+  String translatingFrom(String language) {
+    return 'Translating from $language…';
+  }
+
+  @override
+  String translatedFrom(String language) {
+    return 'Translated from $language';
+  }
+
+  @override
+  String get translationLanguages => 'Translation languages';
+
+  @override
+  String get translationLanguagesSub =>
+      'Downloaded for translating on your phone';
+
+  @override
+  String get translationExplain =>
+      'ZT Browser translates pages on your phone, with Firefox\'s translation engine. Each language is downloaded once, from ZT Browser\'s releases on GitHub. The text of the pages you translate is never sent anywhere.';
+
+  @override
+  String get translationNoneYet =>
+      'No languages yet. They download the first time you translate a page.';
+
+  @override
+  String translationModelSize(String size) {
+    return '$size MB on the phone';
+  }
+
+  @override
+  String get translationCredit =>
+      'Translation engine: Bergamot (Firefox Translations). Language models: Mozilla. Both under the Mozilla Public License 2.0.';
+
+  @override
   String qrFor(String url) {
     return 'QR code for $url';
   }

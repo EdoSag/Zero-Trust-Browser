@@ -34,6 +34,11 @@ class BrowserTab {
     this.readerable = false,
     this.reader = false,
     this.javascript = true,
+    this.translatedFrom,
+    this.translatedTo,
+    this.translating = false,
+    this.translateDone = 0,
+    this.translateTotal = 0,
   });
 
   final String id;
@@ -75,6 +80,15 @@ class BrowserTab {
   /// JavaScript on for this page's site.
   final bool javascript;
 
+  /// Shown translated (B16), from and to these languages; null when not.
+  final String? translatedFrom;
+  final String? translatedTo;
+
+  /// Still translating: [translateDone] of [translateTotal] blocks.
+  final bool translating;
+  final int translateDone;
+  final int translateTotal;
+
   bool get isStartPage => url == null || url!.isEmpty || url == 'about:blank';
 
   String get label =>
@@ -99,6 +113,11 @@ class BrowserTab {
     bool? readerable,
     bool? reader,
     bool? javascript,
+    String? Function()? translatedFrom,
+    String? Function()? translatedTo,
+    bool? translating,
+    int? translateDone,
+    int? translateTotal,
   }) => BrowserTab(
     id: id,
     private: private,
@@ -119,6 +138,13 @@ class BrowserTab {
     readerable: readerable ?? this.readerable,
     reader: reader ?? this.reader,
     javascript: javascript ?? this.javascript,
+    translatedFrom: translatedFrom != null
+        ? translatedFrom()
+        : this.translatedFrom,
+    translatedTo: translatedTo != null ? translatedTo() : this.translatedTo,
+    translating: translating ?? this.translating,
+    translateDone: translateDone ?? this.translateDone,
+    translateTotal: translateTotal ?? this.translateTotal,
   );
 }
 
@@ -476,6 +502,11 @@ class TabsController extends Notifier<TabsState> {
             readerable: e.get<bool>('readerable'),
             reader: e.get<bool>('reader'),
             javascript: e.get<bool>('javascript'),
+            translatedFrom: () => e.get<String>('translatedFrom'),
+            translatedTo: () => e.get<String>('translatedTo'),
+            translating: e.get<bool>('translating'),
+            translateDone: e.get<int>('translateDone'),
+            translateTotal: e.get<int>('translateTotal'),
             clearFavicon: urlChanged && hostOf(url) != hostOf(tab.url),
           ),
         );

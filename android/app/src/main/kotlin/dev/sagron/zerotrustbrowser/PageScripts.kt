@@ -119,6 +119,23 @@ P.onmessage=function(e){if(!last)return;
 if(e.data==='pause')last.pause();else if(e.data==='play'){var r=last.play();if(r&&r.catch)r.catch(function(){});}};
 })();"""
 
+    private var translateSrc: String? = null
+
+    /**
+     * B16: the page side of translation (assets/translate/page.js), an
+     * expression giving an object with collect(max), apply(results),
+     * restore() and dirty. [key] names its state on the page.
+     */
+    fun translate(context: Context, key: String): String {
+        val src = translateSrc ?: asset(context, "assets/translate/page.js").trim().also { translateSrc = it }
+        return src.replace("__ZTKEY__", key)
+    }
+
+    /** The page's declared language and a sample of its text (B16). */
+    const val PAGE_LANGUAGE =
+        "JSON.stringify({lang:(document.documentElement.lang||'')," +
+            "sample:(document.body?document.body.innerText:'').slice(0,3000)})"
+
     private fun asset(context: Context, name: String): String {
         val key = FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(name)
         return context.assets.open(key).bufferedReader().use { it.readText() }

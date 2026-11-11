@@ -1444,6 +1444,99 @@ class AppL10nHe extends AppL10n {
       'ZT VPN, אם יגיע, יוסיף DNS מוצפן לכל אפליקציה. עד אז, DNS פרטי הוא האפשרות הבטוחה ביותר ולא דורש אפליקציה נוספת.';
 
   @override
+  String get translate => 'תרגום';
+
+  @override
+  String get translatePage => 'תרגום הדף';
+
+  @override
+  String get translatePageSub => 'בטלפון שלך; הטקסט לא יוצא ממנו';
+
+  @override
+  String get showOriginal => 'הצגת המקור';
+
+  @override
+  String get translateFrom => 'משפה';
+
+  @override
+  String get translateTo => 'לשפה';
+
+  @override
+  String get translatePickLanguage =>
+      'לא ניתן היה לזהות את שפת הדף. אפשר לבחור אותה כאן.';
+
+  @override
+  String get translateSameLanguage => 'יש לבחור שתי שפות שונות.';
+
+  @override
+  String get translateNoModel => 'עדיין אין תרגום בין השפות האלה.';
+
+  @override
+  String get translateOnDevice =>
+      'התרגום נעשה בטלפון שלך עם מנוע התרגום של Firefox. הטקסט של הדף לא נשלח לשום מקום.';
+
+  @override
+  String translateDownloadExplain(String size) {
+    return 'בפעם הראשונה, קובצי השפה ($size MB) יורדים מהגרסאות של ZT Browser ב-GitHub (המודלים של Firefox מבית Mozilla). אחר כך התרגום עובד בלי אינטרנט. הטקסט של הדף לא נשלח לשום מקום.';
+  }
+
+  @override
+  String translateDownloadAndTranslate(String size) {
+    return 'הורדת $size MB ותרגום';
+  }
+
+  @override
+  String get translateDownloadFailed =>
+      'לא ניתן היה להוריד את קובצי השפה. כדאי לבדוק את החיבור ולנסות שוב.';
+
+  @override
+  String get translateListFailed =>
+      'לא ניתן היה לקבל את רשימת השפות. כדאי לבדוק את החיבור.';
+
+  @override
+  String get tryAgain => 'ניסיון חוזר';
+
+  @override
+  String get translateNeedsJs =>
+      'תרגום דורש JavaScript פעיל באתר הזה (הגדרות האתר).';
+
+  @override
+  String get translateFailed => 'התרגום נעצר. מוצג המקור.';
+
+  @override
+  String translatingFrom(String language) {
+    return 'מתרגם מהשפה $language…';
+  }
+
+  @override
+  String translatedFrom(String language) {
+    return 'תורגם מהשפה $language';
+  }
+
+  @override
+  String get translationLanguages => 'שפות לתרגום';
+
+  @override
+  String get translationLanguagesSub => 'הורדו לתרגום בטלפון שלך';
+
+  @override
+  String get translationExplain =>
+      'ZT Browser מתרגם דפים בטלפון שלך, עם מנוע התרגום של Firefox. כל שפה יורדת פעם אחת, מהגרסאות של ZT Browser ב-GitHub. הטקסט של הדפים שמתרגמים לא נשלח לשום מקום.';
+
+  @override
+  String get translationNoneYet =>
+      'עדיין אין שפות. הן יורדות בפעם הראשונה שמתרגמים דף.';
+
+  @override
+  String translationModelSize(String size) {
+    return '$size MB בטלפון';
+  }
+
+  @override
+  String get translationCredit =>
+      'מנוע התרגום: Bergamot (Firefox Translations). מודלי השפה: Mozilla. שניהם ברישיון Mozilla Public License 2.0.';
+
+  @override
   String qrFor(String url) {
     return 'קוד QR עבור $url';
   }

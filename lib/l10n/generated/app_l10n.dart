@@ -2491,6 +2491,156 @@ abstract class AppL10n {
   /// **'A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, Private DNS is the safest choice and needs no extra app.'**
   String get encryptedDnsVpnNote;
 
+  /// No description provided for @translate.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get translate;
+
+  /// No description provided for @translatePage.
+  ///
+  /// In en, this message translates to:
+  /// **'Translate page'**
+  String get translatePage;
+
+  /// No description provided for @translatePageSub.
+  ///
+  /// In en, this message translates to:
+  /// **'On your phone; the text never leaves it'**
+  String get translatePageSub;
+
+  /// No description provided for @showOriginal.
+  ///
+  /// In en, this message translates to:
+  /// **'Show original'**
+  String get showOriginal;
+
+  /// No description provided for @translateFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get translateFrom;
+
+  /// No description provided for @translateTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get translateTo;
+
+  /// No description provided for @translatePickLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t tell the page\'s language. Pick it here.'**
+  String get translatePickLanguage;
+
+  /// No description provided for @translateSameLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick two different languages.'**
+  String get translateSameLanguage;
+
+  /// No description provided for @translateNoModel.
+  ///
+  /// In en, this message translates to:
+  /// **'There\'s no translation between these languages yet.'**
+  String get translateNoModel;
+
+  /// No description provided for @translateOnDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated on your phone with Firefox\'s translation engine. The page\'s text is never sent anywhere.'**
+  String get translateOnDevice;
+
+  /// No description provided for @translateDownloadExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'The first time, the language files ({size} MB) download from ZT Browser\'s releases on GitHub (Mozilla\'s Firefox models). After that, translation works offline. The page\'s text is never sent anywhere.'**
+  String translateDownloadExplain(String size);
+
+  /// No description provided for @translateDownloadAndTranslate.
+  ///
+  /// In en, this message translates to:
+  /// **'Download {size} MB and translate'**
+  String translateDownloadAndTranslate(String size);
+
+  /// No description provided for @translateDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t download the language files. Check the connection and try again.'**
+  String get translateDownloadFailed;
+
+  /// No description provided for @translateListFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t get the list of languages. Check the connection.'**
+  String get translateListFailed;
+
+  /// No description provided for @tryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get tryAgain;
+
+  /// No description provided for @translateNeedsJs.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation needs JavaScript on for this site (site settings).'**
+  String get translateNeedsJs;
+
+  /// No description provided for @translateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation stopped. Showing the original.'**
+  String get translateFailed;
+
+  /// No description provided for @translatingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Translating from {language}…'**
+  String translatingFrom(String language);
+
+  /// No description provided for @translatedFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Translated from {language}'**
+  String translatedFrom(String language);
+
+  /// No description provided for @translationLanguages.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation languages'**
+  String get translationLanguages;
+
+  /// No description provided for @translationLanguagesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloaded for translating on your phone'**
+  String get translationLanguagesSub;
+
+  /// No description provided for @translationExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Browser translates pages on your phone, with Firefox\'s translation engine. Each language is downloaded once, from ZT Browser\'s releases on GitHub. The text of the pages you translate is never sent anywhere.'**
+  String get translationExplain;
+
+  /// No description provided for @translationNoneYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No languages yet. They download the first time you translate a page.'**
+  String get translationNoneYet;
+
+  /// No description provided for @translationModelSize.
+  ///
+  /// In en, this message translates to:
+  /// **'{size} MB on the phone'**
+  String translationModelSize(String size);
+
+  /// No description provided for @translationCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Translation engine: Bergamot (Firefox Translations). Language models: Mozilla. Both under the Mozilla Public License 2.0.'**
+  String get translationCredit;
+
   /// No description provided for @qrFor.
   ///
   /// In en, this message translates to:

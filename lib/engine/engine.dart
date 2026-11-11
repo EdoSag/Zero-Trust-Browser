@@ -383,6 +383,48 @@ class BrowserEngine {
     }
   }
 
+  // ---- B16: translation -----------------------------------------------------
+
+  /// The page's declared language (`lang`) and a sample of its text.
+  Future<({String lang, String sample})?> pageLanguage(String tabId) async {
+    final String? raw = await _call<String>('pageLanguage', <String, Object?>{
+      'tabId': tabId,
+    });
+    if (raw == null) return null;
+    try {
+      final Object? v = jsonDecode(raw);
+      if (v is! Map) return null;
+      return (
+        lang: v['lang'] as String? ?? '',
+        sample: v['sample'] as String? ?? '',
+      );
+    } on FormatException {
+      return null;
+    }
+  }
+
+  /// Translates the page on the phone, with the models in [modelsDir].
+  /// False when the page's JavaScript is off.
+  Future<bool> translatePage(
+    String tabId,
+    String from,
+    String to,
+    String modelsDir,
+  ) async =>
+      await _call<bool>('translatePage', <String, Object?>{
+        'tabId': tabId,
+        'from': from,
+        'to': to,
+        'modelsDir': modelsDir,
+      }) ??
+      false;
+
+  Future<void> showOriginal(String tabId) =>
+      _call<void>('showOriginal', <String, Object?>{'tabId': tabId});
+
+  /// The installed models changed.
+  Future<void> translatorReset() => _call<void>('translatorReset');
+
   // ---- B27: read aloud -----------------------------------------------------
 
   /// Reads [parts] aloud with the phone's own text-to-speech, in

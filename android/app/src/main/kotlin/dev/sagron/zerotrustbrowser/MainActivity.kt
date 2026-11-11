@@ -94,6 +94,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     private lateinit var readAloud: ReadAloud
     private var readAloudPrivate = false
 
+    /** B16: on-device translation, started the first time a page is translated. */
+    private val translator by lazy { Translator(this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         downloads = Downloads(this)
@@ -344,6 +347,28 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     )
                     "selection" -> {
                         if (tab == null) result.success(null) else tab.selection { result.success(it) }
+                    }
+                    "pageLanguage" -> {
+                        if (tab == null) result.success(null) else tab.pageLanguage { result.success(it) }
+                    }
+                    "translatePage" -> {
+                        val dir = call.argument<String>("modelsDir")
+                        val from = call.argument<String>("from")
+                        val to = call.argument<String>("to")
+                        if (tab == null || dir == null || from == null || to == null) {
+                            result.success(false)
+                        } else {
+                            translator.modelsDir = java.io.File(dir)
+                            result.success(tab.translatePage(translator, from, to))
+                        }
+                    }
+                    "showOriginal" -> {
+                        tab?.showOriginal()
+                        result.success(null)
+                    }
+                    "translatorReset" -> {
+                        translator.reset()
+                        result.success(null)
                     }
                     "readAloudStart" -> {
                         // From a private tab: its title stays off the
@@ -1104,6 +1129,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
 
     override fun onDestroy() {
         readAloud.shutdown()
+        translator.stop()
         MediaHub.control = null
         for (t in tabs.values) t.destroy()
         tabs.clear()
