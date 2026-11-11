@@ -821,6 +821,66 @@
   "copyHostname": "Copy hostname",
   "openNetworkSettings": "Open network settings",
   "encryptedDnsVpnNote": "A ZT VPN, if it comes, would add per-app encrypted DNS. Until then, Private DNS is the safest choice and needs no extra app.",
+  "translate": "Translate",
+  "translatePage": "Translate page",
+  "translatePageSub": "On your phone; the text never leaves it",
+  "showOriginal": "Show original",
+  "translateFrom": "From",
+  "translateTo": "To",
+  "translatePickLanguage": "Couldn't tell the page's language. Pick it here.",
+  "translateSameLanguage": "Pick two different languages.",
+  "translateNoModel": "There's no translation between these languages yet.",
+  "translateOnDevice": "Translated on your phone with Firefox's translation engine. The page's text is never sent anywhere.",
+  "translateDownloadExplain": "The first time, the language files ({size} MB) download from ZT Browser's releases on GitHub (Mozilla's Firefox models). After that, translation works offline. The page's text is never sent anywhere.",
+  "@translateDownloadExplain": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "translateDownloadAndTranslate": "Download {size} MB and translate",
+  "@translateDownloadAndTranslate": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "translateDownloadFailed": "Couldn't download the language files. Check the connection and try again.",
+  "translateListFailed": "Couldn't get the list of languages. Check the connection.",
+  "tryAgain": "Try again",
+  "translateNeedsJs": "Translation needs JavaScript on for this site (site settings).",
+  "translateFailed": "Translation stopped. Showing the original.",
+  "translatingFrom": "Translating from {language}…",
+  "@translatingFrom": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "translatedFrom": "Translated from {language}",
+  "@translatedFrom": {
+    "placeholders": {
+      "language": {
+        "type": "String"
+      }
+    }
+  },
+  "translationLanguages": "Translation languages",
+  "translationLanguagesSub": "Downloaded for translating on your phone",
+  "translationExplain": "ZT Browser translates pages on your phone, with Firefox's translation engine. Each language is downloaded once, from ZT Browser's releases on GitHub. The text of the pages you translate is never sent anywhere.",
+  "translationNoneYet": "No languages yet. They download the first time you translate a page.",
+  "translationModelSize": "{size} MB on the phone",
+  "@translationModelSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "translationCredit": "Translation engine: Bergamot (Firefox Translations). Language models: Mozilla. Both under the Mozilla Public License 2.0.",
   "qrFor": "QR code for {url}",
   "@qrFor": {
     "placeholders": {

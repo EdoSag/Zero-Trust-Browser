@@ -1,0 +1,78 @@
+# Copies Mozilla's released Firefox Translations models into the rolling
+# "translation-models" release, with a signed list (models.json). ZT Browser
+# downloads a language from there when someone first translates a page in
+# it, checks every file against the list, and only trusts a list signed
+# with the key built into the app (the blocklist key). Translation itself
+# runs on the phone: page text is never sent anywhere.
+#
+# Needs the BLOCKLIST_SIGNING_KEY secret (already set for the Blocklist
+# workflow). Run it once by hand after merging; then it refreshes monthly.
+name: Translation models
+
+on:
+  schedule:
+    # The 3rd of each month, 05:23 UTC.
+    - cron: '23 5 3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: translation-models
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Previous list
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download translation-models -p models.json -O "$RUNNER_TEMP/previous.json" 2>/dev/null \
+            || echo '{}' > "$RUNNER_TEMP/previous.json"
+
+      - name: Copy the released models
+        run: python3 -I tool/mirror_translation_models.py out "$RUNNER_TEMP/previous.json"
+
+      - name: Sign the list
+        env:
+          SIGNING_KEY: ${{ secrets.BLOCKLIST_SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::Add the BLOCKLIST_SIGNING_KEY secret (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/key.pem" -rawin -in out/models.json \
+            | base64 -w0 > out/models.json.sig
+          rm -f "$RUNNER_TEMP/key.pem"
+          PUB=$(sed -nE "s/^ *'([A-Za-z0-9+\/=]{44})';$/\1/p" lib/browser/blocklist_updater.dart | head -1)
+          [ -n "$PUB" ] || { echo "::error::Public key not found in the app"; exit 1; }
+          { printf '\x30\x2a\x30\x05\x06\x03\x2b\x65\x70\x03\x21\x00'; printf '%s' "$PUB" | base64 -d; } \
+            | openssl pkey -pubin -inform DER -out "$RUNNER_TEMP/pub.pem"
+          base64 -d out/models.json.sig > "$RUNNER_TEMP/sig.bin"
+          openssl pkeyutl -verify -pubin -inkey "$RUNNER_TEMP/pub.pem" -rawin \
+            -in out/models.json -sigfile "$RUNNER_TEMP/sig.bin"
+
+      - name: Publish on the "translation-models" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Language models ZT Browser downloads to translate pages on the phone. Copied from Mozilla's Firefox Translations models (https://github.com/mozilla/translations), MPL-2.0. Not an app release."
+          if ! gh release view translation-models >/dev/null 2>&1; then
+            gh release create translation-models --target "$GITHUB_SHA" --latest=false \
+              --title "Translation models (updated monthly)" --notes "$NOTES"
+          fi
+          cd out
+          # Changed model files first, the signed list last, so a phone never
+          # sees a list naming a file that isn't up yet.
+          if [ -s changed.txt ]; then
+            xargs -a changed.txt -n 20 gh release upload translation-models --clobber
+          fi
+          gh release upload translation-models models.json models.json.sig --clobber

@@ -813,6 +813,70 @@ S = [
      "ZT VPN, אם יגיע, יוסיף DNS מוצפן לכל אפליקציה. עד אז, DNS פרטי הוא "
      "האפשרות הבטוחה ביותר ולא דורש אפליקציה נוספת."),
 
+    # ---- B16 translate pages (on the phone) ----
+    ("translate", "Translate", "תרגום"),
+    ("translatePage", "Translate page", "תרגום הדף"),
+    ("translatePageSub", "On your phone; the text never leaves it",
+     "בטלפון שלך; הטקסט לא יוצא ממנו"),
+    ("showOriginal", "Show original", "הצגת המקור"),
+    ("translateFrom", "From", "משפה"),
+    ("translateTo", "To", "לשפה"),
+    ("translatePickLanguage",
+     "Couldn't tell the page's language. Pick it here.",
+     "לא ניתן היה לזהות את שפת הדף. אפשר לבחור אותה כאן."),
+    ("translateSameLanguage", "Pick two different languages.",
+     "יש לבחור שתי שפות שונות."),
+    ("translateNoModel", "There's no translation between these languages yet.",
+     "עדיין אין תרגום בין השפות האלה."),
+    ("translateOnDevice",
+     "Translated on your phone with Firefox's translation engine. The page's "
+     "text is never sent anywhere.",
+     "התרגום נעשה בטלפון שלך עם מנוע התרגום של Firefox. הטקסט של הדף לא "
+     "נשלח לשום מקום."),
+    ("translateDownloadExplain",
+     "The first time, the language files ({size} MB) download from ZT "
+     "Browser's releases on GitHub (Mozilla's Firefox models). After that, "
+     "translation works offline. The page's text is never sent anywhere.",
+     "בפעם הראשונה, קובצי השפה ({size} MB) יורדים מהגרסאות של ZT Browser "
+     "ב-GitHub (המודלים של Firefox מבית Mozilla). אחר כך התרגום עובד בלי "
+     "אינטרנט. הטקסט של הדף לא נשלח לשום מקום."),
+    ("translateDownloadAndTranslate", "Download {size} MB and translate",
+     "הורדת {size} MB ותרגום"),
+    ("translateDownloadFailed",
+     "Couldn't download the language files. Check the connection and try "
+     "again.",
+     "לא ניתן היה להוריד את קובצי השפה. כדאי לבדוק את החיבור ולנסות שוב."),
+    ("translateListFailed",
+     "Couldn't get the list of languages. Check the connection.",
+     "לא ניתן היה לקבל את רשימת השפות. כדאי לבדוק את החיבור."),
+    ("tryAgain", "Try again", "ניסיון חוזר"),
+    ("translateNeedsJs",
+     "Translation needs JavaScript on for this site (site settings).",
+     "תרגום דורש JavaScript פעיל באתר הזה (הגדרות האתר)."),
+    ("translateFailed", "Translation stopped. Showing the original.",
+     "התרגום נעצר. מוצג המקור."),
+    ("translatingFrom", "Translating from {language}…", "מתרגם מהשפה {language}…"),
+    ("translatedFrom", "Translated from {language}", "תורגם מהשפה {language}"),
+    ("translationLanguages", "Translation languages", "שפות לתרגום"),
+    ("translationLanguagesSub", "Downloaded for translating on your phone",
+     "הורדו לתרגום בטלפון שלך"),
+    ("translationExplain",
+     "ZT Browser translates pages on your phone, with Firefox's translation "
+     "engine. Each language is downloaded once, from ZT Browser's releases on "
+     "GitHub. The text of the pages you translate is never sent anywhere.",
+     "ZT Browser מתרגם דפים בטלפון שלך, עם מנוע התרגום של Firefox. כל שפה "
+     "יורדת פעם אחת, מהגרסאות של ZT Browser ב-GitHub. הטקסט של הדפים שמתרגמים "
+     "לא נשלח לשום מקום."),
+    ("translationNoneYet",
+     "No languages yet. They download the first time you translate a page.",
+     "עדיין אין שפות. הן יורדות בפעם הראשונה שמתרגמים דף."),
+    ("translationModelSize", "{size} MB on the phone", "{size} MB בטלפון"),
+    ("translationCredit",
+     "Translation engine: Bergamot (Firefox Translations). Language models: "
+     "Mozilla. Both under the Mozilla Public License 2.0.",
+     "מנוע התרגום: Bergamot (Firefox Translations). מודלי השפה: Mozilla. "
+     "שניהם ברישיון Mozilla Public License 2.0."),
+
     # ---- QR ----
     ("qrFor", "QR code for {url}", "קוד QR עבור {url}"),
     ("shareLink", "Share link", "שיתוף הקישור"),

@@ -58,3 +58,6 @@ flutter:
     - .env
     - assets/blocklist/
     - assets/reader/
+    # Firefox's translation engine (Bergamot, MPL-2.0) for B16.
+    - assets/translate/
+    - assets/translate/worker/
