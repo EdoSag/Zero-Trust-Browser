@@ -1333,24 +1333,6 @@ abstract class AppL10n {
   /// **'Remove {name}'**
   String removeEngine(String name);
 
-  /// No description provided for @language.
-  ///
-  /// In en, this message translates to:
-  /// **'Language'**
-  String get language;
-
-  /// No description provided for @languageSystem.
-  ///
-  /// In en, this message translates to:
-  /// **'Phone language'**
-  String get languageSystem;
-
-  /// No description provided for @languageNote.
-  ///
-  /// In en, this message translates to:
-  /// **'Sign-in and account screens are shared by all Zero-Trust apps and are in English for now.'**
-  String get languageNote;
-
   /// No description provided for @startPageSection.
   ///
   /// In en, this message translates to:

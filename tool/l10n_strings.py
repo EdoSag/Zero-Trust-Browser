@@ -395,13 +395,6 @@ S = [
     ("engineInvalid", "Type a name and a web address that contains %s",
      "יש להקליד שם וכתובת אתר שמכילה %s"),
     ("removeEngine", "Remove {name}", "הסרת {name}"),
-    ("language", "Language", "שפה"),
-    ("languageSystem", "Phone language", "שפת הטלפון"),
-    ("languageNote",
-     "Sign-in and account screens are shared by all Zero-Trust apps and "
-     "are in English for now.",
-     "מסכי הכניסה והחשבון משותפים לכל אפליקציות Zero-Trust ומוצגים בינתיים "
-     "באנגלית."),
     ("startPageSection", "Start page", "דף הפתיחה"),
     ("showMostVisited", "Show most visited sites",
      "הצגת האתרים הנצפים ביותר"),

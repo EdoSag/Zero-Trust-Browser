@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
-import 'package:zerotrust_browser/app/language.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
@@ -43,7 +42,6 @@ class BrowserSettingsPage extends ConsumerWidget {
     final Map<Object?, Object?> autofill =
         ref.watch(_autofillProvider).value ?? const <Object?, Object?>{};
     final String? passwordManager = autofill['service'] as String?;
-    final Locale? language = ref.watch(appLanguageProvider);
 
     Future<void> save(BrowserSettings next) => data.saveSettings(next);
     void push(Widget page) => Navigator.of(
@@ -88,12 +86,6 @@ class BrowserSettingsPage extends ConsumerWidget {
           onChanged: s.engine.suggest == null
               ? null
               : (bool v) => _setSuggestions(context, ref, v),
-        ),
-        ListTile(
-          leading: const Icon(Icons.language),
-          title: Text(l.language),
-          subtitle: Text(_languageName(l, language)),
-          onTap: () => _pickLanguage(context, ref, language),
         ),
         _Header(l.privacy),
         SwitchListTile(
@@ -284,55 +276,6 @@ class BrowserSettingsPage extends ConsumerWidget {
         ),
       ],
     );
-  }
-
-  static String _languageName(AppL10n l, Locale? locale) =>
-      switch (locale?.languageCode) {
-        'en' => 'English',
-        'he' => 'עברית',
-        _ => l.languageSystem,
-      };
-
-  Future<void> _pickLanguage(
-    BuildContext context,
-    WidgetRef ref,
-    Locale? current,
-  ) async {
-    final AppL10n l = context.l10n;
-    const String system = 'system';
-    final String? picked = await showDialog<String>(
-      context: context,
-      builder: (BuildContext d) => SimpleDialog(
-        title: Text(l.language),
-        children: <Widget>[
-          RadioGroup<String>(
-            groupValue: current?.languageCode ?? system,
-            onChanged: (String? v) => Navigator.of(d).pop(v),
-            child: Column(
-              children: <Widget>[
-                RadioListTile<String>(
-                  value: system,
-                  title: Text(l.languageSystem),
-                ),
-                for (final Locale locale in appLocales)
-                  RadioListTile<String>(
-                    value: locale.languageCode,
-                    title: Text(_languageName(l, locale)),
-                  ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
-            child: Text(l.languageNote, style: Theme.of(d).textTheme.bodySmall),
-          ),
-        ],
-      ),
-    );
-    if (picked == null) return;
-    await ref
-        .read(appLanguageProvider.notifier)
-        .set(picked == system ? null : Locale(picked));
   }
 
   /// Suggestions send what is typed to the search engine: say so before
