@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
+import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 
 /// Collects what the tabs count for the privacy report.
@@ -21,11 +22,21 @@ class _Counted extends PrivacyReportRecorder {
 class _NoAutoClear extends CookieAutoClear {
   _NoAutoClear(super.ref);
 
+  static final List<String?> seen = <String?>[];
+
   @override
-  Future<void> visited(String? url) async {}
+  Future<void> visited(String? url) async => seen.add(url);
 
   @override
   Future<void> sweep(Iterable<String?> openUrls) async {}
+}
+
+/// History isn't kept in these tests (it needs the account's vault).
+class _NoHistory extends BrowserData {
+  _NoHistory(super.ref);
+
+  @override
+  Future<void> recordVisit(String url, String? title) async {}
 }
 
 void main() {
@@ -36,6 +47,7 @@ void main() {
   setUp(() {
     calls = <MethodCall>[];
     _Counted.seen.clear();
+    _NoAutoClear.seen.clear();
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall call) async {
           calls.add(call);
@@ -49,6 +61,7 @@ void main() {
         browserEngineProvider.overrideWithValue(BrowserEngine(channel)),
         privacyReportRecorderProvider.overrideWith(_Counted.new),
         cookieAutoClearProvider.overrideWith(_NoAutoClear.new),
+        browserDataProvider.overrideWith(_NoHistory.new),
       ],
     );
     addTearDown(c.dispose);
@@ -159,6 +172,29 @@ void main() {
       ]);
     },
   );
+
+  test('a page opened by its address is noted for cookie clearing', () async {
+    final ProviderContainer c = container();
+    final TabsController tabs = c.read(tabsProvider.notifier);
+    final BrowserTab t = await tabs.open(url: 'https://a.org');
+    final BrowserTab p = await tabs.open(url: 'https://b.org', private: true);
+    for (final BrowserTab tab in <BrowserTab>[t, p]) {
+      // The address is the one the tab was opened with: no change.
+      await nativeEvent(<String, Object?>{
+        'tabId': tab.id,
+        'type': 'state',
+        'url': tab.url,
+        'loading': false,
+      });
+      await nativeEvent(<String, Object?>{
+        'tabId': tab.id,
+        'type': 'visited',
+        'url': tab.url,
+        'title': 'A',
+      });
+    }
+    expect(_NoAutoClear.seen, <String?>['https://a.org']);
+  });
 
   test('a pop-up opens as a new tab of the same kind', () async {
     final ProviderContainer c = container();

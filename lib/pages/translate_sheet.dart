@@ -117,8 +117,11 @@ class _TranslateSheetState extends ConsumerState<_TranslateSheet> {
           }
         },
       );
+      // Closed while downloading: nothing to translate or close any more
+      // (the navigator may be showing another screen by now).
+      if (!mounted) return;
       final bool started = await models.translate(widget.tab.id, _from!, _to);
-      nav.pop(started);
+      if (mounted) nav.pop(started);
     } on Object {
       if (mounted) {
         setState(() {
