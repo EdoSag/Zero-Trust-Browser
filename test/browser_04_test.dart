@@ -21,6 +21,28 @@ void main() {
       );
     });
 
+    test('page paths go with their host', () {
+      expect(
+        hostsToClear(
+          <String>['shop.example.com/account', 'example.com', 'other.org/a/b'],
+          <String>['other.org'],
+          const <String>[],
+        ),
+        <String>['shop.example.com/account', 'example.com'],
+      );
+      expect(
+        cookieEntryFor(Uri.parse('https://Shop.example.com/')),
+        'shop.example.com',
+      );
+      expect(
+        cookieEntryFor(
+          Uri.parse('https://shop.example.com/account/orders?x=1'),
+        ),
+        'shop.example.com/account/orders',
+      );
+      expect(hostOfEntry('shop.example.com/account'), 'shop.example.com');
+    });
+
     test('skips sites kept signed in', () {
       expect(
         hostsToClear(

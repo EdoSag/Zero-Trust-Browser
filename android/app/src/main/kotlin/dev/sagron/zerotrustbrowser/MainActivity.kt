@@ -92,6 +92,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
 
     private lateinit var downloads: Downloads
     private lateinit var readAloud: ReadAloud
+    private var readAloudPrivate = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -345,6 +346,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         if (tab == null) result.success(null) else tab.selection { result.success(it) }
                     }
                     "readAloudStart" -> {
+                        // From a private tab: its title stays off the
+                        // notification and the lock screen.
+                        readAloudPrivate = call.argument<Boolean>("private") ?: false
                         readAloud.start(
                             call.argument<List<String>>("parts") ?: emptyList(),
                             call.argument<String>("title") ?: "",
@@ -867,7 +871,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         when (state["status"]) {
             "speaking" -> {
                 for (t in tabs.values) if (t.mediaPlaying) t.mediaControl("pause")
-                MediaHub.set(this, MediaHub.Now("speech", null, readAloud.currentTitle, "", true, false))
+                MediaHub.set(this, MediaHub.Now("speech", null, readAloud.currentTitle, "", true, readAloudPrivate))
             }
             "paused" -> if (now?.source == "speech") MediaHub.set(this, now.copy(playing = false))
             else -> if (now?.source == "speech") MediaHub.set(this, null)

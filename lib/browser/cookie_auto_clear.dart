@@ -8,9 +8,11 @@ import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 
-/// The hosts (of [known]) whose cookies and site data should go now: their
-/// site isn't open in any tab ([openHosts]) and isn't kept signed in.
-/// Grouped by site, so `mail.example.com` stays while `example.com` is open.
+/// The entries (of [known]) whose cookies and site data should go now:
+/// their site isn't open in any tab ([openHosts]) and isn't kept signed
+/// in. An entry is a host, or a host and a page path ("example.com/account")
+/// so cookies set for that path are found too. Grouped by site, so
+/// `mail.example.com` stays while `example.com` is open.
 List<String> hostsToClear(
   Iterable<String> known,
   Iterable<String> openHosts,
@@ -24,9 +26,30 @@ List<String> hostsToClear(
       .map((String s) => s.toLowerCase())
       .toSet();
   return <String>[
-    for (final String h in known)
-      if (!open.contains(siteOf(h)) && !keep.contains(siteOf(h))) h,
+    for (final String e in known)
+      if (!open.contains(siteOf(hostOfEntry(e))) &&
+          !keep.contains(siteOf(hostOfEntry(e))))
+        e,
   ];
+}
+
+String hostOfEntry(String entry) {
+  final int slash = entry.indexOf('/');
+  return slash < 0 ? entry : entry.substring(0, slash);
+}
+
+/// The entry for a page: its host and the path its cookies may be limited
+/// to (the page's directory), or just the host for the top of the site.
+String? cookieEntryFor(Uri u) {
+  final String host = u.host.toLowerCase();
+  if (host.isEmpty) return null;
+  final List<String> dirs = u.pathSegments
+      .where((String p) => p.isNotEmpty)
+      .toList();
+  // The page itself may be a directory ("/account") or a file in one.
+  final List<String> keep = dirs.take(4).toList();
+  if (keep.isEmpty) return host;
+  return '$host/${keep.map(Uri.encodeComponent).join('/')}';
 }
 
 /// B24: wipes a site's cookies and site data once its last tab closes,
@@ -81,7 +104,18 @@ class CookieAutoClear {
     final String host = u.host.toLowerCase();
     if (host.isEmpty) return;
     final Set<String> known = await _load();
-    if (known.add(host)) _queueSave();
+    bool changed = known.add(host);
+    // Cookies limited to a path only show up when asked for that path, so
+    // remember the pages' paths too (a few per host).
+    final String? entry = cookieEntryFor(u);
+    if (entry != null &&
+        entry != host &&
+        !known.contains(entry) &&
+        known.where((String e) => e.startsWith('$host/')).length < 30) {
+      known.add(entry);
+      changed = true;
+    }
+    if (changed) _queueSave();
   }
 
   /// Wipes the data of every site no tab in [openUrls] shows any more.

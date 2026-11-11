@@ -394,10 +394,12 @@ class BrowserEngine {
     String? language,
     double rate = 1.0,
     int from = 0,
+    bool private = false,
   }) async =>
       await _call<bool>('readAloudStart', <String, Object?>{
         'parts': parts,
         'title': title,
+        'private': private,
         'language': language,
         'rate': rate,
         'from': from,
