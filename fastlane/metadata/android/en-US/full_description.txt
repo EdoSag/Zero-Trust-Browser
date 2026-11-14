@@ -1,0 +1,29 @@
+Zero-Trust Browser blocks ads, trackers and cookie banners out of the box, and syncs your bookmarks, history and tabs end-to-end encrypted. Fast, clean pages, and nobody watching over your shoulder.
+
+WHAT IT DOES
+• Built-in ad, tracker and cookie-banner blocking, with lists that update weekly.
+• Strips tracking tags from links, per-site JavaScript switch and fingerprinting protection.
+• A privacy report: trackers blocked per site and per week.
+• Fire button: one tap closes every tab and wipes the session.
+• Private tabs that block screenshots, with an optional separate lock.
+• Cookie auto-clear when a site's last tab closes, except sites you keep.
+• Translate pages on the phone itself, with nothing sent to a translation service.
+• Reader mode, read aloud, dark mode for pages and text size.
+• Bookmarks with folders, reading list for offline, send a tab to another device.
+• Tab groups and tab search, picture-in-picture and background audio.
+• QR scanner and voice search, print or save as PDF, add a site to the home screen.
+• Save a page to Zero-Trust Notes or as a "read later" task.
+• Import bookmarks from Chrome or Firefox. Works with your password manager.
+
+WHY ZERO-TRUST
+• End-to-end encrypted: everything is encrypted on your phone before it syncs. We can't read it, and neither can anyone who breaks into the server.
+• One private account for every Zero-Trust app, unlocked with your fingerprint or face.
+• Works offline and syncs across your devices when you're back online.
+• No ads, no trackers, no analytics, no data sold. Ever.
+• Open source (AGPL-3.0), so anyone can check what the app does.
+• English and Hebrew, with full right-to-left support.
+
+Part of the Zero-Trust suite: Notes, Tasks, Calendar, Contacts, Phone, Fitness, Meds, Time and Browser. One account opens them all.
+
+Privacy policy: https://zerotrust.bz/privacy/
+Support: support@zerotrust.bz
