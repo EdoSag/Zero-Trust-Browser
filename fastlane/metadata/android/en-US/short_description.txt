@@ -1,0 +1,1 @@
+A private browser that blocks ads and trackers, with encrypted sync.
