@@ -120,11 +120,13 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
 
   Future<void> _open(DownloadItem d) async {
     if (d.status != 'done') return;
-    await _report(await _engine.openDownload(d.key), l.cantOpenFile);
+    final String failed = l.cantOpenFile;
+    await _report(await _engine.openDownload(d.key), failed);
   }
 
   Future<void> _share(DownloadItem d) async {
-    await _report(await _engine.shareDownload(d.key), l.cantShare);
+    final String failed = l.cantShare;
+    await _report(await _engine.shareDownload(d.key), failed);
   }
 
   Future<void> _delete(DownloadItem d) async {
