@@ -20,11 +20,19 @@
     defineProp = Object.defineProperty, setT = W.setTimeout,
     PromiseC = W.Promise, consoleRef = W.console, docRef = W.document,
     atobF = W.atob, btoaF = W.btoa, TD = W.TextDecoder, BlobC = W.Blob,
-    DP = W.DOMParser, U8 = W.Uint8Array, AB = W.ArrayBuffer;
-  function has(o, k) { return hasOwn.call(o, k); }
-  function log() { try { consoleRef.log.apply(consoleRef, arguments); } catch (e) {} }
+    DP = W.DOMParser, U8 = W.Uint8Array, AB = W.ArrayBuffer,
+    RApply = W.Reflect.apply, fromCharCode = String.fromCharCode,
+    consoleLog = consoleRef.log, consoleError = consoleRef.error;
+  // Calls go through Reflect.apply as it was at document start: a page can
+  // replace Function.prototype.call/apply later, and would then be handed
+  // the function (a granted GM_* helper) and its arguments.
+  function call(f, self, args) { return RApply(f, self, args || []); }
+  // Writes that never run a setter a page put on Object/Array.prototype.
+  function put(o, k, v) { defineProp(o, k, { value: v, writable: true, enumerable: true, configurable: true }); }
+  function has(o, k) { return call(hasOwn, o, [k]); }
+  function log() { try { call(consoleLog, consoleRef, arguments); } catch (e) {} }
   function warn(name, e) {
-    try { consoleRef.error('[ZT Browser] User script "' + name + '":', e); } catch (x) {}
+    try { call(consoleError, consoleRef, ['[ZT Browser] User script "' + name + '":', e]); } catch (x) {}
   }
   function send(o) {
     if (!P) return false;
@@ -33,6 +41,17 @@
 
   // ---- Messages from the app ------------------------------------------
   var pending = {}, nextReq = 1, menus = {};
+  // Request ids are unique per frame: the app keeps every tab's requests
+  // in one place.
+  var RID = (function () {
+    try {
+      var a = new U8(8);
+      W.crypto.getRandomValues(a);
+      var s = '';
+      for (var i = 0; i < a.length; i++) s += (a[i] + 256).toString(16).slice(1);
+      return s;
+    } catch (e) { return String(Math.random()).slice(2); }
+  })();
   if (P) {
     P.onmessage = function (e) {
       var m;
@@ -45,7 +64,7 @@
       } else if (m.t === 'menu') {
         var cmds = menus[m.s];
         var c = cmds && cmds[m.i];
-        if (c) { try { c.fn.call(W); } catch (x) { warn(c.script, x); } }
+        if (c) { try { call(c.fn, W); } catch (x) { warn(c.script, x); } }
       }
     };
   }
@@ -84,7 +103,7 @@
   function bytesToB64(bytes) {
     var s = '', CH = 0x8000;
     for (var i = 0; i < bytes.length; i += CH) {
-      s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+      s += call(fromCharCode, null, bytes.subarray(i, i + CH));
     }
     return btoaF(s);
   }
@@ -116,7 +135,7 @@
         var o, n;
         try { o = oldRaw === undefined ? undefined : parse(oldRaw); } catch (e) {}
         try { n = newRaw === undefined ? undefined : parse(newRaw); } catch (e) {}
-        try { listeners[id].fn.call(W, k, o, n, false); } catch (e) { warn(c.name, e); }
+        try { call(listeners[id].fn, W, [k, o, n, false]); } catch (e) { warn(c.name, e); }
       }
     }
     function setValue(k, v) {
@@ -124,7 +143,7 @@
       var raw = stringify(v);
       if (raw === undefined) return deleteValue(k);
       var old = values[k];
-      values[k] = raw;
+      put(values, k, raw);
       if (!PRIVATE) send({ t: 'set', s: c.id, k: k, v: raw });
       if (old !== raw) changed(k, old, raw);
     }
@@ -151,7 +170,7 @@
     function deleteValues(ks) { for (var i = 0; i < ks.length; i++) deleteValue(ks[i]); }
     function addValueChangeListener(k, fn) {
       var id = nextListener++;
-      listeners[id] = { k: String(k), fn: fn };
+      put(listeners, id, { k: String(k), fn: fn });
       return id;
     }
     function removeValueChangeListener(id) { delete listeners[id]; }
@@ -189,7 +208,7 @@
 
     function xmlhttpRequest(d) {
       d = d || {};
-      var n = nextReq++, aborted = false, ctx = d.context;
+      var n = RID + ':' + (nextReq++), aborted = false, ctx = d.context;
       var url;
       try { url = new W.URL(d.url, W.location.href).href; } catch (e) { url = String(d.url); }
       var msg = {
@@ -213,7 +232,7 @@
       }
       function fire(name, r) {
         var f = d[name];
-        if (typeof f === 'function') { try { f.call(W, r); } catch (e) { warn(c.name, e); } }
+        if (typeof f === 'function') { try { call(f, W, [r]); } catch (e) { warn(c.name, e); } }
       }
       function response(m) {
         var type = d.responseType || '', mime = d.overrideMimeType || m.type || '';
@@ -255,7 +274,7 @@
           setT(function () { fire('onerror', r0); fire('onloadend', r0); fail(r0); }, 0);
           return;
         }
-        pending[n] = function (m) {
+        put(pending, n, function (m) {
           if (aborted) return;
           var r = response(m);
           if (m.error) {
@@ -269,7 +288,7 @@
             fire('onloadend', r);
             ok(r);
           }
-        };
+        });
         fire('onloadstart', { readyState: 1, context: ctx });
         if (!send(msg)) pending[n]({ error: 'unavailable' });
       });
@@ -308,7 +327,7 @@
     }
     function registerMenuCommand(name, fn, opts) {
       var id = (opts && typeof opts === 'object' && opts.id) || nextCmd++;
-      cmds[id] = { name: String(name), fn: fn, script: c.name };
+      put(cmds, id, { name: String(name), fn: fn, script: c.name });
       publishMenu();
       return id;
     }
@@ -318,7 +337,7 @@
       return function () {
         var a = arguments;
         return new PromiseC(function (ok, fail) {
-          try { ok(fn.apply(null, a)); } catch (e) { fail(e); }
+          try { ok(call(fn, null, a)); } catch (e) { fail(e); }
         });
       };
     }
@@ -350,32 +369,30 @@
     // Given without a @grant, as they can't reach anything the page can't.
     var always = { unsafeWindow: 1, GM_info: 1, GM_log: 1, GM_addStyle: 1, GM_addElement: 1 };
     var GM = { info: info, log: log, addStyle: promised(addStyle), addElement: promised(addElement) };
-    if (can('GM_getValue')) GM.getValue = promised(getValue);
-    if (can('GM_setValue')) GM.setValue = promised(setValue);
-    if (can('GM_deleteValue')) GM.deleteValue = promised(deleteValue);
-    if (can('GM_listValues')) GM.listValues = promised(listValues);
-    if (can('GM_getValues')) GM.getValues = promised(getValues);
-    if (can('GM_setValues')) GM.setValues = promised(setValues);
-    if (can('GM_deleteValues')) GM.deleteValues = promised(deleteValues);
-    if (can('GM_addValueChangeListener')) GM.addValueChangeListener = promised(addValueChangeListener);
-    if (can('GM_removeValueChangeListener')) GM.removeValueChangeListener = promised(removeValueChangeListener);
-    if (can('GM_getResourceText')) GM.getResourceText = promised(getResourceText);
+    if (can('GM_getValue')) put(GM, 'getValue', promised(getValue));
+    if (can('GM_setValue')) put(GM, 'setValue', promised(setValue));
+    if (can('GM_deleteValue')) put(GM, 'deleteValue', promised(deleteValue));
+    if (can('GM_listValues')) put(GM, 'listValues', promised(listValues));
+    if (can('GM_getValues')) put(GM, 'getValues', promised(getValues));
+    if (can('GM_setValues')) put(GM, 'setValues', promised(setValues));
+    if (can('GM_deleteValues')) put(GM, 'deleteValues', promised(deleteValues));
+    if (can('GM_addValueChangeListener')) put(GM, 'addValueChangeListener', promised(addValueChangeListener));
+    if (can('GM_removeValueChangeListener')) put(GM, 'removeValueChangeListener', promised(removeValueChangeListener));
+    if (can('GM_getResourceText')) put(GM, 'getResourceText', promised(getResourceText));
     if (can('GM_getResourceURL') || can('GM_getResourceUrl')) {
-      GM.getResourceUrl = GM.getResourceURL = promised(getResourceURL);
+      var gru = promised(getResourceURL); put(GM, 'getResourceUrl', gru); put(GM, 'getResourceURL', gru);
     }
-    if (can('GM_xmlhttpRequest')) GM.xmlHttpRequest = GM.xmlhttpRequest = xmlhttpRequest;
-    if (can('GM_openInTab')) GM.openInTab = openInTab;
-    if (can('GM_setClipboard')) GM.setClipboard = promised(setClipboard);
-    if (can('GM_notification')) GM.notification = promised(notification);
-    if (can('GM_registerMenuCommand')) GM.registerMenuCommand = registerMenuCommand;
-    if (can('GM_unregisterMenuCommand')) GM.unregisterMenuCommand = unregisterMenuCommand;
+    if (can('GM_xmlhttpRequest')) { put(GM, 'xmlHttpRequest', xmlhttpRequest); put(GM, 'xmlhttpRequest', xmlhttpRequest); }
+    if (can('GM_openInTab')) put(GM, 'openInTab', openInTab);
+    if (can('GM_setClipboard')) put(GM, 'setClipboard', promised(setClipboard));
+    if (can('GM_notification')) put(GM, 'notification', promised(notification));
+    if (can('GM_registerMenuCommand')) put(GM, 'registerMenuCommand', registerMenuCommand);
+    if (can('GM_unregisterMenuCommand')) put(GM, 'unregisterMenuCommand', unregisterMenuCommand);
 
     var args = [];
     for (var i = 0; i < ARGS.length; i++) {
       var name = ARGS[i];
-      if (name === 'GM') args[i] = GM;
-      else if (has(always, name) || can(name)) args[i] = all[name];
-      else args[i] = undefined;
+      put(args, i, name === 'GM' ? GM : (has(always, name) || can(name)) ? all[name] : undefined);
     }
     return args;
   }
@@ -391,7 +408,7 @@
         // Not on reader view, which shows the page's text in the app's own
         // layout.
         if (docRef.documentElement && docRef.documentElement.hasAttribute('data-zt-reader')) return;
-        try { fn.apply(W, args); } catch (e) { warn(c.name, e); }
+        try { call(fn, W, args); } catch (e) { warn(c.name, e); }
       });
     },
   };

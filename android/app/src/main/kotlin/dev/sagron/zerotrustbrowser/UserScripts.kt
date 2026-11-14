@@ -300,7 +300,9 @@ object UserScripts {
         userAgent: String,
         reply: (String) -> Unit,
     ) {
-        val n = msg.optInt("n")
+        // Unique per frame (the runtime adds a random prefix), so two tabs
+        // running the same script never share an entry.
+        val n = msg.optString("n")
         val tag = "${script.id}:$n"
         fun answer(o: JSONObject) {
             inFlight.remove(tag)
@@ -308,59 +310,92 @@ object UserScripts {
             val s = o.toString()
             main.post { reply(s) }
         }
-        val url = try {
+
+        /** Null when [u] may be requested, else why not. */
+        fun refused(u: URL): String? {
+            if (u.protocol != "https" && u.protocol != "http") return "failed"
+            val h = u.host ?: return "failed"
+            if (!script.canRequest || !mayConnect(script, h, pageHost)) return "not allowed"
+            if (Blocker.shouldBlock(h.lowercase(), pageHost)) return "blocked"
+            return null
+        }
+        val first = try {
             URL(msg.optString("url"))
         } catch (e: Exception) {
             answer(JSONObject().put("error", "failed"))
             return
         }
-        val host = url.host ?: ""
-        if (url.protocol != "https" && url.protocol != "http") {
-            answer(JSONObject().put("error", "failed"))
-            return
-        }
-        if (!script.canRequest || !mayConnect(script, host, pageHost)) {
-            answer(JSONObject().put("error", "not allowed"))
-            return
-        }
-        if (Blocker.shouldBlock(host.lowercase(), pageHost)) {
-            answer(JSONObject().put("error", "blocked"))
+        refused(first)?.let {
+            answer(JSONObject().put("error", it))
             return
         }
         inFlight[tag] = net.submit(Runnable {
             var conn: HttpURLConnection? = null
             try {
-                val c = url.openConnection() as HttpURLConnection
-                conn = c
-                val method = msg.optString("method", "GET")
-                // HttpURLConnection has no PATCH (or other verbs).
-                c.requestMethod = method
-                val timeout = msg.optInt("timeout", 0).takeIf { it > 0 } ?: 60_000
-                c.connectTimeout = timeout
-                c.readTimeout = timeout
-                c.instanceFollowRedirects = true
-                c.useCaches = false
-                c.setRequestProperty("User-Agent", userAgent)
-                val headers = msg.optJSONObject("headers")
-                var hasCookie = false
-                headers?.keys()?.forEach { k ->
-                    if (k.equals("host", true)) return@forEach
-                    if (k.equals("cookie", true)) hasCookie = true
-                    c.setRequestProperty(k, headers.optString(k))
-                }
-                val anonymous = msg.optBoolean("anonymous") || isPrivate
-                if (!anonymous && !hasCookie) {
-                    CookieManager.getInstance().getCookie(url.toString())?.let { c.setRequestProperty("Cookie", it) }
-                }
-                val body: ByteArray? = when {
+                var url = first
+                var method = msg.optString("method", "GET")
+                var body: ByteArray? = when {
                     msg.has("b64") -> Base64.decode(msg.optString("b64"), Base64.DEFAULT)
                     msg.has("body") -> msg.optString("body").toByteArray(Charsets.UTF_8)
                     else -> null
                 }
-                if (body != null && method != "GET" && method != "HEAD") {
-                    c.doOutput = true
-                    c.setFixedLengthStreamingMode(body.size)
-                    c.outputStream.use { it.write(body) }
+                val timeout = msg.optInt("timeout", 0).takeIf { it > 0 } ?: 60_000
+                val headers = msg.optJSONObject("headers")
+                val anonymous = msg.optBoolean("anonymous") || isPrivate
+                var hops = 0
+                var c: HttpURLConnection
+                while (true) {
+                    c = url.openConnection() as HttpURLConnection
+                    conn = c
+                    // HttpURLConnection has no PATCH (or other verbs): those fail.
+                    c.requestMethod = method
+                    c.connectTimeout = timeout
+                    c.readTimeout = timeout
+                    // Each redirect is checked like the first address.
+                    c.instanceFollowRedirects = false
+                    c.useCaches = false
+                    c.setRequestProperty("User-Agent", userAgent)
+                    var hasCookie = false
+                    headers?.keys()?.forEach { k ->
+                        if (k.equals("host", true)) return@forEach
+                        if (k.equals("cookie", true)) hasCookie = true
+                        c.setRequestProperty(k, headers.optString(k))
+                    }
+                    if (!anonymous && !hasCookie) {
+                        CookieManager.getInstance().getCookie(url.toString())?.let { c.setRequestProperty("Cookie", it) }
+                    }
+                    val payload = body
+                    if (payload != null && method != "GET" && method != "HEAD") {
+                        c.doOutput = true
+                        c.setFixedLengthStreamingMode(payload.size)
+                        c.outputStream.use { it.write(payload) }
+                    }
+                    val code = c.responseCode
+                    if (!anonymous) {
+                        val here = url.toString()
+                        for ((k, vs) in c.headerFields) {
+                            if (k != null && k.equals("set-cookie", true)) {
+                                for (v in vs) CookieManager.getInstance().setCookie(here, v)
+                            }
+                        }
+                    }
+                    val location = c.getHeaderField("Location")
+                    if (code !in listOf(301, 302, 303, 307, 308) || location == null) break
+                    if (++hops > 10) {
+                        answer(JSONObject().put("error", "failed"))
+                        return@Runnable
+                    }
+                    val next = URL(url, location)
+                    refused(next)?.let {
+                        answer(JSONObject().put("error", it))
+                        return@Runnable
+                    }
+                    c.disconnect()
+                    if (code == 303 || ((code == 301 || code == 302) && method == "POST")) {
+                        method = "GET"
+                        body = null
+                    }
+                    url = next
                 }
                 val status = c.responseCode
                 val stream = if (status >= 400) c.errorStream else c.inputStream
@@ -384,16 +419,13 @@ object UserScripts {
                 for ((k, vs) in c.headerFields) {
                     if (k == null) continue
                     for (v in vs) lines.append(k.lowercase()).append(": ").append(v).append("\r\n")
-                    if (!anonymous && k.equals("set-cookie", true)) {
-                        for (v in vs) CookieManager.getInstance().setCookie(c.url.toString(), v)
-                    }
                 }
                 answer(
                     JSONObject()
                         .put("status", status)
                         .put("statusText", c.responseMessage ?: "")
                         .put("headers", lines.toString())
-                        .put("finalUrl", c.url.toString())
+                        .put("finalUrl", url.toString())
                         .put("type", c.contentType ?: "")
                         .put("b64", Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)),
                 )
@@ -407,7 +439,7 @@ object UserScripts {
         })
     }
 
-    fun abort(scriptId: String, n: Int) {
+    fun abort(scriptId: String, n: String) {
         inFlight.remove("$scriptId:$n")?.cancel(true)
     }
 

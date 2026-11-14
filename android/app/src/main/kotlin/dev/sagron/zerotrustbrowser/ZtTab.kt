@@ -271,7 +271,7 @@ class ZtTab(
                 "xhr" -> UserScripts.request(msg, script, originHost, isPrivate, webView.settings.userAgentString) {
                     try { reply.postMessage(it) } catch (e: Exception) { }
                 }
-                "abort" -> UserScripts.abort(script.id, msg.optInt("n"))
+                "abort" -> UserScripts.abort(script.id, msg.optString("n"))
                 "tab" -> {
                     val url = msg.optString("url")
                     if (script.grants.any { it.equals("GM_openInTab", true) || it.equals("GM.openInTab", true) } &&
