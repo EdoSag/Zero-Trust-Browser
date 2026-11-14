@@ -2,6 +2,9 @@ package dev.sagron.zerotrustbrowser
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
@@ -32,6 +35,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONArray
+import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -92,6 +96,12 @@ class ZtTab(
     private val defaultUserAgent: String
     private var startScript: ScriptHandler? = null
     private var mediaScript: ScriptHandler? = null
+
+    /** B41: the user's scripts, added after the browser's own. */
+    private var userScripts: List<ScriptHandler> = emptyList()
+
+    /** Commands the page's user scripts added (GM_registerMenuCommand). */
+    private val scriptMenus = LinkedHashMap<String, Pair<JavaScriptReplyProxy, JSONArray>>()
 
     /** The frame whose media played last, to pause or play it again. */
     private var mediaFrame: JavaScriptReplyProxy? = null
@@ -159,6 +169,7 @@ class ZtTab(
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         listenForMedia()
+        listenForUserScripts()
         refreshScripts()
         webView.webViewClient = Client()
         webView.webChromeClient = Chrome()
@@ -224,6 +235,88 @@ class ZtTab(
             WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.media(backgroundPlay), setOf("*"))
         } else {
             null
+        }
+        refreshUserScripts()
+    }
+
+    // ---- User scripts (B41) ------------------------------------------------
+
+    /** Adds the user's scripts again (they or what they store changed). */
+    fun refreshUserScripts() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        for (h in userScripts) h.remove()
+        userScripts = UserScripts.injections(activity, isPrivate).map {
+            WebViewCompat.addDocumentStartJavaScript(webView, it, setOf("*"))
+        }
+    }
+
+    /**
+     * Messages from user scripts (see assets/userscripts/runtime.js). The
+     * site is the frame's real origin, never what the message says.
+     */
+    private fun listenForUserScripts() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+        WebViewCompat.addWebMessageListener(webView, "ztUserScripts", setOf("*")) { _, message, origin, isMainFrame, reply ->
+            val msg = try {
+                JSONObject(message.data ?: return@addWebMessageListener)
+            } catch (e: Exception) {
+                return@addWebMessageListener
+            }
+            val script = UserScripts.script(msg.optString("s")) ?: return@addWebMessageListener
+            if (isPrivate && !script.allowPrivate) return@addWebMessageListener
+            val originHost = origin.host?.lowercase()
+            when (msg.optString("t")) {
+                "set" -> if (!isPrivate) UserScripts.setValue(activity, script.id, msg.optString("k"), msg.optString("v"))
+                "del" -> if (!isPrivate) UserScripts.setValue(activity, script.id, msg.optString("k"), null)
+                "xhr" -> UserScripts.request(msg, script, originHost, isPrivate, webView.settings.userAgentString) {
+                    try { reply.postMessage(it) } catch (e: Exception) { }
+                }
+                "abort" -> UserScripts.abort(script.id, msg.optString("n"))
+                "tab" -> {
+                    val url = msg.optString("url")
+                    if (script.grants.any { it.equals("GM_openInTab", true) || it.equals("GM.openInTab", true) } &&
+                        (url.startsWith("https://") || url.startsWith("http://"))
+                    ) {
+                        events("openTab", mapOf("url" to url, "private" to isPrivate))
+                    }
+                }
+                "clip" -> if (script.grants.any { it.equals("GM_setClipboard", true) || it.equals("GM.setClipboard", true) }) {
+                    val cm = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText(script.name, msg.optString("text")))
+                }
+                "notify" -> if (script.grants.any { it.equals("GM_notification", true) || it.equals("GM.notification", true) }) {
+                    events(
+                        "scriptNotice",
+                        mapOf("script" to script.name, "title" to msg.optString("title"), "text" to msg.optString("text")),
+                    )
+                }
+                "menu" -> if (isMainFrame) {
+                    val cmds = msg.optJSONArray("cmds") ?: JSONArray()
+                    if (cmds.length() == 0) scriptMenus.remove(script.id) else scriptMenus[script.id] = reply to cmds
+                }
+            }
+        }
+    }
+
+    /** The page's user script commands: script, name, s (script id), i. */
+    fun scriptCommands(): List<Map<String, Any?>> {
+        val out = ArrayList<Map<String, Any?>>()
+        for ((id, entry) in scriptMenus) {
+            val name = UserScripts.script(id)?.name ?: continue
+            for (k in 0 until entry.second.length()) {
+                val c = entry.second.optJSONObject(k) ?: continue
+                out.add(mapOf("script" to name, "name" to c.optString("n"), "s" to id, "i" to c.optInt("i")))
+            }
+        }
+        return out
+    }
+
+    fun runScriptCommand(scriptId: String, commandId: Int) {
+        val proxy = scriptMenus[scriptId]?.first ?: return
+        try {
+            proxy.postMessage(JSONObject().put("t", "menu").put("s", scriptId).put("i", commandId).toString())
+        } catch (e: Exception) {
+            // The page is gone.
         }
     }
 
@@ -582,6 +675,16 @@ class ZtTab(
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
             val url = request.url.toString()
+            // B41: a link to a user script offers to install it (as
+            // Tampermonkey does), instead of showing its code.
+            val scheme = request.url.scheme?.lowercase()
+            if ((scheme == "https" || scheme == "http") &&
+                (request.url.path ?: "").lowercase().endsWith(".user.js") &&
+                request.method.equals("GET", true)
+            ) {
+                events("userScript", mapOf("url" to url))
+                return true
+            }
             return when (request.url.scheme?.lowercase()) {
                 "https" -> {
                     // A wrapper on https can hold an http address: that one
@@ -617,6 +720,7 @@ class ZtTab(
 
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageHost = Uri.parse(url).host
+            scriptMenus.clear()
             // A new page: its translation (if any) starts again once loaded.
             translateGen++
             translatedFrom = null

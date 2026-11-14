@@ -471,6 +471,57 @@ class BrowserEngine {
   /// Picture-in-picture for the video playing full screen now, if any.
   Future<bool> pictureInPicture() async =>
       await _call<bool>('pictureInPicture') ?? false;
+
+  // ---- B41: user scripts ---------------------------------------------------
+
+  /// The scripts to run (see UserScripts.toEngine); tabs pick them up for
+  /// their next page.
+  Future<void> setUserScripts(List<Map<String, Object?>> scripts) =>
+      _call<void>('setUserScripts', <String, Object?>{'scripts': scripts});
+
+  /// Deletes what a removed script stored on this phone.
+  Future<void> forgetUserScript(String id) =>
+      _call<void>('forgetUserScript', <String, Object?>{'id': id});
+
+  /// No scripts and nothing they stored (signed out).
+  Future<void> clearUserScripts() => _call<void>('clearUserScripts');
+
+  /// Commands the page's scripts added to the menu.
+  Future<List<ScriptCommand>> scriptCommands(String tabId) async =>
+      <ScriptCommand>[
+        for (final Object? m
+            in await _call<List<Object?>>('scriptCommands', <String, Object?>{
+                  'tabId': tabId,
+                }) ??
+                const <Object?>[])
+          if (m is Map<Object?, Object?>)
+            ScriptCommand(
+              script: m['script'] as String? ?? '',
+              name: m['name'] as String? ?? '',
+              scriptId: m['s'] as String? ?? '',
+              id: m['i'] as int? ?? 0,
+            ),
+      ];
+
+  Future<void> runScriptCommand(String tabId, ScriptCommand c) => _call<void>(
+    'runScriptCommand',
+    <String, Object?>{'tabId': tabId, 's': c.scriptId, 'i': c.id},
+  );
+}
+
+/// A command a user script added to the menu (GM_registerMenuCommand).
+class ScriptCommand {
+  const ScriptCommand({
+    required this.script,
+    required this.name,
+    required this.scriptId,
+    required this.id,
+  });
+
+  final String script;
+  final String name;
+  final String scriptId;
+  final int id;
 }
 
 /// Read aloud, as the engine reports it.

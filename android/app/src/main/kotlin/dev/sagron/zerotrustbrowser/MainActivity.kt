@@ -109,6 +109,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             for (t in tabs.values) t.refreshScripts()
         }
         Blocker.load(this)
+        UserScripts.onChanged = { for (t in tabs.values) t.refreshUserScripts() }
         // A private profile left over from a crash: nothing may survive it.
         deletePrivateProfileIfUnused()
     }
@@ -399,6 +400,27 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         result.success(null)
                     }
                     "pictureInPicture" -> result.success(enterPip())
+                    // ---- B41: user scripts ----
+                    "setUserScripts" -> {
+                        val list = (call.argument<List<Any?>>("scripts") ?: emptyList())
+                            .filterIsInstance<Map<*, *>>()
+                            .map { m -> m.entries.associate { it.key.toString() to it.value } }
+                        UserScripts.set(this, list)
+                        result.success(null)
+                    }
+                    "forgetUserScript" -> {
+                        call.argument<String>("id")?.let { UserScripts.forget(this, it) }
+                        result.success(null)
+                    }
+                    "clearUserScripts" -> {
+                        UserScripts.clear(this)
+                        result.success(null)
+                    }
+                    "scriptCommands" -> result.success(tab?.scriptCommands() ?: emptyList<Map<String, Any?>>())
+                    "runScriptCommand" -> {
+                        tab?.runScriptCommand(call.argument<String>("s") ?: "", call.argument<Int>("i") ?: 0)
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             } catch (e: Exception) {

@@ -16,6 +16,7 @@ import 'package:zerotrust_browser/browser/reader.dart';
 import 'package:zerotrust_browser/browser/search_suggestions.dart';
 import 'package:zerotrust_browser/browser/site_permissions.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
+import 'package:zerotrust_browser/browser/user_scripts.dart';
 import 'package:zerotrust_browser/browser/zt_apps.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -27,6 +28,7 @@ import 'package:zerotrust_browser/pages/downloads_page.dart';
 import 'package:zerotrust_browser/pages/history_page.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
+import 'package:zerotrust_browser/pages/scripts_page.dart';
 import 'package:zerotrust_browser/pages/send_tab_sheet.dart';
 import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
@@ -87,6 +89,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   Future<void> _start() async {
     _pushPrivacy(ref.read(browserSettingsProvider));
     _pushMedia(ref.read(browserSettingsProvider));
+    _pushScripts(ref.read(userScriptsProvider).value);
     await ref
         .read(tabsProvider.notifier)
         .restoreIfEmpty(closeAfterDays: _settings.closeTabsAfterDays);
@@ -154,6 +157,12 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   void _pushPrivacy(BrowserSettings s) {
     applySettings(_engine, s).ignore();
+  }
+
+  /// The user's scripts (B41), here or changed on another device.
+  void _pushScripts(List<UserScript>? scripts) {
+    if (scripts == null) return;
+    ref.read(userScriptsServiceProvider).push(scripts).ignore();
   }
 
   /// Background play and the media notification's texts (B26, B27).
@@ -354,6 +363,19 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         }
       case 'translateFailed':
         _snack(l.translateFailed);
+      case 'userScript':
+        // A link to a .user.js file (B41): show what it would do first.
+        final String? url = e.get<String>('url');
+        if (url != null) await reviewScriptFromUrl(context, url);
+      case 'scriptNotice':
+        final String title = e.get<String>('title') ?? '';
+        final String text = e.get<String>('text') ?? '';
+        _snack(
+          l.scriptNotice(
+            e.get<String>('script') ?? '',
+            title.isEmpty ? text : '$title: $text',
+          ),
+        );
       case 'permission':
         await _askPermission(e);
       case 'httpsFailed':
@@ -927,12 +949,41 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
 
   // ---- Menu ---------------------------------------------------------------
 
+  /// Commands the page's user scripts added (B41).
+  Future<void> _scriptCommands(BrowserTab tab, List<ScriptCommand> commands) =>
+      showModalBottomSheet<void>(
+        context: context,
+        showDragHandle: true,
+        builder: (BuildContext sheet) => SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                for (final ScriptCommand c in commands)
+                  ListTile(
+                    leading: const Icon(Icons.play_arrow_outlined),
+                    title: Text(c.name),
+                    subtitle: Text(c.script),
+                    onTap: () {
+                      Navigator.pop(sheet);
+                      _engine.runScriptCommand(tab.id, c).ignore();
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+
   Future<void> _menu(BrowserTab? tab) async {
     final BrowserData data = ref.read(browserDataProvider);
     final bool onPage = tab != null && !tab.isStartPage && !tab.crashed;
     final Bookmark? saved = onPage ? data.bookmarkFor(tab.url!) : null;
     final bool pinned = onPage && _settings.isPinned(tab.url!);
     final Set<String> apps = onPage ? await _ztApps() : const <String>{};
+    final List<ScriptCommand> commands = onPage
+        ? await _engine.scriptCommands(tab.id)
+        : const <ScriptCommand>[];
     if (!mounted) return;
     final bool reading = _engine.readAloud.value.active;
     await showModalBottomSheet<void>(
@@ -1039,6 +1090,24 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   title: Text(l.privacyReport),
                   onTap: () => run(() => _push(const PrivacyReportPage())),
                 ),
+                ListTile(
+                  leading: const Icon(Icons.code),
+                  title: Text(l.scripts),
+                  onTap: () => run(
+                    () => _push(
+                      ScriptsPage(
+                        onOpen: (String url) =>
+                            _openFromList(url, newTab: true),
+                      ),
+                    ),
+                  ),
+                ),
+                if (onPage && commands.isNotEmpty)
+                  ListTile(
+                    leading: const Icon(Icons.terminal),
+                    title: Text(l.scriptCommands),
+                    onTap: () => run(() => _scriptCommands(tab, commands)),
+                  ),
                 if (onPage) const Divider(),
                 if (onPage)
                   ListTile(
@@ -1214,6 +1283,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           !_same(prev.filterLists, next.filterLists)) {
         ref.read(userBlockRulesProvider).refreshIfDue().ignore();
       }
+    });
+    // The user's scripts (B41).
+    ref.listen(userScriptsProvider, (_, AsyncValue<List<UserScript>> next) {
+      _pushScripts(next.value);
     });
     // Pages other devices sent here (B23).
     ref.listen(sentToMeProvider, (_, AsyncValue<List<SentTab>> next) {
