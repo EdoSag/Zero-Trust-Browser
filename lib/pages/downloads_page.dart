@@ -84,15 +84,47 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     }
   }
 
-  void _snack(String text) => ScaffoldMessenger.of(context)
-    ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(text)));
+  void _snack(String text, {SnackBarAction? action}) =>
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(text),
+            action: action,
+            // A snackbar with an action stays until dismissed otherwise.
+            duration: const Duration(seconds: 6),
+          ),
+        );
+
+  /// Tells what went wrong; nothing ever fails silently.
+  Future<void> _report(DownloadResult r, String failedText) async {
+    if (!mounted) return;
+    switch (r) {
+      case DownloadResult.done:
+        return;
+      case DownloadResult.noApp:
+        _snack(
+          l.noAppOpens,
+          action: SnackBarAction(
+            label: l.showInFiles,
+            onPressed: () => unawaited(_engine.showDownloadsFolder()),
+          ),
+        );
+      case DownloadResult.missing:
+        _snack(l.fileGone);
+        await _refresh();
+      case DownloadResult.failed:
+        _snack(failedText);
+    }
+  }
 
   Future<void> _open(DownloadItem d) async {
     if (d.status != 'done') return;
-    if (!await _engine.openDownload(d.key)) {
-      _snack(l.noAppOpens);
-    }
+    await _report(await _engine.openDownload(d.key), l.cantOpenFile);
+  }
+
+  Future<void> _share(DownloadItem d) async {
+    await _report(await _engine.shareDownload(d.key), l.cantShare);
   }
 
   Future<void> _delete(DownloadItem d) async {
@@ -181,9 +213,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
             case 'open':
               await _open(d);
             case 'share':
-              if (!await _engine.shareDownload(d.key)) {
-                _snack(l.cantShare);
-              }
+              await _share(d);
             case 'delete':
               await _delete(d);
           }

@@ -223,13 +223,43 @@ class BrowserEngine {
       (await _call<List<Object?>>('downloads') ?? const <Object?>[])
           .whereType<Map<Object?, Object?>>()
           .toList();
-  Future<bool> openDownload(String key) async =>
-      await _call<bool>('openDownload', <String, Object?>{'key': key}) ?? false;
-  Future<bool> shareDownload(String key) async =>
-      await _call<bool>('shareDownload', <String, Object?>{'key': key}) ??
-      false;
-  Future<void> deleteDownload(String key) =>
-      _call<void>('deleteDownload', <String, Object?>{'key': key});
+
+  /// Opens a downloaded file in another app: [DownloadResult.done],
+  /// [DownloadResult.noApp], [DownloadResult.missing] or
+  /// [DownloadResult.failed]. Never throws.
+  Future<DownloadResult> openDownload(String key) =>
+      _downloadAction('openDownload', key);
+
+  /// The share sheet for a downloaded file.
+  Future<DownloadResult> shareDownload(String key) =>
+      _downloadAction('shareDownload', key);
+
+  Future<DownloadResult> _downloadAction(String method, String key) async {
+    try {
+      return DownloadResult.parse(
+        await _call<Object>(method, <String, Object?>{'key': key}),
+      );
+    } on PlatformException {
+      return DownloadResult.failed;
+    }
+  }
+
+  /// The phone's own Downloads folder (the Files app); false when none.
+  Future<bool> showDownloadsFolder() async {
+    try {
+      return await _call<bool>('showDownloadsFolder') ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  Future<void> deleteDownload(String key) async {
+    try {
+      await _call<void>('deleteDownload', <String, Object?>{'key': key});
+    } on PlatformException {
+      // Already gone; the list refresh shows what's left.
+    }
+  }
 
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
@@ -549,6 +579,23 @@ class ReadAloudState {
     parts: m['parts'] as int? ?? 0,
     error: m['error'] as String?,
   );
+}
+
+/// What came of opening or sharing a downloaded file.
+enum DownloadResult {
+  done,
+  noApp,
+  missing,
+  failed;
+
+  /// The engine's answer: "opened", "noApp", "missing" or "failed" (and
+  /// true/false from older engines).
+  static DownloadResult parse(Object? v) => switch (v) {
+    'opened' || true => done,
+    'noApp' => noApp,
+    'missing' => missing,
+    _ => failed,
+  };
 }
 
 final browserEngineProvider = Provider<BrowserEngine>((ref) => BrowserEngine());

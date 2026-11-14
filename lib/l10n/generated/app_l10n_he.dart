@@ -929,6 +929,15 @@ class AppL10nHe extends AppL10n {
   String get noAppOpens => 'אין בטלפון הזה אפליקציה שפותחת קובץ מהסוג הזה';
 
   @override
+  String get showInFiles => 'הצגה בקבצים';
+
+  @override
+  String get fileGone => 'הקובץ הזה כבר לא נמצא בטלפון';
+
+  @override
+  String get cantOpenFile => 'אי אפשר לפתוח את הקובץ הזה';
+
+  @override
   String get cancelDownloadTitle => 'לבטל את ההורדה?';
 
   @override
