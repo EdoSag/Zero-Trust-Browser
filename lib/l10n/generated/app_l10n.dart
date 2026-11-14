@@ -2652,6 +2652,360 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Share link'**
   String get shareLink;
+
+  /// No description provided for @scripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts'**
+  String get scripts;
+
+  /// No description provided for @scriptsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Your own scripts that change how sites look and work'**
+  String get scriptsSub;
+
+  /// No description provided for @scriptsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No scripts yet} =1{1 script} other{{count} scripts}}'**
+  String scriptsCount(int count);
+
+  /// No description provided for @scriptsExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'User scripts in the Tampermonkey and Greasemonkey format change pages on the sites they name: dark themes, hiding clutter, extra buttons. They sync end-to-end encrypted to your other devices. Only add scripts you trust: a script can read everything on the sites it runs on, including what you type.'**
+  String get scriptsExplain;
+
+  /// No description provided for @addScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Add script'**
+  String get addScript;
+
+  /// No description provided for @addScriptFromLink.
+  ///
+  /// In en, this message translates to:
+  /// **'From a link'**
+  String get addScriptFromLink;
+
+  /// No description provided for @addScriptFromFile.
+  ///
+  /// In en, this message translates to:
+  /// **'From a file'**
+  String get addScriptFromFile;
+
+  /// No description provided for @addScriptPaste.
+  ///
+  /// In en, this message translates to:
+  /// **'Write or paste'**
+  String get addScriptPaste;
+
+  /// No description provided for @findScripts.
+  ///
+  /// In en, this message translates to:
+  /// **'Find scripts on Greasy Fork'**
+  String get findScripts;
+
+  /// No description provided for @scriptLinkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Address of a .user.js file'**
+  String get scriptLinkHint;
+
+  /// No description provided for @scriptLinkInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'That isn\'t a web address'**
+  String get scriptLinkInvalid;
+
+  /// No description provided for @scriptLoading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the script…'**
+  String get scriptLoading;
+
+  /// No description provided for @scriptNotAScript.
+  ///
+  /// In en, this message translates to:
+  /// **'This isn\'t a user script: it needs a ==UserScript== block with a @name.'**
+  String get scriptNotAScript;
+
+  /// No description provided for @scriptDownloadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load the script. Check the address and your connection.'**
+  String get scriptDownloadFailed;
+
+  /// No description provided for @scriptDependencyFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load a file the script needs: {url}'**
+  String scriptDependencyFailed(String url);
+
+  /// No description provided for @scriptTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This script is too large to sync (over 700 KB with its files).'**
+  String get scriptTooLarge;
+
+  /// No description provided for @scriptUnreadable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unreadable script'**
+  String get scriptUnreadable;
+
+  /// No description provided for @reviewScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Review script'**
+  String get reviewScript;
+
+  /// No description provided for @installScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Install'**
+  String get installScript;
+
+  /// No description provided for @updateScript.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateScript;
+
+  /// No description provided for @scriptWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This script can read and change everything on the sites below, including passwords you type. Only install it if you trust where it comes from.'**
+  String get scriptWarning;
+
+  /// No description provided for @scriptRunsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs on'**
+  String get scriptRunsOn;
+
+  /// No description provided for @scriptAllSites.
+  ///
+  /// In en, this message translates to:
+  /// **'Every site you visit'**
+  String get scriptAllSites;
+
+  /// No description provided for @scriptEverywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs on every site'**
+  String get scriptEverywhere;
+
+  /// No description provided for @scriptSitesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Runs on 1 site} other{Runs on {count} sites}}'**
+  String scriptSitesCount(int count);
+
+  /// No description provided for @scriptSendsTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Can send data to'**
+  String get scriptSendsTo;
+
+  /// No description provided for @scriptSendsAnywhere.
+  ///
+  /// In en, this message translates to:
+  /// **'Any site'**
+  String get scriptSendsAnywhere;
+
+  /// No description provided for @scriptAlsoCan.
+  ///
+  /// In en, this message translates to:
+  /// **'It can also'**
+  String get scriptAlsoCan;
+
+  /// No description provided for @permStorage.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep its own data on this phone'**
+  String get permStorage;
+
+  /// No description provided for @permNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Send requests to other sites'**
+  String get permNetwork;
+
+  /// No description provided for @permTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Open new tabs'**
+  String get permTabs;
+
+  /// No description provided for @permClipboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy text to the clipboard'**
+  String get permClipboard;
+
+  /// No description provided for @permNotifications.
+  ///
+  /// In en, this message translates to:
+  /// **'Show messages'**
+  String get permNotifications;
+
+  /// No description provided for @permMenu.
+  ///
+  /// In en, this message translates to:
+  /// **'Add commands to the menu'**
+  String get permMenu;
+
+  /// No description provided for @scriptFilesFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Loads code from'**
+  String get scriptFilesFrom;
+
+  /// No description provided for @scriptUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available in ZT Browser (parts of the script may not work)'**
+  String get scriptUnsupported;
+
+  /// No description provided for @scriptContextMenuUnsupported.
+  ///
+  /// In en, this message translates to:
+  /// **'Scripts that run from the long-press menu aren\'t supported yet'**
+  String get scriptContextMenuUnsupported;
+
+  /// No description provided for @scriptSource.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get scriptSource;
+
+  /// No description provided for @scriptVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {version}'**
+  String scriptVersion(String version);
+
+  /// No description provided for @scriptVersionChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Version {from} to {to}'**
+  String scriptVersionChange(String from, String to);
+
+  /// No description provided for @scriptNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get scriptNew;
+
+  /// No description provided for @scriptShowCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Show code'**
+  String get scriptShowCode;
+
+  /// No description provided for @scriptInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'Installed {name}'**
+  String scriptInstalled(String name);
+
+  /// No description provided for @scriptUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Updated {name}'**
+  String scriptUpdated(String name);
+
+  /// No description provided for @scriptOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get scriptOn;
+
+  /// No description provided for @scriptRunPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Run in private tabs'**
+  String get scriptRunPrivate;
+
+  /// No description provided for @scriptRunPrivateSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Off unless you turn it on. What it stores there isn\'t kept.'**
+  String get scriptRunPrivateSub;
+
+  /// No description provided for @checkForUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for update'**
+  String get checkForUpdate;
+
+  /// No description provided for @checkForUpdateSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Updates are never installed without your OK'**
+  String get checkForUpdateSub;
+
+  /// No description provided for @scriptUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'You have the newest version'**
+  String get scriptUpToDate;
+
+  /// No description provided for @editCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit code'**
+  String get editCode;
+
+  /// No description provided for @newScript.
+  ///
+  /// In en, this message translates to:
+  /// **'New script'**
+  String get newScript;
+
+  /// No description provided for @scriptEditorHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Paste or write a user script, starting with // ==UserScript=='**
+  String get scriptEditorHint;
+
+  /// No description provided for @deleteScriptQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String deleteScriptQ(String name);
+
+  /// No description provided for @deleteScriptExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'What it stored on this phone is deleted too.'**
+  String get deleteScriptExplain;
+
+  /// No description provided for @scriptCommands.
+  ///
+  /// In en, this message translates to:
+  /// **'Script commands'**
+  String get scriptCommands;
+
+  /// No description provided for @scriptNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'{script}: {text}'**
+  String scriptNotice(String script, String text);
+
+  /// No description provided for @installScriptQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Install the user script from {host}?'**
+  String installScriptQ(String host);
+
+  /// No description provided for @review.
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get review;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -889,5 +889,140 @@
       }
     }
   },
-  "shareLink": "Share link"
+  "shareLink": "Share link",
+  "scripts": "Scripts",
+  "scriptsSub": "Your own scripts that change how sites look and work",
+  "scriptsCount": "{count, plural, =0{No scripts yet} =1{1 script} other{{count} scripts}}",
+  "@scriptsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scriptsExplain": "User scripts in the Tampermonkey and Greasemonkey format change pages on the sites they name: dark themes, hiding clutter, extra buttons. They sync end-to-end encrypted to your other devices. Only add scripts you trust: a script can read everything on the sites it runs on, including what you type.",
+  "addScript": "Add script",
+  "addScriptFromLink": "From a link",
+  "addScriptFromFile": "From a file",
+  "addScriptPaste": "Write or paste",
+  "findScripts": "Find scripts on Greasy Fork",
+  "scriptLinkHint": "Address of a .user.js file",
+  "scriptLinkInvalid": "That isn't a web address",
+  "scriptLoading": "Loading the script…",
+  "scriptNotAScript": "This isn't a user script: it needs a ==UserScript== block with a @name.",
+  "scriptDownloadFailed": "Couldn't load the script. Check the address and your connection.",
+  "scriptDependencyFailed": "Couldn't load a file the script needs: {url}",
+  "@scriptDependencyFailed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptTooLarge": "This script is too large to sync (over 700 KB with its files).",
+  "scriptUnreadable": "Unreadable script",
+  "reviewScript": "Review script",
+  "installScript": "Install",
+  "updateScript": "Update",
+  "scriptWarning": "This script can read and change everything on the sites below, including passwords you type. Only install it if you trust where it comes from.",
+  "scriptRunsOn": "Runs on",
+  "scriptAllSites": "Every site you visit",
+  "scriptEverywhere": "Runs on every site",
+  "scriptSitesCount": "{count, plural, =1{Runs on 1 site} other{Runs on {count} sites}}",
+  "@scriptSitesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scriptSendsTo": "Can send data to",
+  "scriptSendsAnywhere": "Any site",
+  "scriptAlsoCan": "It can also",
+  "permStorage": "Keep its own data on this phone",
+  "permNetwork": "Send requests to other sites",
+  "permTabs": "Open new tabs",
+  "permClipboard": "Copy text to the clipboard",
+  "permNotifications": "Show messages",
+  "permMenu": "Add commands to the menu",
+  "scriptFilesFrom": "Loads code from",
+  "scriptUnsupported": "Not available in ZT Browser (parts of the script may not work)",
+  "scriptContextMenuUnsupported": "Scripts that run from the long-press menu aren't supported yet",
+  "scriptSource": "From",
+  "scriptVersion": "Version {version}",
+  "@scriptVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptVersionChange": "Version {from} to {to}",
+  "@scriptVersionChange": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptNew": "New",
+  "scriptShowCode": "Show code",
+  "scriptInstalled": "Installed {name}",
+  "@scriptInstalled": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptUpdated": "Updated {name}",
+  "@scriptUpdated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptOn": "On",
+  "scriptRunPrivate": "Run in private tabs",
+  "scriptRunPrivateSub": "Off unless you turn it on. What it stores there isn't kept.",
+  "checkForUpdate": "Check for update",
+  "checkForUpdateSub": "Updates are never installed without your OK",
+  "scriptUpToDate": "You have the newest version",
+  "editCode": "Edit code",
+  "newScript": "New script",
+  "scriptEditorHint": "Paste or write a user script, starting with // ==UserScript==",
+  "deleteScriptQ": "Delete {name}?",
+  "@deleteScriptQ": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteScriptExplain": "What it stored on this phone is deleted too.",
+  "scriptCommands": "Script commands",
+  "scriptNotice": "{script}: {text}",
+  "@scriptNotice": {
+    "placeholders": {
+      "script": {
+        "type": "String"
+      },
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "installScriptQ": "Install the user script from {host}?",
+  "@installScriptQ": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "review": "Review"
 }

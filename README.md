@@ -52,6 +52,14 @@ it is **ZT Browser**.
   row from your history.
 - **Search suggestions** (off until you turn them on; addresses and
   private tabs are never sent) and **your own search engines**.
+- **User scripts** in the Tampermonkey / Greasemonkey format (Greasy Fork
+  scripts work), the answer to "no extensions": add from a link, a file or
+  by pasting; tap a `.user.js` link to install. Before installing you see
+  which sites the script runs on, where it can send data and what else it
+  can do. Updates only after you review them; off in private tabs unless
+  you allow it. Scripts sync end-to-end encrypted; what they store stays
+  on the phone, encrypted. See "User scripts" below for the supported
+  `GM_*` functions.
 - **English and Hebrew**, with a right-to-left layout. The sign-in and
   unlock screens come from Zero-Trust-Core and are English for now.
 - Can be the default browser; "Share to" and "Search in ZT Browser" for
@@ -79,6 +87,32 @@ settings and look as every Zero-Trust app.
 Requires Android 10 (API 29). Private tabs need Android System WebView with
 multi-profile support (version 123 or newer); on older WebView versions they
 still keep no history and no cache, but share cookies with normal tabs.
+
+## User scripts (B41)
+
+Scripts run in the page itself, like Violentmonkey's "page" mode: the
+engine adds them as document-start scripts (`UserScripts.kt`, runtime in
+`assets/userscripts/runtime.js`) and each script's code is checked against
+its `@match` / `@include` / `@exclude` / `@exclude-match` rules on every
+page and frame. `@run-at` document-start, document-body, document-end and
+document-idle (the default) are honoured, and `@noframes`; `@require` and
+`@resource` files are fetched once at install and synced with the script.
+
+Supported (both `GM_x` and `GM.x`): `GM_info`, `GM_log`, `unsafeWindow`,
+`GM_addStyle`, `GM_addElement`, `GM_getValue` / `setValue` / `deleteValue`
+/ `listValues` (and the `…Values` forms), `GM_addValueChangeListener`
+(changes on the same page), `GM_getResourceText`, `GM_getResourceURL`,
+`GM_xmlhttpRequest` (cross-site, only to `@connect` sites when the script
+names any; blocked tracker hosts stay blocked; no cookies from private
+tabs; no streaming or progress events), `GM_openInTab`, `GM_setClipboard`,
+`GM_notification` (shown as a message in the app),
+`GM_registerMenuCommand` / `GM_unregisterMenuCommand` (menu → Script
+commands).
+
+Not supported: `GM_download`, `GM_cookie`, `GM_webRequest`, `GM_getTab` /
+`GM_saveTab` / `GM_getTabs`, `GM_audio`, `window.onurlchange`,
+`@run-at context-menu`, `@sandbox` and `@inject-into content` (everything
+runs in the page). The install screen lists any of these a script asks for.
 
 ## Texts and languages
 

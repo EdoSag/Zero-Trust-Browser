@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:zero_trust_core/zero_trust_core.dart';
+import 'package:zerotrust_browser/browser/user_script.dart';
 
 /// A random item id. Ids are visible to the server, so they never carry the
 /// URL (not even hashed: a hash of a URL can be guessed back).
@@ -862,6 +863,176 @@ class ReadingItem {
   }
 }
 
+/// A file a user script names with @resource, fetched when it was
+/// installed and kept with it.
+class ScriptResource {
+  const ScriptResource({
+    required this.url,
+    required this.mime,
+    required this.data,
+  });
+
+  final String url;
+  final String mime;
+
+  /// The file, base64.
+  final String data;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'url': url,
+    'mime': mime,
+    'data': data,
+  };
+
+  static ScriptResource? fromJson(Object? j) => j is Map<String, Object?>
+      ? ScriptResource(
+          url: j['url'] as String? ?? '',
+          mime: j['mime'] as String? ?? 'application/octet-stream',
+          data: j['data'] as String? ?? '',
+        )
+      : null;
+}
+
+/// B41: a user script (Tampermonkey / Greasemonkey format). Synced and
+/// end-to-end encrypted like bookmarks, with the files it @requires and
+/// its @resources, so another device runs exactly what was reviewed here.
+/// What the script stores for itself (GM_setValue) stays on each phone.
+class UserScript {
+  const UserScript({
+    required this.id,
+    required this.code,
+    required this.installedAt,
+    required this.updatedAt,
+    this.enabled = true,
+    this.allowPrivate = false,
+    this.sourceUrl,
+    this.requires = const <String, String>{},
+    this.resources = const <String, ScriptResource>{},
+    this.position,
+  });
+
+  final String id;
+
+  /// The script as installed (metadata block and all).
+  final String code;
+  final DateTime installedAt;
+  final DateTime updatedAt;
+  final bool enabled;
+
+  /// Runs in private tabs too. Off unless the user turns it on.
+  final bool allowPrivate;
+
+  /// Where it was installed from, for "Check for update". Null for pasted
+  /// scripts and files.
+  final String? sourceUrl;
+
+  /// @require address -> code, fetched at install.
+  final Map<String, String> requires;
+
+  /// @resource name -> file.
+  final Map<String, ScriptResource> resources;
+
+  /// The user's order; null ones last, oldest first.
+  final double? position;
+
+  UserScriptMeta? get meta => UserScriptMeta.parse(code);
+
+  String get name => meta?.name ?? '';
+
+  /// Where to look for a newer version: @updateURL, @downloadURL, then the
+  /// address it came from.
+  String? get updateUrl {
+    final UserScriptMeta? m = meta;
+    for (final String? u in <String?>[
+      m?.updateUrl,
+      m?.downloadUrl,
+      sourceUrl,
+    ]) {
+      if (u != null && (u.startsWith('https://') || u.startsWith('http://'))) {
+        return u;
+      }
+    }
+    return null;
+  }
+
+  UserScript copyWith({
+    String? code,
+    DateTime? updatedAt,
+    bool? enabled,
+    bool? allowPrivate,
+    String? Function()? sourceUrl,
+    Map<String, String>? requires,
+    Map<String, ScriptResource>? resources,
+    double? position,
+  }) => UserScript(
+    id: id,
+    code: code ?? this.code,
+    installedAt: installedAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    enabled: enabled ?? this.enabled,
+    allowPrivate: allowPrivate ?? this.allowPrivate,
+    sourceUrl: sourceUrl != null ? sourceUrl() : this.sourceUrl,
+    requires: requires ?? this.requires,
+    resources: resources ?? this.resources,
+    position: position ?? this.position,
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'code': code,
+    'installedAt': installedAt.millisecondsSinceEpoch,
+    'updatedAt': updatedAt.millisecondsSinceEpoch,
+    'enabled': enabled,
+    'allowPrivate': allowPrivate,
+    if (sourceUrl != null) 'sourceUrl': sourceUrl,
+    if (requires.isNotEmpty) 'requires': requires,
+    if (resources.isNotEmpty)
+      'resources': <String, Object?>{
+        for (final MapEntry<String, ScriptResource> e in resources.entries)
+          e.key: e.value.toJson(),
+      },
+    if (position != null) 'position': position,
+  };
+
+  static UserScript fromJson(String id, Map<String, Object?> j, DateTime at) {
+    final Object? req = j['requires'];
+    final Object? res = j['resources'];
+    return UserScript(
+      id: id,
+      code: j['code'] as String? ?? '',
+      installedAt: _ms(j['installedAt'], at),
+      updatedAt: _ms(j['updatedAt'], at),
+      enabled: j['enabled'] as bool? ?? true,
+      allowPrivate: j['allowPrivate'] as bool? ?? false,
+      sourceUrl: j['sourceUrl'] as String?,
+      requires: req is Map<String, Object?>
+          ? <String, String>{
+              for (final MapEntry<String, Object?> e in req.entries)
+                if (e.value is String) e.key: e.value! as String,
+            }
+          : const <String, String>{},
+      resources: res is Map<String, Object?>
+          ? <String, ScriptResource>{
+              for (final MapEntry<String, Object?> e in res.entries)
+                if (ScriptResource.fromJson(e.value)
+                    case final ScriptResource r)
+                  e.key: r,
+            }
+          : const <String, ScriptResource>{},
+      position: (j['position'] as num?)?.toDouble(),
+    );
+  }
+
+  /// The user's order first, then by when they were installed.
+  static int compare(UserScript a, UserScript b) {
+    final double? x = a.position;
+    final double? y = b.position;
+    if (x != null && y != null) return x.compareTo(y);
+    if (x != null) return -1;
+    if (y != null) return 1;
+    return a.installedAt.compareTo(b.installedAt);
+  }
+}
+
 /// The kinds of items ZT Browser keeps in its synced store.
 abstract final class BrowserCollections {
   static final ZtCollection<Bookmark> bookmarks = ZtCollection<Bookmark>(
@@ -906,4 +1077,11 @@ abstract final class BrowserCollections {
         toJson: (BrowserSettings s) => s.toJson(),
         idOf: (_) => BrowserSettings.itemId,
       );
+
+  static final ZtCollection<UserScript> userScripts = ZtCollection<UserScript>(
+    kind: 'user-script',
+    fromJson: UserScript.fromJson,
+    toJson: (UserScript u) => u.toJson(),
+    idOf: (UserScript u) => u.id,
+  );
 }

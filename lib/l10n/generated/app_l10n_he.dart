@@ -1543,4 +1543,223 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get shareLink => 'שיתוף הקישור';
+
+  @override
+  String get scripts => 'סקריפטים';
+
+  @override
+  String get scriptsSub => 'סקריפטים משלך שמשנים את המראה וההתנהגות של אתרים';
+
+  @override
+  String scriptsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סקריפטים',
+      one: 'סקריפט אחד',
+      zero: 'אין עדיין סקריפטים',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scriptsExplain =>
+      'סקריפטים בפורמט של Tampermonkey ו-Greasemonkey משנים דפים באתרים שהם מציינים: ערכות כהות, הסתרת עומס, כפתורים נוספים. הם מסונכרנים בהצפנה מקצה לקצה למכשירים האחרים שלך. כדאי להוסיף רק סקריפטים שסומכים עליהם: סקריפט יכול לקרוא כל מה שיש באתרים שהוא פועל בהם, כולל מה שמקלידים.';
+
+  @override
+  String get addScript => 'הוספת סקריפט';
+
+  @override
+  String get addScriptFromLink => 'מקישור';
+
+  @override
+  String get addScriptFromFile => 'מקובץ';
+
+  @override
+  String get addScriptPaste => 'כתיבה או הדבקה';
+
+  @override
+  String get findScripts => 'חיפוש סקריפטים ב-Greasy Fork';
+
+  @override
+  String get scriptLinkHint => 'כתובת של קובץ ‎.user.js';
+
+  @override
+  String get scriptLinkInvalid => 'זו לא כתובת אינטרנט';
+
+  @override
+  String get scriptLoading => 'הסקריפט נטען…';
+
+  @override
+  String get scriptNotAScript =>
+      'זה לא סקריפט משתמש: חסר בלוק ‎==UserScript==‎ עם ‎@name.';
+
+  @override
+  String get scriptDownloadFailed =>
+      'לא הצלחנו לטעון את הסקריפט. כדאי לבדוק את הכתובת ואת החיבור.';
+
+  @override
+  String scriptDependencyFailed(String url) {
+    return 'לא הצלחנו לטעון קובץ שהסקריפט צריך: $url';
+  }
+
+  @override
+  String get scriptTooLarge =>
+      'הסקריפט גדול מדי לסנכרון (יותר מ-700KB עם הקבצים שלו).';
+
+  @override
+  String get scriptUnreadable => 'סקריפט לא קריא';
+
+  @override
+  String get reviewScript => 'בדיקת הסקריפט';
+
+  @override
+  String get installScript => 'התקנה';
+
+  @override
+  String get updateScript => 'עדכון';
+
+  @override
+  String get scriptWarning =>
+      'הסקריפט הזה יכול לקרוא ולשנות כל מה שיש באתרים שלמטה, כולל סיסמאות שמקלידים. כדאי להתקין אותו רק אם סומכים על המקור שלו.';
+
+  @override
+  String get scriptRunsOn => 'פועל באתרים';
+
+  @override
+  String get scriptAllSites => 'כל אתר שנכנסים אליו';
+
+  @override
+  String get scriptEverywhere => 'פועל בכל האתרים';
+
+  @override
+  String scriptSitesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'פועל ב-$count אתרים',
+      one: 'פועל באתר אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scriptSendsTo => 'יכול לשלוח נתונים אל';
+
+  @override
+  String get scriptSendsAnywhere => 'כל אתר';
+
+  @override
+  String get scriptAlsoCan => 'הוא יכול גם';
+
+  @override
+  String get permStorage => 'לשמור נתונים משלו בטלפון הזה';
+
+  @override
+  String get permNetwork => 'לשלוח בקשות לאתרים אחרים';
+
+  @override
+  String get permTabs => 'לפתוח כרטיסיות חדשות';
+
+  @override
+  String get permClipboard => 'להעתיק טקסט ללוח';
+
+  @override
+  String get permNotifications => 'להציג הודעות';
+
+  @override
+  String get permMenu => 'להוסיף פקודות לתפריט';
+
+  @override
+  String get scriptFilesFrom => 'טוען קוד מ';
+
+  @override
+  String get scriptUnsupported =>
+      'לא זמין ב-ZT Browser (חלקים מהסקריפט עלולים לא לעבוד)';
+
+  @override
+  String get scriptContextMenuUnsupported =>
+      'עדיין אין תמיכה בסקריפטים שפועלים מתפריט הלחיצה הארוכה';
+
+  @override
+  String get scriptSource => 'מקור';
+
+  @override
+  String scriptVersion(String version) {
+    return 'גרסה $version';
+  }
+
+  @override
+  String scriptVersionChange(String from, String to) {
+    return 'מגרסה $from לגרסה $to';
+  }
+
+  @override
+  String get scriptNew => 'חדש';
+
+  @override
+  String get scriptShowCode => 'הצגת הקוד';
+
+  @override
+  String scriptInstalled(String name) {
+    return '$name הותקן';
+  }
+
+  @override
+  String scriptUpdated(String name) {
+    return '$name עודכן';
+  }
+
+  @override
+  String get scriptOn => 'פעיל';
+
+  @override
+  String get scriptRunPrivate => 'הפעלה בכרטיסיות פרטיות';
+
+  @override
+  String get scriptRunPrivateSub =>
+      'כבוי עד שמפעילים אותו. מה שהוא שומר שם לא נשמר.';
+
+  @override
+  String get checkForUpdate => 'בדיקת עדכון';
+
+  @override
+  String get checkForUpdateSub => 'עדכון אף פעם לא מותקן בלי אישור שלך';
+
+  @override
+  String get scriptUpToDate => 'זו הגרסה החדשה ביותר';
+
+  @override
+  String get editCode => 'עריכת הקוד';
+
+  @override
+  String get newScript => 'סקריפט חדש';
+
+  @override
+  String get scriptEditorHint =>
+      'אפשר להדביק או לכתוב סקריפט משתמש, שמתחיל ב-‎// ==UserScript==';
+
+  @override
+  String deleteScriptQ(String name) {
+    return 'למחוק את $name?';
+  }
+
+  @override
+  String get deleteScriptExplain => 'גם מה שהוא שמר בטלפון הזה יימחק.';
+
+  @override
+  String get scriptCommands => 'פקודות של סקריפטים';
+
+  @override
+  String scriptNotice(String script, String text) {
+    return '$script: $text';
+  }
+
+  @override
+  String installScriptQ(String host) {
+    return 'להתקין את סקריפט המשתמש מ-$host?';
+  }
+
+  @override
+  String get review => 'בדיקה';
 }

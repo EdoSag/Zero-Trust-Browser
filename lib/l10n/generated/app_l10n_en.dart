@@ -1551,4 +1551,225 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get shareLink => 'Share link';
+
+  @override
+  String get scripts => 'Scripts';
+
+  @override
+  String get scriptsSub =>
+      'Your own scripts that change how sites look and work';
+
+  @override
+  String scriptsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count scripts',
+      one: '1 script',
+      zero: 'No scripts yet',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scriptsExplain =>
+      'User scripts in the Tampermonkey and Greasemonkey format change pages on the sites they name: dark themes, hiding clutter, extra buttons. They sync end-to-end encrypted to your other devices. Only add scripts you trust: a script can read everything on the sites it runs on, including what you type.';
+
+  @override
+  String get addScript => 'Add script';
+
+  @override
+  String get addScriptFromLink => 'From a link';
+
+  @override
+  String get addScriptFromFile => 'From a file';
+
+  @override
+  String get addScriptPaste => 'Write or paste';
+
+  @override
+  String get findScripts => 'Find scripts on Greasy Fork';
+
+  @override
+  String get scriptLinkHint => 'Address of a .user.js file';
+
+  @override
+  String get scriptLinkInvalid => 'That isn\'t a web address';
+
+  @override
+  String get scriptLoading => 'Loading the script…';
+
+  @override
+  String get scriptNotAScript =>
+      'This isn\'t a user script: it needs a ==UserScript== block with a @name.';
+
+  @override
+  String get scriptDownloadFailed =>
+      'Couldn\'t load the script. Check the address and your connection.';
+
+  @override
+  String scriptDependencyFailed(String url) {
+    return 'Couldn\'t load a file the script needs: $url';
+  }
+
+  @override
+  String get scriptTooLarge =>
+      'This script is too large to sync (over 700 KB with its files).';
+
+  @override
+  String get scriptUnreadable => 'Unreadable script';
+
+  @override
+  String get reviewScript => 'Review script';
+
+  @override
+  String get installScript => 'Install';
+
+  @override
+  String get updateScript => 'Update';
+
+  @override
+  String get scriptWarning =>
+      'This script can read and change everything on the sites below, including passwords you type. Only install it if you trust where it comes from.';
+
+  @override
+  String get scriptRunsOn => 'Runs on';
+
+  @override
+  String get scriptAllSites => 'Every site you visit';
+
+  @override
+  String get scriptEverywhere => 'Runs on every site';
+
+  @override
+  String scriptSitesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Runs on $count sites',
+      one: 'Runs on 1 site',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scriptSendsTo => 'Can send data to';
+
+  @override
+  String get scriptSendsAnywhere => 'Any site';
+
+  @override
+  String get scriptAlsoCan => 'It can also';
+
+  @override
+  String get permStorage => 'Keep its own data on this phone';
+
+  @override
+  String get permNetwork => 'Send requests to other sites';
+
+  @override
+  String get permTabs => 'Open new tabs';
+
+  @override
+  String get permClipboard => 'Copy text to the clipboard';
+
+  @override
+  String get permNotifications => 'Show messages';
+
+  @override
+  String get permMenu => 'Add commands to the menu';
+
+  @override
+  String get scriptFilesFrom => 'Loads code from';
+
+  @override
+  String get scriptUnsupported =>
+      'Not available in ZT Browser (parts of the script may not work)';
+
+  @override
+  String get scriptContextMenuUnsupported =>
+      'Scripts that run from the long-press menu aren\'t supported yet';
+
+  @override
+  String get scriptSource => 'From';
+
+  @override
+  String scriptVersion(String version) {
+    return 'Version $version';
+  }
+
+  @override
+  String scriptVersionChange(String from, String to) {
+    return 'Version $from to $to';
+  }
+
+  @override
+  String get scriptNew => 'New';
+
+  @override
+  String get scriptShowCode => 'Show code';
+
+  @override
+  String scriptInstalled(String name) {
+    return 'Installed $name';
+  }
+
+  @override
+  String scriptUpdated(String name) {
+    return 'Updated $name';
+  }
+
+  @override
+  String get scriptOn => 'On';
+
+  @override
+  String get scriptRunPrivate => 'Run in private tabs';
+
+  @override
+  String get scriptRunPrivateSub =>
+      'Off unless you turn it on. What it stores there isn\'t kept.';
+
+  @override
+  String get checkForUpdate => 'Check for update';
+
+  @override
+  String get checkForUpdateSub => 'Updates are never installed without your OK';
+
+  @override
+  String get scriptUpToDate => 'You have the newest version';
+
+  @override
+  String get editCode => 'Edit code';
+
+  @override
+  String get newScript => 'New script';
+
+  @override
+  String get scriptEditorHint =>
+      'Paste or write a user script, starting with // ==UserScript==';
+
+  @override
+  String deleteScriptQ(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get deleteScriptExplain =>
+      'What it stored on this phone is deleted too.';
+
+  @override
+  String get scriptCommands => 'Script commands';
+
+  @override
+  String scriptNotice(String script, String text) {
+    return '$script: $text';
+  }
+
+  @override
+  String installScriptQ(String host) {
+    return 'Install the user script from $host?';
+  }
+
+  @override
+  String get review => 'Review';
 }
