@@ -1,7 +1,7 @@
 name: zerotrust_browser
 description: "Zero-Trust Browser: a private web browser that blocks trackers, with bookmarks and history end-to-end encrypted in your Zero-Trust account."
 publish_to: none
-version: 0.4.0+6
+version: 0.4.1+7
 
 environment:
   sdk: ^3.9.0
