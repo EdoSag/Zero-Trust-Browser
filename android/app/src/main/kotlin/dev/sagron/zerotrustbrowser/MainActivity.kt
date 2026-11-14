@@ -283,6 +283,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "downloads" -> result.success(downloads.list())
                     "openDownload" -> result.success(downloads.open(call.argument<String>("key") ?: ""))
                     "shareDownload" -> result.success(downloads.share(call.argument<String>("key") ?: ""))
+                    "showDownloadsFolder" -> result.success(downloads.showFolder())
                     "deleteDownload" -> {
                         downloads.delete(call.argument<String>("key") ?: "")
                         result.success(null)
