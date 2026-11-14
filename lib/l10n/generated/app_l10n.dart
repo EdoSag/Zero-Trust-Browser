@@ -1669,6 +1669,24 @@ abstract class AppL10n {
   /// **'No app on this phone opens this kind of file'**
   String get noAppOpens;
 
+  /// No description provided for @showInFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Show in Files'**
+  String get showInFiles;
+
+  /// No description provided for @fileGone.
+  ///
+  /// In en, this message translates to:
+  /// **'This file isn\'t on the phone any more'**
+  String get fileGone;
+
+  /// No description provided for @cantOpenFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open this file'**
+  String get cantOpenFile;
+
   /// No description provided for @cancelDownloadTitle.
   ///
   /// In en, this message translates to:

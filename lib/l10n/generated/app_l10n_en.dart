@@ -932,6 +932,15 @@ class AppL10nEn extends AppL10n {
   String get noAppOpens => 'No app on this phone opens this kind of file';
 
   @override
+  String get showInFiles => 'Show in Files';
+
+  @override
+  String get fileGone => 'This file isn\'t on the phone any more';
+
+  @override
+  String get cantOpenFile => 'Couldn\'t open this file';
+
+  @override
   String get cancelDownloadTitle => 'Cancel download?';
 
   @override
