@@ -132,10 +132,16 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         channel?.invokeMethod("openPending", null)
     }
 
+    private fun isOwnAuthLink(uri: Uri?): Boolean =
+        uri != null && uri.scheme == "https" && uri.host == "zerotrust.bz" &&
+            uri.path.orEmpty().startsWith("/auth/browser/")
+
     private fun linkFrom(intent: Intent?): String? {
         if (intent == null) return null
         return when (intent.action) {
-            Intent.ACTION_VIEW -> intent.dataString
+            // Our own password-reset link is for the account, not a page to
+            // show: supabase_flutter picks it up (see EmailLinks).
+            Intent.ACTION_VIEW -> intent.dataString.takeUnless { isOwnAuthLink(intent.data) }
             Intent.ACTION_WEB_SEARCH -> intent.getStringExtra("query")
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
             Intent.ACTION_PROCESS_TEXT -> intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
