@@ -784,7 +784,7 @@ abstract class AppL10n {
   /// No description provided for @privateExplain.
   ///
   /// In en, this message translates to:
-  /// **'Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads and bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.'**
+  /// **'Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads you keep private are encrypted and deleted at the same time; bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.'**
   String get privateExplain;
 
   /// No description provided for @startBlurb.
@@ -1726,7 +1726,7 @@ abstract class AppL10n {
   /// No description provided for @downloadsEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Files you download show here. They are saved in your phone\'s Downloads folder.'**
+  /// **'Files you download show here. They are saved in your phone\'s Downloads folder. Files from private tabs can stay encrypted in the app instead, until you close your private tabs.'**
   String get downloadsEmpty;
 
   /// No description provided for @progressOf.
@@ -1758,6 +1758,198 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'This file can\'t be shared'**
   String get cantShare;
+
+  /// No description provided for @waitingToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to start'**
+  String get waitingToStart;
+
+  /// No description provided for @pausedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused · {progress}'**
+  String pausedAt(String progress);
+
+  /// No description provided for @pauseDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get pauseDownload;
+
+  /// No description provided for @resumeDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get resumeDownload;
+
+  /// No description provided for @downloadFailedSpace.
+  ///
+  /// In en, this message translates to:
+  /// **'Not enough space on the phone'**
+  String get downloadFailedSpace;
+
+  /// No description provided for @downloadFailedRefused.
+  ///
+  /// In en, this message translates to:
+  /// **'The site refused the download'**
+  String get downloadFailedRefused;
+
+  /// No description provided for @downloadFailedGone.
+  ///
+  /// In en, this message translates to:
+  /// **'The page closed before the file was saved'**
+  String get downloadFailedGone;
+
+  /// No description provided for @privateDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Private downloads'**
+  String get privateDownloads;
+
+  /// No description provided for @privateDownloadsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted in the app and deleted when you close your private tabs. Use \"Save to phone\" to keep one.'**
+  String get privateDownloadsSub;
+
+  /// No description provided for @privateDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Private download'**
+  String get privateDownload;
+
+  /// No description provided for @finishedDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished downloads'**
+  String get finishedDownloads;
+
+  /// No description provided for @downloadComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Download complete'**
+  String get downloadComplete;
+
+  /// No description provided for @downloadingFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {count} files'**
+  String downloadingFiles(String count);
+
+  /// No description provided for @downloadingPrivately.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading {name} privately'**
+  String downloadingPrivately(String name);
+
+  /// No description provided for @savedPrivately.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is ready in private downloads'**
+  String savedPrivately(String name);
+
+  /// No description provided for @saveFileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this file?'**
+  String get saveFileTitle;
+
+  /// No description provided for @saveFilePrivateTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save this file from a private tab?'**
+  String get saveFilePrivateTitle;
+
+  /// No description provided for @fileName.
+  ///
+  /// In en, this message translates to:
+  /// **'File name'**
+  String get fileName;
+
+  /// No description provided for @sizeUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Size unknown'**
+  String get sizeUnknown;
+
+  /// No description provided for @fromSite.
+  ///
+  /// In en, this message translates to:
+  /// **'from {site}'**
+  String fromSite(String site);
+
+  /// No description provided for @downloadWarnApp.
+  ///
+  /// In en, this message translates to:
+  /// **'This is an Android app. Apps from websites can take over your phone; install apps only from sources you trust.'**
+  String get downloadWarnApp;
+
+  /// No description provided for @downloadWarnProgram.
+  ///
+  /// In en, this message translates to:
+  /// **'This is a program or script that runs on a computer. Open it only if you trust the site it comes from.'**
+  String get downloadWarnProgram;
+
+  /// No description provided for @downloadWarnDisguised.
+  ///
+  /// In en, this message translates to:
+  /// **'The file\'s name hides what it really is. Files made to look like documents or photos are a common trick.'**
+  String get downloadWarnDisguised;
+
+  /// No description provided for @downloadWarnInsecure.
+  ///
+  /// In en, this message translates to:
+  /// **'This file comes over an unencrypted connection, so someone on the network could have swapped it.'**
+  String get downloadWarnInsecure;
+
+  /// No description provided for @keepPrivate.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep private'**
+  String get keepPrivate;
+
+  /// No description provided for @keepPrivateSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted in the app, deleted when you close your private tabs'**
+  String get keepPrivateSub;
+
+  /// No description provided for @saveToPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Save to phone'**
+  String get saveToPhone;
+
+  /// No description provided for @saveToPhoneSub.
+  ///
+  /// In en, this message translates to:
+  /// **'In the phone\'s Downloads folder, where it stays'**
+  String get saveToPhoneSub;
+
+  /// No description provided for @openWhenDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Open when done'**
+  String get openWhenDone;
+
+  /// No description provided for @saveAnyway.
+  ///
+  /// In en, this message translates to:
+  /// **'Save anyway'**
+  String get saveAnyway;
+
+  /// No description provided for @askBeforeDownload.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask before downloading'**
+  String get askBeforeDownload;
+
+  /// No description provided for @askBeforeDownloadSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Show the name, size and where it goes before saving a file. Risky files are always asked about.'**
+  String get askBeforeDownloadSub;
 
   /// No description provided for @readingListError.
   ///
@@ -2298,6 +2490,12 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Private tabs are locked.'**
   String get privateLocked;
+
+  /// No description provided for @privateDownloadsLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked with your private tabs. Unlock to see them.'**
+  String get privateDownloadsLocked;
 
   /// No description provided for @privateUnlockReason.
   ///

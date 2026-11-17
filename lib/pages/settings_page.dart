@@ -338,6 +338,14 @@ class BrowserSettingsPage extends ConsumerWidget {
           value: s.backgroundPlay,
           onChanged: (bool v) => save(s.copyWith(backgroundPlay: v)),
         ),
+        _Header(l.downloads),
+        SwitchListTile(
+          secondary: const Icon(Icons.download_outlined),
+          title: Text(l.askBeforeDownload),
+          subtitle: Text(l.askBeforeDownloadSub),
+          value: s.askBeforeDownload,
+          onChanged: (bool v) => save(s.copyWith(askBeforeDownload: v)),
+        ),
         _Header(l.tabsAndHistory),
         ListTile(
           leading: const Icon(Icons.tab_unselected),

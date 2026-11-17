@@ -433,6 +433,7 @@ class BrowserSettings {
     this.bookmarkFolders = const <String>[],
     this.backgroundPlay = true,
     this.readAloudRate = 1.0,
+    this.askBeforeDownload = true,
   });
 
   static const String itemId = 'browser-settings';
@@ -528,6 +529,10 @@ class BrowserSettings {
 
   /// Read aloud speed (1.0 is normal).
   final double readAloudRate;
+
+  /// Show "Save this file?" (name, size, where it goes) before each
+  /// download (B35). Files that look risky are always asked about.
+  final bool askBeforeDownload;
 
   static const List<double> readAloudRates = <double>[
     0.75,
@@ -651,6 +656,7 @@ class BrowserSettings {
     List<String>? bookmarkFolders,
     bool? backgroundPlay,
     double? readAloudRate,
+    bool? askBeforeDownload,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -685,6 +691,7 @@ class BrowserSettings {
     bookmarkFolders: bookmarkFolders ?? this.bookmarkFolders,
     backgroundPlay: backgroundPlay ?? this.backgroundPlay,
     readAloudRate: readAloudRate ?? this.readAloudRate,
+    askBeforeDownload: askBeforeDownload ?? this.askBeforeDownload,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -725,6 +732,7 @@ class BrowserSettings {
     'bookmarkFolders': bookmarkFolders,
     'backgroundPlay': backgroundPlay,
     'readAloudRate': readAloudRate,
+    'askBeforeDownload': askBeforeDownload,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -797,6 +805,7 @@ class BrowserSettings {
       readAloudRate: rate is num && rate >= 0.5 && rate <= 3
           ? rate.toDouble()
           : 1.0,
+      askBeforeDownload: j['askBeforeDownload'] as bool? ?? true,
     );
   }
 }
