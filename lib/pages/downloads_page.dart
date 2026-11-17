@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 
@@ -15,6 +16,10 @@ class DownloadItem {
     required this.status,
     required this.bytes,
     required this.total,
+    this.private = false,
+    this.canPause = false,
+    this.canResume = false,
+    this.error,
   });
 
   factory DownloadItem.fromMap(Map<Object?, Object?> m) => DownloadItem(
@@ -27,6 +32,10 @@ class DownloadItem {
     status: m['status'] as String? ?? 'done',
     bytes: (m['bytes'] as num?)?.toInt() ?? 0,
     total: (m['total'] as num?)?.toInt() ?? -1,
+    private: m['private'] as bool? ?? false,
+    canPause: m['canPause'] as bool? ?? false,
+    canResume: m['canResume'] as bool? ?? false,
+    error: m['error'] as String?,
   );
 
   final String key;
@@ -34,15 +43,31 @@ class DownloadItem {
   final String mime;
   final DateTime time;
 
-  /// running, paused, done or failed.
+  /// queued, running, waiting (for the network), paused, done or failed.
   final String status;
   final int bytes;
   final int total;
 
-  bool get running => status == 'running' || status == 'paused';
+  /// From a private tab, kept encrypted in the app (B33).
+  final bool private;
+  final bool canPause;
+
+  /// Paused, or failed and can be tried again from where it stopped.
+  final bool canResume;
+
+  /// Why it failed: network, http, space or gone.
+  final String? error;
+
+  /// Still going (or about to), so the list keeps updating.
+  bool get running =>
+      status == 'queued' || status == 'running' || status == 'waiting';
+
+  /// Not finished: deleting it cancels it.
+  bool get unfinished => status != 'done' && status != 'failed';
 }
 
-/// Files downloaded in ZT Browser: open, share or delete them.
+/// Files downloaded in ZT Browser: pause, resume, open, share or delete
+/// them. Private downloads (B33) come first, under their own heading.
 class DownloadsPage extends ConsumerStatefulWidget {
   const DownloadsPage({super.key});
 
@@ -134,9 +159,11 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
         await showDialog<bool>(
           context: context,
           builder: (BuildContext c) => AlertDialog(
-            title: Text(d.running ? l.cancelDownloadTitle : l.deleteFileTitle),
+            title: Text(
+              d.unfinished ? l.cancelDownloadTitle : l.deleteFileTitle,
+            ),
             content: Text(
-              d.running
+              d.unfinished
                   ? l.stopsDownloading(_name(d))
                   : l.deletedFromPhone(_name(d)),
             ),
@@ -147,7 +174,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(c, true),
-                child: Text(d.running ? l.cancelDownload : l.delete),
+                child: Text(d.unfinished ? l.cancelDownload : l.delete),
               ),
             ],
           ),
@@ -158,9 +185,31 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     await _refresh();
   }
 
+  Future<void> _pause(DownloadItem d) async {
+    await _engine.pauseDownload(d.key);
+    await _refresh();
+  }
+
+  Future<void> _resume(DownloadItem d) async {
+    await _engine.resumeDownload(d.key);
+    await _refresh();
+  }
+
+  /// A private download into the phone's Downloads, where it stays.
+  Future<void> _saveToPhone(DownloadItem d) async {
+    final String name = _name(d);
+    final String failed = l.couldntSave(name);
+    final String saved = l.savedToDownloads(name);
+    final bool ok = await _engine.saveDownloadToPhone(d.key);
+    if (!mounted) return;
+    _snack(ok ? saved : failed);
+    await _refresh();
+  }
+
   @override
   Widget build(BuildContext context) {
     final List<DownloadItem>? items = _items;
+    final bool locked = ref.watch(privateLockProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l.downloads)),
       body: items == null
@@ -176,28 +225,69 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
               onRefresh: _refresh,
               child: ListView(
                 children: <Widget>[
-                  for (final DownloadItem d in items) _tile(d),
+                  if (items.any((DownloadItem d) => d.private)) ...<Widget>[
+                    ListTile(
+                      leading: const Icon(Icons.lock_outline),
+                      title: Text(l.privateDownloads),
+                      subtitle: Text(
+                        locked
+                            ? l.privateDownloadsLocked
+                            : l.privateDownloadsSub,
+                      ),
+                      // Locked private tabs (B29) lock their files too.
+                      trailing: locked
+                          ? TextButton.icon(
+                              key: const ValueKey<String>(
+                                'unlock-private-downloads',
+                              ),
+                              onPressed: () => ref
+                                  .read(privateLockProvider.notifier)
+                                  .unlock(l.privateUnlockReason),
+                              icon: const Icon(Icons.lock_open),
+                              label: Text(l.unlock),
+                            )
+                          : null,
+                    ),
+                    if (!locked)
+                      for (final DownloadItem d in items)
+                        if (d.private) _tile(d),
+                    const Divider(),
+                  ],
+                  for (final DownloadItem d in items)
+                    if (!d.private) _tile(d),
                 ],
               ),
             ),
     );
   }
 
-  Widget _tile(DownloadItem d) {
-    final String detail = switch (d.status) {
-      'running' when d.total > 0 => l.progressOf(
-        l.fileSize(d.bytes),
-        l.fileSize(d.total),
-      ),
+  String _detail(DownloadItem d) {
+    final String progress = d.total > 0
+        ? l.progressOf(l.fileSize(d.bytes), l.fileSize(d.total))
+        : l.fileSize(d.bytes);
+    return switch (d.status) {
+      'queued' => l.waitingToStart,
+      'running' when d.total > 0 => progress,
       'running' => l.downloadingEllipsis,
-      'paused' => l.waitingConnection,
-      'failed' => l.couldntDownload,
+      'waiting' => l.waitingConnection,
+      'paused' => l.pausedAt(progress),
+      'failed' => switch (d.error) {
+        'space' => l.downloadFailedSpace,
+        'http' => l.downloadFailedRefused,
+        'gone' => l.downloadFailedGone,
+        _ => l.couldntDownload,
+      },
       _ => l.fileSize(d.bytes),
     };
+  }
+
+  Widget _tile(DownloadItem d) {
+    final String detail = _detail(d);
+    final bool showBar = (d.running || d.status == 'paused') && d.total > 0;
     return ListTile(
       leading: Icon(_icon(d)),
       title: Text(_name(d), maxLines: 2, overflow: TextOverflow.ellipsis),
-      subtitle: d.running && d.total > 0
+      subtitle: showBar
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -208,26 +298,52 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
             )
           : Text(detail),
       onTap: () => _open(d),
-      trailing: PopupMenuButton<String>(
-        tooltip: l.more,
-        onSelected: (String v) async {
-          switch (v) {
-            case 'open':
-              await _open(d);
-            case 'share':
-              await _share(d);
-            case 'delete':
-              await _delete(d);
-          }
-        },
-        itemBuilder: (_) => <PopupMenuEntry<String>>[
-          if (d.status == 'done')
-            PopupMenuItem<String>(value: 'open', child: Text(l.open)),
-          if (d.status == 'done')
-            PopupMenuItem<String>(value: 'share', child: Text(l.share)),
-          PopupMenuItem<String>(
-            value: 'delete',
-            child: Text(d.running ? l.cancelDownload : l.delete),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          if (d.canPause)
+            IconButton(
+              tooltip: l.pauseDownload,
+              icon: const Icon(Icons.pause),
+              onPressed: () => _pause(d),
+            )
+          else if (d.canResume)
+            IconButton(
+              tooltip: d.status == 'failed' ? l.tryAgain : l.resumeDownload,
+              icon: Icon(
+                d.status == 'failed' ? Icons.refresh : Icons.play_arrow,
+              ),
+              onPressed: () => _resume(d),
+            ),
+          PopupMenuButton<String>(
+            tooltip: l.more,
+            onSelected: (String v) async {
+              switch (v) {
+                case 'open':
+                  await _open(d);
+                case 'share':
+                  await _share(d);
+                case 'phone':
+                  await _saveToPhone(d);
+                case 'delete':
+                  await _delete(d);
+              }
+            },
+            itemBuilder: (_) => <PopupMenuEntry<String>>[
+              if (d.status == 'done')
+                PopupMenuItem<String>(value: 'open', child: Text(l.open)),
+              if (d.status == 'done')
+                PopupMenuItem<String>(value: 'share', child: Text(l.share)),
+              if (d.status == 'done' && d.private)
+                PopupMenuItem<String>(
+                  value: 'phone',
+                  child: Text(l.saveToPhone),
+                ),
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Text(d.unfinished ? l.cancelDownload : l.delete),
+              ),
+            ],
           ),
         ],
       ),
@@ -236,6 +352,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
 
   IconData _icon(DownloadItem d) {
     if (d.status == 'failed') return Icons.error_outline;
+    if (d.status == 'paused') return Icons.pause_circle_outline;
     if (d.running) return Icons.downloading;
     final String m = d.mime;
     if (m.startsWith('image/')) return Icons.image_outlined;

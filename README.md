@@ -34,8 +34,13 @@ it is **ZT Browser**.
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
   unload when memory runs low and come back with their history.
-- **Downloads page** (open, share, delete), including files pages make
-  themselves (`blob:` and `data:` links).
+- **Download manager**: its own downloader with pause, resume where it
+  stopped and automatic retry when the connection drops, progress and
+  Pause/Cancel in a notification, and no size limit for files pages make
+  themselves (`blob:` links). "Save this file?" first (name, size, site),
+  with warnings for apps, programs, disguised names and plain http.
+  Downloads from private tabs stay encrypted in the app (key only in
+  memory) and are deleted with the private tabs, unless saved to the phone.
 - **Import bookmarks** from Chrome, Firefox, Edge or Safari (.html export).
 - **QR code scanner** (ZXing, offline) and voice search in the address bar;
   share a page as a QR code.
@@ -76,7 +81,10 @@ Play), shown in Flutter through a platform view. The native side lives in
 | `ZtTab.kt` | One tab: a WebView with the privacy settings above, blocking, HTTPS upgrade, per-site JavaScript, permissions, pop-ups, downloads, reader extraction, long-press menu, find in page |
 | `Blocker.kt` | Host-name blocking and element-hiding rules from `assets/blocklist/blocklist.txt` (hash-set lookups), or a newer signed download |
 | `PageScripts.kt` | The script every page gets first (Global Privacy Control, fingerprinting noise, hiding CSS), reader view, blob downloads |
-| `Downloads.kt` | The Downloads page's list, data:/blob: files saved to Downloads |
+| `DownloadEngine.kt` | The downloader: queue, pause/resume (HTTP Range), retry, writes into a hidden Downloads entry until done, private downloads into `PrivateVault` |
+| `DownloadService.kt` | Foreground service and notifications for running and finished downloads |
+| `PrivateVault.kt` | Private-tab downloads encrypted in 64 KiB AES-GCM chunks under a key held only in memory |
+| `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete |
 | `MainActivity.kt` | Tab registry and memory (unloading), the `zt_browser/engine` channel, file uploads, fullscreen video, downloads, permissions, print, shortcuts, QR, voice, autofill status, default-browser role |
 
 Tabs outlive the Flutter widget showing them, so switching tabs or locking

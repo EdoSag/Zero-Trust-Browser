@@ -4,7 +4,6 @@ import android.app.DownloadManager
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ContentUris
-import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -12,17 +11,18 @@ import android.provider.BaseColumns
 import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
 
 /**
- * The files ZT Browser downloaded, for the Downloads page: web downloads
- * through the system download manager, and data:/blob: files the page made
- * itself, written to Downloads directly. The list (names, not contents)
- * stays on this phone.
+ * The files ZT Browser downloaded, for the Downloads page: everything from
+ * [DownloadEngine] (B34), private downloads (B33) included, and the ones
+ * from before it (through the system download manager, or written straight
+ * to Downloads), which are only listed, opened, shared and deleted. The
+ * list (names, not contents) stays on this phone.
  */
-class Downloads(private val context: Context) {
+class Downloads(private val context: Context, private val engine: DownloadEngine) {
     private val prefs = context.getSharedPreferences("zt_downloads", Context.MODE_PRIVATE)
     private val manager = context.getSystemService(DownloadManager::class.java)
 
@@ -38,43 +38,13 @@ class Downloads(private val context: Context) {
         prefs.edit().putString("list", JSONArray(kept).toString()).apply()
     }
 
-    @Synchronized
-    fun addManaged(id: Long, name: String, mime: String?) {
-        store(entries() + entry(name, mime).put("dm", id))
-    }
-
-    /** Writes [bytes] to the phone's Downloads folder. */
-    @Synchronized
-    fun saveBytes(bytes: ByteArray, name: String, mime: String): Boolean {
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, name)
-            put(MediaStore.Downloads.MIME_TYPE, mime)
-            put(MediaStore.Downloads.IS_PENDING, 1)
-        }
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return false
-        try {
-            resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: throw IllegalStateException("no stream")
-            values.clear()
-            values.put(MediaStore.Downloads.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            return false
-        }
-        store(entries() + entry(name, mime).put("uri", uri.toString()))
-        return true
-    }
-
-    private fun entry(name: String, mime: String?) = JSONObject()
-        .put("key", UUID.randomUUID().toString())
-        .put("name", name)
-        .put("mime", mime ?: "application/octet-stream")
-        .put("time", System.currentTimeMillis())
-
     /** Newest first, with progress; files deleted elsewhere drop out. */
     @Synchronized
     fun list(): List<Map<String, Any?>> {
+        val jobs = engine.list().filter { j ->
+            // A finished file someone deleted in the Files app.
+            j.private || j.status != "done" || j.uri?.let { storedInfo(Uri.parse(it)) } != null
+        }
         val all = entries()
         val kept = ArrayList<JSONObject>()
         val out = ArrayList<Map<String, Any?>>()
@@ -88,11 +58,12 @@ class Downloads(private val context: Context) {
                     "name" to e.getString("name"),
                     "mime" to e.optString("mime"),
                     "time" to e.getLong("time"),
+                    "private" to false,
                 ) + info,
             )
         }
         if (kept.size != all.size) store(kept)
-        return out.reversed()
+        return (jobs.map { it.toMap() } + out.reversed()).sortedByDescending { (it["time"] as? Long) ?: 0L }
     }
 
     private fun managedInfo(id: Long): Map<String, Any?>? {
@@ -128,6 +99,28 @@ class Downloads(private val context: Context) {
     }
 
     private fun find(key: String): JSONObject? = entries().firstOrNull { it.optString("key") == key }
+
+    /**
+     * What another app may be handed for [key]: a finished download's
+     * Downloads entry, or for a private one a plain copy in the app's cache
+     * (deleted with the private session) shared through [PrivateFiles].
+     * Null when it isn't one of the engine's downloads.
+     */
+    private fun engineTarget(key: String): Pair<JSONObject, List<Uri>>? {
+        val job = engine.job(key) ?: return null
+        val info = JSONObject().put("name", job.name).put("mime", job.mime)
+        if (job.status != "done") return info to emptyList()
+        if (job.private) {
+            val copy = engine.privateCopy(key) ?: return info to emptyList()
+            val uri = try {
+                FileProvider.getUriForFile(context, PrivateFiles.authority(context), copy)
+            } catch (e: Exception) {
+                null
+            }
+            return info to listOfNotNull(uri)
+        }
+        return info to listOfNotNull(job.uri?.let(Uri::parse))
+    }
 
     /**
      * The links another app may be handed for this file, best first.
@@ -196,8 +189,9 @@ class Downloads(private val context: Context) {
      * or "failed".
      */
     fun open(key: String): String {
-        val e = find(key) ?: return "missing"
-        val uris = urisOf(e)
+        val target = engineTarget(key)
+        val e = target?.first ?: find(key) ?: return "missing"
+        val uris = target?.second ?: urisOf(e)
         if (uris.isEmpty()) return "missing"
         var noApp = false
         for (uri in uris) {
@@ -219,8 +213,9 @@ class Downloads(private val context: Context) {
 
     /** The share sheet for the file: "opened", "missing" or "failed". */
     fun share(key: String): String {
-        val e = find(key) ?: return "missing"
-        val uris = urisOf(e)
+        val target = engineTarget(key)
+        val e = target?.first ?: find(key) ?: return "missing"
+        val uris = target?.second ?: urisOf(e)
         if (uris.isEmpty()) return "missing"
         for (uri in uris) {
             val send = Intent(Intent.ACTION_SEND)
@@ -264,6 +259,10 @@ class Downloads(private val context: Context) {
     /** Deletes the file from the phone, or cancels a running download. */
     @Synchronized
     fun delete(key: String) {
+        if (engine.job(key) != null) {
+            engine.delete(key)
+            return
+        }
         val all = entries()
         val e = all.firstOrNull { it.optString("key") == key } ?: return
         try {

@@ -73,7 +73,7 @@ class ZtTab(
 
         fun showFullscreen(view: View, onHidden: () -> Unit)
         fun hideFullscreen()
-        fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?)
+        fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?, length: Long)
         fun onCrashed(tab: ZtTab)
 
         /**
@@ -173,8 +173,8 @@ class ZtTab(
         refreshScripts()
         webView.webViewClient = Client()
         webView.webChromeClient = Chrome()
-        webView.setDownloadListener { url, userAgent, disposition, mime, _ ->
-            host.download(this, url, userAgent, disposition, mime)
+        webView.setDownloadListener { url, userAgent, disposition, mime, length ->
+            host.download(this, url, userAgent, disposition, mime, length)
         }
         webView.setFindListener { active, count, done ->
             events("find", mapOf("active" to active, "count" to count, "done" to done))
@@ -506,39 +506,85 @@ class ZtTab(
     }
 
     /**
-     * Reads a blob: URL the page offered as a download, as a data: URL.
-     * Null when the engine can't (old WebView) or the page refused.
+     * Holds on to a blob: file the page offered as a download (pages often
+     * revoke the address right after the click), and reads it back a piece
+     * at a time once the download starts (B34): no size limit, and never
+     * the whole file in memory. Null when the engine can't (old WebView,
+     * JavaScript off).
      */
-    fun fetchBlob(url: String, maxBytes: Long, done: (String?) -> Unit) {
+    fun holdBlob(url: String): BlobStream? {
         val supported = listOf(
             WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL,
             WebViewFeature.POST_WEB_MESSAGE,
             WebViewFeature.WEB_MESSAGE_PORT_SET_MESSAGE_CALLBACK,
             WebViewFeature.WEB_MESSAGE_CALLBACK_ON_MESSAGE,
+            WebViewFeature.WEB_MESSAGE_PORT_POST_MESSAGE,
         ).all { WebViewFeature.isFeatureSupported(it) }
-        if (!supported || !webView.settings.javaScriptEnabled) {
-            done(null)
-            return
-        }
+        if (!supported || !webView.settings.javaScriptEnabled) return null
         val ports = WebViewCompat.createWebMessageChannel(webView)
-        var answered = false
-        fun finish(result: String?) {
-            if (answered) return
-            answered = true
-            try { ports[0].close() } catch (e: Exception) { }
-            done(result)
-        }
+        val stream = BlobStream(ports[0], main)
         ports[0].setWebMessageCallback(object : WebMessagePortCompat.WebMessageCallbackCompat() {
             override fun onMessage(port: WebMessagePortCompat, message: WebMessageCompat?) {
-                val data = message?.data
-                main.post { finish(if (data != null && data.startsWith("data:")) data else null) }
+                stream.receive(message?.data)
             }
         })
         val key = UUID.randomUUID().toString()
-        webView.evaluateJavascript(PageScripts.fetchBlob(url, key, maxBytes)) {
+        webView.evaluateJavascript(PageScripts.holdBlob(url, key, BlobStream.PIECE)) {
             WebViewCompat.postWebMessage(webView, WebMessageCompat(key, arrayOf(ports[1])), Uri.parse("*"))
         }
-        main.postDelayed({ finish(null) }, 60_000)
+        return stream
+    }
+
+    /** The pieces of a held blob, pulled by the download engine. */
+    class BlobStream(private val port: WebMessagePortCompat, private val main: Handler) : DownloadEngine.ChunkSource {
+        private val queue = java.util.concurrent.LinkedBlockingQueue<String>()
+        @Volatile private var closed = false
+
+        /** The blob's size once the page has read it; -1 until then. */
+        @Volatile var size: Long = -1
+            private set
+
+        fun receive(data: String?) {
+            if (data == null) return
+            if (data.startsWith("size:")) {
+                size = data.substring(5).toLongOrNull() ?: -1
+                return
+            }
+            queue.offer(data)
+        }
+
+        private fun post(text: String) = main.post {
+            try { port.postMessage(WebMessageCompat(text)) } catch (e: Exception) { }
+        }
+
+        override fun next(): ByteArray? {
+            if (closed) throw java.io.IOException("closed")
+            post("next")
+            val msg = queue.poll(60, java.util.concurrent.TimeUnit.SECONDS) ?: throw java.io.IOException("timeout")
+            return when {
+                msg == "end" -> {
+                    cancel()
+                    null
+                }
+                msg.startsWith("c:") -> android.util.Base64.decode(msg.substring(2), android.util.Base64.DEFAULT)
+                else -> throw java.io.IOException("page")
+            }
+        }
+
+        override fun cancel() {
+            if (closed) return
+            closed = true
+            queue.offer("error")
+            main.post {
+                try { port.postMessage(WebMessageCompat("stop")) } catch (e: Exception) { }
+                try { port.close() } catch (e: Exception) { }
+            }
+        }
+
+        companion object {
+            /** Bytes per piece read from the page. */
+            const val PIECE = 512 * 1024
+        }
     }
 
     fun destroy() {

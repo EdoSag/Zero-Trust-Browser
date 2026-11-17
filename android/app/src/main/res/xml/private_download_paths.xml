@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain copies of private downloads, made only to open or share one (B33). -->
+<paths>
+    <cache-path name="private" path="private-open/" />
+</paths>

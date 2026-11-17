@@ -22,12 +22,27 @@ class SearchWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val ACTION = "dev.sagron.zerotrustbrowser.WIDGET"
         private const val EXTRA = "widget_action"
-        private val KNOWN = setOf("search", "voice", "private", "qr")
+        // "downloads": a tap on a download notification opens the Downloads page.
+        private val KNOWN = setOf("search", "voice", "private", "qr", "downloads")
 
         /** The widget button behind [intent], or null when it isn't a widget tap. */
         fun actionFrom(intent: Intent?): String? {
             if (intent?.action != ACTION) return null
             return intent.getStringExtra(EXTRA)?.takeIf { it in KNOWN }
+        }
+
+        /** Opens ZT Browser and does [action] once it is unlocked. */
+        fun open(context: Context, action: String, requestCode: Int): PendingIntent {
+            val intent = Intent(context, MainActivity::class.java)
+                .setAction(ACTION)
+                .putExtra(EXTRA, action)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            return PendingIntent.getActivity(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
         }
     }
 
@@ -60,18 +75,5 @@ class SearchWidgetProvider : AppWidgetProvider() {
         views.setOnClickPendingIntent(R.id.private_button, open(context, "private", 2))
         views.setOnClickPendingIntent(R.id.qr_button, open(context, "qr", 3))
         return views
-    }
-
-    private fun open(context: Context, action: String, requestCode: Int): PendingIntent {
-        val intent = Intent(context, MainActivity::class.java)
-            .setAction(ACTION)
-            .putExtra(EXTRA, action)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-        return PendingIntent.getActivity(
-            context,
-            requestCode,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
     }
 }

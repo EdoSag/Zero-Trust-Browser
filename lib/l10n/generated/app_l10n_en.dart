@@ -378,7 +378,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get privateExplain =>
-      'Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads and bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.';
+      'Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads you keep private are encrypted and deleted at the same time; bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.';
 
   @override
   String get startBlurb =>
@@ -964,7 +964,7 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get downloadsEmpty =>
-      'Files you download show here. They are saved in your phone\'s Downloads folder.';
+      'Files you download show here. They are saved in your phone\'s Downloads folder. Files from private tabs can stay encrypted in the app instead, until you close your private tabs.';
 
   @override
   String progressOf(String done, String total) {
@@ -982,6 +982,120 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get cantShare => 'This file can\'t be shared';
+
+  @override
+  String get waitingToStart => 'Waiting to start';
+
+  @override
+  String pausedAt(String progress) {
+    return 'Paused · $progress';
+  }
+
+  @override
+  String get pauseDownload => 'Pause';
+
+  @override
+  String get resumeDownload => 'Resume';
+
+  @override
+  String get downloadFailedSpace => 'Not enough space on the phone';
+
+  @override
+  String get downloadFailedRefused => 'The site refused the download';
+
+  @override
+  String get downloadFailedGone => 'The page closed before the file was saved';
+
+  @override
+  String get privateDownloads => 'Private downloads';
+
+  @override
+  String get privateDownloadsSub =>
+      'Encrypted in the app and deleted when you close your private tabs. Use \"Save to phone\" to keep one.';
+
+  @override
+  String get privateDownload => 'Private download';
+
+  @override
+  String get finishedDownloads => 'Finished downloads';
+
+  @override
+  String get downloadComplete => 'Download complete';
+
+  @override
+  String downloadingFiles(String count) {
+    return 'Downloading $count files';
+  }
+
+  @override
+  String downloadingPrivately(String name) {
+    return 'Downloading $name privately';
+  }
+
+  @override
+  String savedPrivately(String name) {
+    return '$name is ready in private downloads';
+  }
+
+  @override
+  String get saveFileTitle => 'Save this file?';
+
+  @override
+  String get saveFilePrivateTitle => 'Save this file from a private tab?';
+
+  @override
+  String get fileName => 'File name';
+
+  @override
+  String get sizeUnknown => 'Size unknown';
+
+  @override
+  String fromSite(String site) {
+    return 'from $site';
+  }
+
+  @override
+  String get downloadWarnApp =>
+      'This is an Android app. Apps from websites can take over your phone; install apps only from sources you trust.';
+
+  @override
+  String get downloadWarnProgram =>
+      'This is a program or script that runs on a computer. Open it only if you trust the site it comes from.';
+
+  @override
+  String get downloadWarnDisguised =>
+      'The file\'s name hides what it really is. Files made to look like documents or photos are a common trick.';
+
+  @override
+  String get downloadWarnInsecure =>
+      'This file comes over an unencrypted connection, so someone on the network could have swapped it.';
+
+  @override
+  String get keepPrivate => 'Keep private';
+
+  @override
+  String get keepPrivateSub =>
+      'Encrypted in the app, deleted when you close your private tabs';
+
+  @override
+  String get saveToPhone => 'Save to phone';
+
+  @override
+  String get saveToPhoneSub =>
+      'In the phone\'s Downloads folder, where it stays';
+
+  @override
+  String get openWhenDone => 'Open when done';
+
+  @override
+  String get saveAnyway => 'Save anyway';
+
+  @override
+  String get askBeforeDownload => 'Ask before downloading';
+
+  @override
+  String get askBeforeDownloadSub =>
+      'Show the name, size and where it goes before saving a file. Risky files are always asked about.';
 
   @override
   String get readingListError => 'The reading list couldn\'t load.';
@@ -1322,6 +1436,10 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get privateLocked => 'Private tabs are locked.';
+
+  @override
+  String get privateDownloadsLocked =>
+      'Locked with your private tabs. Unlock to see them.';
 
   @override
   String get privateUnlockReason => 'Unlock your private tabs';
