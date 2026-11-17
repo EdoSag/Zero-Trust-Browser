@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:zerotrust_browser/app/app_gate.dart';
 import 'package:zerotrust_browser/app/browser_config.dart';
 import 'package:zerotrust_browser/app/language.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'app/email_links.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +52,7 @@ Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0).''',
     url: dotenv.env['SUPABASE_URL']!,
     publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+  unawaited(EmailLinks.listen());
   runApp(
     ProviderScope(
       overrides: [ztAppConfigProvider.overrideWithValue(browserAppConfig)],
