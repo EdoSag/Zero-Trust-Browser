@@ -804,6 +804,7 @@
   "privateLockSub": "After you leave the app, private tabs need your fingerprint, face or screen lock again.",
   "privateLockUnavailable": "Set a screen lock on your phone to use this.",
   "privateLocked": "Private tabs are locked.",
+  "privateDownloadsLocked": "Locked with your private tabs. Unlock to see them.",
   "privateUnlockReason": "Unlock your private tabs",
   "blockRules": "Your block rules",
   "blockRulesSub": "Block or allow a site yourself, add filter lists",

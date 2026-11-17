@@ -1438,6 +1438,10 @@ class AppL10nEn extends AppL10n {
   String get privateLocked => 'Private tabs are locked.';
 
   @override
+  String get privateDownloadsLocked =>
+      'Locked with your private tabs. Unlock to see them.';
+
+  @override
   String get privateUnlockReason => 'Unlock your private tabs';
 
   @override

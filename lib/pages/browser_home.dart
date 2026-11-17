@@ -399,8 +399,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   /// A download finished: say so, and open it if that was asked for.
   Future<void> _onDownloadEvent(DownloadEvent e) async {
     if (!mounted) return;
-    final String name = e.name.isEmpty ? l.fileFallbackName : e.name;
-    if (e.done && e.openWhenDone) {
+    // Private tabs are locked (B29): no name, and nothing opens by itself.
+    final bool hidden = e.private && ref.read(privateLockProvider);
+    final String name = hidden
+        ? l.privateDownload
+        : e.name.isEmpty
+        ? l.fileFallbackName
+        : e.name;
+    if (e.done && e.openWhenDone && !hidden) {
       final DownloadResult r = await _engine.openDownload(e.key);
       if (r == DownloadResult.done || !mounted) return;
     }
@@ -418,7 +424,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           ),
           // Flutter keeps a snackbar with an action open until it is tapped.
           persist: false,
-          action: e.done
+          action: e.done && !hidden
               ? SnackBarAction(
                   label: l.open,
                   onPressed: () => _engine.openDownload(e.key).ignore(),

@@ -2491,6 +2491,12 @@ abstract class AppL10n {
   /// **'Private tabs are locked.'**
   String get privateLocked;
 
+  /// No description provided for @privateDownloadsLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked with your private tabs. Unlock to see them.'**
+  String get privateDownloadsLocked;
+
   /// No description provided for @privateUnlockReason.
   ///
   /// In en, this message translates to:

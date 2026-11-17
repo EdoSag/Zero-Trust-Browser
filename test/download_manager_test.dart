@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zerotrust_browser/browser/download_check.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
@@ -361,6 +362,31 @@ void main() {
       final double movie = tester.getTopLeft(find.text('movie.mp4')).dy;
       expect(heading, lessThan(ticket));
       expect(ticket, lessThan(movie));
+      await leave(tester);
+    });
+
+    testWidgets('locked private tabs hide their downloads until unlocked', (
+      WidgetTester tester,
+    ) async {
+      await pumpPage(tester);
+      ProviderScope.containerOf(
+        tester.element(find.byType(DownloadsPage)),
+      ).read(privateLockProvider.notifier).lock();
+      await tester.pump();
+      expect(find.text('ticket.pdf'), findsNothing);
+      expect(
+        find.text('Locked with your private tabs. Unlock to see them.'),
+        findsOneWidget,
+      );
+      final Finder unlock = find.byKey(
+        const ValueKey<String>('unlock-private-downloads'),
+      );
+      expect(unlock, findsOneWidget);
+      // Normal downloads stay, below the locked heading.
+      expect(
+        tester.getTopLeft(find.text('Private downloads')).dy,
+        lessThan(tester.getTopLeft(find.text('movie.mp4')).dy),
+      );
       await leave(tester);
     });
 

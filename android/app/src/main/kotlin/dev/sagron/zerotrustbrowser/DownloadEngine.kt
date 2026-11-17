@@ -461,6 +461,9 @@ class DownloadEngine private constructor(private val app: Context) {
 
     /** One try at downloading the rest of [job]. */
     private fun transferHttp(job: Job) {
+        // Without a validator the server can't tell us the file changed, and
+        // resuming could glue two different files together: start over.
+        if (job.etag == null && job.lastModified == null) return transferFresh(job)
         val (start, sink) = openSink(job, resume = true)
         var conn: HttpURLConnection? = null
         var finished = false
@@ -491,6 +494,8 @@ class DownloadEngine private constructor(private val app: Context) {
             job.etag = conn.getHeaderField("ETag") ?: job.etag
             job.lastModified = conn.getHeaderField("Last-Modified") ?: job.lastModified
             job.total = totalOf(conn, from)
+            // Kept before any byte is written, so a resume after a crash can check them.
+            if (!job.private) save()
             copy(job, conn.inputStream, sink.stream, from)
             sink.finish()
             finished = true
@@ -513,6 +518,7 @@ class DownloadEngine private constructor(private val app: Context) {
             job.etag = conn.getHeaderField("ETag")
             job.lastModified = conn.getHeaderField("Last-Modified")
             job.total = totalOf(conn, 0)
+            if (!job.private) save()
             copy(job, conn.inputStream, sink.stream, 0)
             sink.finish()
             finished = true

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 
@@ -208,6 +209,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   @override
   Widget build(BuildContext context) {
     final List<DownloadItem>? items = _items;
+    final bool locked = ref.watch(privateLockProvider);
     return Scaffold(
       appBar: AppBar(title: Text(l.downloads)),
       body: items == null
@@ -227,10 +229,28 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                     ListTile(
                       leading: const Icon(Icons.lock_outline),
                       title: Text(l.privateDownloads),
-                      subtitle: Text(l.privateDownloadsSub),
+                      subtitle: Text(
+                        locked
+                            ? l.privateDownloadsLocked
+                            : l.privateDownloadsSub,
+                      ),
+                      // Locked private tabs (B29) lock their files too.
+                      trailing: locked
+                          ? TextButton.icon(
+                              key: const ValueKey<String>(
+                                'unlock-private-downloads',
+                              ),
+                              onPressed: () => ref
+                                  .read(privateLockProvider.notifier)
+                                  .unlock(l.privateUnlockReason),
+                              icon: const Icon(Icons.lock_open),
+                              label: Text(l.unlock),
+                            )
+                          : null,
                     ),
-                    for (final DownloadItem d in items)
-                      if (d.private) _tile(d),
+                    if (!locked)
+                      for (final DownloadItem d in items)
+                        if (d.private) _tile(d),
                     const Divider(),
                   ],
                   for (final DownloadItem d in items)

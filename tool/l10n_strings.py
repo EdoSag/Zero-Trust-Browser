@@ -800,6 +800,8 @@ S = [
      "Set a screen lock on your phone to use this.",
      "כדי להשתמש בזה צריך להגדיר נעילת מסך בטלפון."),
     ("privateLocked", "Private tabs are locked.", "הכרטיסיות הפרטיות נעולות."),
+    ("privateDownloadsLocked", "Locked with your private tabs. Unlock to see them.",
+     "נעולות יחד עם הכרטיסיות הפרטיות. יש לבטל את הנעילה כדי לראות אותן."),
     ("privateUnlockReason", "Unlock your private tabs",
      "ביטול הנעילה של הכרטיסיות הפרטיות"),
 

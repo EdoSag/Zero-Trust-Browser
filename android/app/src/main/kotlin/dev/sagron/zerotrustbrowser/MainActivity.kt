@@ -319,8 +319,17 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         downloadEngine.labels = call.argument<Map<String, String>>("labels") ?: emptyMap()
                         result.success(null)
                     }
-                    "openDownload" -> result.success(downloads.open(call.argument<String>("key") ?: ""))
-                    "shareDownload" -> result.success(downloads.share(call.argument<String>("key") ?: ""))
+                    "openDownload", "shareDownload" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        // A private file is decrypted to a temporary copy first,
+                        // off the main thread; then the app or share sheet opens.
+                        io.execute {
+                            downloadEngine.privateCopy(key)
+                            main.post {
+                                result.success(if (call.method == "openDownload") downloads.open(key) else downloads.share(key))
+                            }
+                        }
+                    }
                     "showDownloadsFolder" -> result.success(downloads.showFolder())
                     "deleteDownload" -> {
                         downloads.delete(call.argument<String>("key") ?: "")

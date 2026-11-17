@@ -1433,6 +1433,10 @@ class AppL10nHe extends AppL10n {
   String get privateLocked => 'הכרטיסיות הפרטיות נעולות.';
 
   @override
+  String get privateDownloadsLocked =>
+      'נעולות יחד עם הכרטיסיות הפרטיות. יש לבטל את הנעילה כדי לראות אותן.';
+
+  @override
   String get privateUnlockReason => 'ביטול הנעילה של הכרטיסיות הפרטיות';
 
   @override
