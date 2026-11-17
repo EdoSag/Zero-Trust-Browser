@@ -377,7 +377,7 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get privateExplain =>
-      'דפים שנפתחים כאן לא נשמרים בהיסטוריה. קובצי Cookie ונתוני אתרים נשמרים בנפרד מהכרטיסיות הרגילות, ונמחקים כשסוגרים את הכרטיסייה הפרטית האחרונה או כשהאפליקציה ננעלת. הורדות וסימניות שמוסיפים נשמרות.\n\nכרטיסיות פרטיות מסתירות את הגלישה בטלפון הזה. אתרים, הרשת שלך וספק האינטרנט עדיין יכולים לראות את הביקורים שלך.';
+      'דפים שנפתחים כאן לא נשמרים בהיסטוריה. קובצי Cookie ונתוני אתרים נשמרים בנפרד מהכרטיסיות הרגילות, ונמחקים כשסוגרים את הכרטיסייה הפרטית האחרונה או כשהאפליקציה ננעלת. הורדות שנשמרות כפרטיות מוצפנות ונמחקות באותו זמן; סימניות שמוסיפים נשמרות.\n\nכרטיסיות פרטיות מסתירות את הגלישה בטלפון הזה. אתרים, הרשת שלך וספק האינטרנט עדיין יכולים לראות את הביקורים שלך.';
 
   @override
   String get startBlurb =>
@@ -961,7 +961,7 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get downloadsEmpty =>
-      'קבצים שמורידים מוצגים כאן. הם נשמרים בתיקיית ההורדות של הטלפון.';
+      'קבצים שמורידים מוצגים כאן. הם נשמרים בתיקיית ההורדות של הטלפון. קבצים מכרטיסיות פרטיות יכולים להישאר במקום זה מוצפנים באפליקציה, עד שסוגרים את הכרטיסיות הפרטיות.';
 
   @override
   String progressOf(String done, String total) {
@@ -979,6 +979,119 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get cantShare => 'אי אפשר לשתף את הקובץ הזה';
+
+  @override
+  String get waitingToStart => 'ממתין להתחלה';
+
+  @override
+  String pausedAt(String progress) {
+    return 'מושהה · $progress';
+  }
+
+  @override
+  String get pauseDownload => 'השהיה';
+
+  @override
+  String get resumeDownload => 'המשך';
+
+  @override
+  String get downloadFailedSpace => 'אין מספיק מקום בטלפון';
+
+  @override
+  String get downloadFailedRefused => 'האתר סירב להורדה';
+
+  @override
+  String get downloadFailedGone => 'הדף נסגר לפני שהקובץ נשמר';
+
+  @override
+  String get privateDownloads => 'הורדות פרטיות';
+
+  @override
+  String get privateDownloadsSub =>
+      'מוצפנות באפליקציה ונמחקות כשסוגרים את הכרטיסיות הפרטיות. כדי לשמור קובץ, בוחרים \"שמירה בטלפון\".';
+
+  @override
+  String get privateDownload => 'הורדה פרטית';
+
+  @override
+  String get finishedDownloads => 'הורדות שהסתיימו';
+
+  @override
+  String get downloadComplete => 'ההורדה הסתיימה';
+
+  @override
+  String downloadingFiles(String count) {
+    return 'מוריד $count קבצים';
+  }
+
+  @override
+  String downloadingPrivately(String name) {
+    return '$name יורד באופן פרטי';
+  }
+
+  @override
+  String savedPrivately(String name) {
+    return '$name מוכן בהורדות הפרטיות';
+  }
+
+  @override
+  String get saveFileTitle => 'לשמור את הקובץ?';
+
+  @override
+  String get saveFilePrivateTitle => 'לשמור את הקובץ מהכרטיסייה הפרטית?';
+
+  @override
+  String get fileName => 'שם הקובץ';
+
+  @override
+  String get sizeUnknown => 'גודל לא ידוע';
+
+  @override
+  String fromSite(String site) {
+    return 'מ-$site';
+  }
+
+  @override
+  String get downloadWarnApp =>
+      'זו אפליקציית Android. אפליקציות מאתרים יכולות להשתלט על הטלפון; כדאי להתקין אפליקציות רק ממקורות שסומכים עליהם.';
+
+  @override
+  String get downloadWarnProgram =>
+      'זו תוכנה או סקריפט שרצים במחשב. כדאי לפתוח אותם רק אם סומכים על האתר שממנו הם הגיעו.';
+
+  @override
+  String get downloadWarnDisguised =>
+      'שם הקובץ מסתיר מה הוא באמת. קבצים שמתחפשים למסמכים או לתמונות הם תרגיל נפוץ.';
+
+  @override
+  String get downloadWarnInsecure =>
+      'הקובץ מגיע בחיבור לא מוצפן, כך שמישהו ברשת יכול היה להחליף אותו.';
+
+  @override
+  String get keepPrivate => 'שמירה כפרטי';
+
+  @override
+  String get keepPrivateSub =>
+      'מוצפן באפליקציה, נמחק כשסוגרים את הכרטיסיות הפרטיות';
+
+  @override
+  String get saveToPhone => 'שמירה בטלפון';
+
+  @override
+  String get saveToPhoneSub => 'בתיקיית ההורדות של הטלפון, ונשאר שם';
+
+  @override
+  String get openWhenDone => 'פתיחה בסיום';
+
+  @override
+  String get saveAnyway => 'לשמור בכל זאת';
+
+  @override
+  String get askBeforeDownload => 'שאלה לפני הורדה';
+
+  @override
+  String get askBeforeDownloadSub =>
+      'הצגת השם, הגודל והמיקום לפני שמירת קובץ. על קבצים מסוכנים תמיד נשאל.';
 
   @override
   String get readingListError => 'לא ניתן היה לטעון את רשימת הקריאה.';

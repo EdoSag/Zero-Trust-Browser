@@ -189,7 +189,7 @@
   "passwordsTip": "ZT Browser never stores passwords. Your password manager (Bitwarden, Proton Pass, 1Password...) fills sign-in forms through Android's autofill, in private tabs too.",
   "chooseInAndroid": "Choose in Android",
   "gotIt": "Got it",
-  "privateExplain": "Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads and bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.",
+  "privateExplain": "Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads you keep private are encrypted and deleted at the same time; bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.",
   "startBlurb": "Trackers and ads are blocked on every site. Your bookmarks and history are end-to-end encrypted in your Zero-Trust account: only your devices can read them.",
   "shortcuts": "Shortcuts",
   "mostVisited": "Most visited",
@@ -517,7 +517,7 @@
   },
   "keep": "Keep",
   "cancelDownload": "Cancel download",
-  "downloadsEmpty": "Files you download show here. They are saved in your phone's Downloads folder.",
+  "downloadsEmpty": "Files you download show here. They are saved in your phone's Downloads folder. Files from private tabs can stay encrypted in the app instead, until you close your private tabs.",
   "progressOf": "{done} of {total}",
   "@progressOf": {
     "placeholders": {
@@ -533,6 +533,73 @@
   "waitingConnection": "Waiting for a connection",
   "couldntDownload": "Couldn't download",
   "cantShare": "This file can't be shared",
+  "waitingToStart": "Waiting to start",
+  "pausedAt": "Paused · {progress}",
+  "@pausedAt": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseDownload": "Pause",
+  "resumeDownload": "Resume",
+  "downloadFailedSpace": "Not enough space on the phone",
+  "downloadFailedRefused": "The site refused the download",
+  "downloadFailedGone": "The page closed before the file was saved",
+  "privateDownloads": "Private downloads",
+  "privateDownloadsSub": "Encrypted in the app and deleted when you close your private tabs. Use \"Save to phone\" to keep one.",
+  "privateDownload": "Private download",
+  "finishedDownloads": "Finished downloads",
+  "downloadComplete": "Download complete",
+  "downloadingFiles": "Downloading {count} files",
+  "@downloadingFiles": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingPrivately": "Downloading {name} privately",
+  "@downloadingPrivately": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "savedPrivately": "{name} is ready in private downloads",
+  "@savedPrivately": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFileTitle": "Save this file?",
+  "saveFilePrivateTitle": "Save this file from a private tab?",
+  "fileName": "File name",
+  "sizeUnknown": "Size unknown",
+  "fromSite": "from {site}",
+  "@fromSite": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadWarnApp": "This is an Android app. Apps from websites can take over your phone; install apps only from sources you trust.",
+  "downloadWarnProgram": "This is a program or script that runs on a computer. Open it only if you trust the site it comes from.",
+  "downloadWarnDisguised": "The file's name hides what it really is. Files made to look like documents or photos are a common trick.",
+  "downloadWarnInsecure": "This file comes over an unencrypted connection, so someone on the network could have swapped it.",
+  "keepPrivate": "Keep private",
+  "keepPrivateSub": "Encrypted in the app, deleted when you close your private tabs",
+  "saveToPhone": "Save to phone",
+  "saveToPhoneSub": "In the phone's Downloads folder, where it stays",
+  "openWhenDone": "Open when done",
+  "saveAnyway": "Save anyway",
+  "askBeforeDownload": "Ask before downloading",
+  "askBeforeDownloadSub": "Show the name, size and where it goes before saving a file. Risky files are always asked about.",
   "readingListError": "The reading list couldn't load.",
   "readingListEmpty": "Save pages from the menu with \"Add to reading list\". Articles are kept to read offline, end-to-end encrypted in your account.",
   "savedOffline": "Saved offline",

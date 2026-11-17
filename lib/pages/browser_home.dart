@@ -8,6 +8,7 @@ import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/apply_settings.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/download_check.dart';
 import 'package:zerotrust_browser/browser/filter_lists.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
@@ -24,6 +25,7 @@ import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/engine/tab_view.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/bookmarks_page.dart';
+import 'package:zerotrust_browser/pages/download_sheet.dart';
 import 'package:zerotrust_browser/pages/downloads_page.dart';
 import 'package:zerotrust_browser/pages/history_page.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
@@ -56,6 +58,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   final FocusNode _addressFocus = FocusNode();
   final TextEditingController _findText = TextEditingController();
   StreamSubscription<TabPrompt>? _prompts;
+  StreamSubscription<DownloadEvent>? _downloads;
 
   /// The page being read aloud is in a private tab.
   bool _readingPrivate = false;
@@ -80,6 +83,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       if (!_addressFocus.hasFocus && _editing) setState(() => _editing = false);
     });
     _prompts = ref.read(tabsProvider.notifier).prompts.listen(_onPrompt);
+    _downloads = _engine.downloadEvents.listen(_onDownloadEvent);
     _engine.pendingLinks.addListener(_openPendingLink);
     _engine.systemUiOpen.addListener(_onSystemUi);
     _engine.readAloud.addListener(_onReadAloud);
@@ -89,6 +93,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   Future<void> _start() async {
     _pushPrivacy(ref.read(browserSettingsProvider));
     _pushMedia(ref.read(browserSettingsProvider));
+    _pushDownloadLabels();
     _pushScripts(ref.read(userScriptsProvider).value);
     await ref
         .read(tabsProvider.notifier)
@@ -138,6 +143,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _prompts?.cancel();
+    _downloads?.cancel();
     _engine.pendingLinks.removeListener(_openPendingLink);
     _engine.systemUiOpen.removeListener(_onSystemUi);
     _engine.readAloud.removeListener(_onReadAloud);
@@ -181,6 +187,23 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
           },
         )
         .ignore();
+  }
+
+  /// The download notification's texts (B34), in the app's language.
+  void _pushDownloadLabels() {
+    final AppL10n l = this.l;
+    _engine.setDownloadLabels(<String, String>{
+      'channel': l.downloads,
+      'channelDone': l.finishedDownloads,
+      'downloading': l.downloadingEllipsis,
+      'downloadingCount': l.downloadingFiles('%d'),
+      'privateDownload': l.privateDownload,
+      'waiting': l.waitingConnection,
+      'complete': l.downloadComplete,
+      'failed': l.couldntDownload,
+      'pause': l.pauseDownload,
+      'cancel': l.cancel,
+    }).ignore();
   }
 
   /// Screenshots and the recent apps preview while private tabs are open
@@ -260,6 +283,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         await _scanQr();
       case 'private':
         _startEditing(await _tabs.open(private: true));
+      case 'downloads':
+        // A tap on a download notification.
+        _push(const DownloadsPage());
       default:
         _startEditing(await _tabs.open());
     }
@@ -324,6 +350,87 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       ..showSnackBar(SnackBar(content: Text(text)));
   }
 
+  /// A page offered a file (B35): ask first (unless turned off and nothing
+  /// looks risky), then start it.
+  Future<void> _onDownloadRequest(DownloadRequest r) async {
+    _pushDownloadLabels();
+    final DownloadChoice? choice =
+        _settings.askBeforeDownload || r.warnings.isNotEmpty
+        ? await showDownloadSheet(context, r)
+        : DownloadChoice(
+            name: cleanFileName(r.name),
+            keepPrivate: true,
+            openWhenDone: false,
+          );
+    if (choice == null) {
+      await _engine.dismissDownload(r.requestId);
+      return;
+    }
+    final String? key = await _engine.startDownload(
+      r.requestId,
+      name: choice.name,
+      keepPrivate: choice.keepPrivate,
+      openWhenDone: choice.openWhenDone,
+    );
+    if (!mounted) return;
+    if (key == null) {
+      _snack(l.cantDownload);
+      return;
+    }
+    final bool private = r.private && choice.keepPrivate;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            private
+                ? l.downloadingPrivately(choice.name)
+                : l.downloadStarted(choice.name),
+          ),
+          persist: false,
+          action: SnackBarAction(
+            label: l.show,
+            onPressed: () => _push(const DownloadsPage()),
+          ),
+        ),
+      );
+  }
+
+  /// A download finished: say so, and open it if that was asked for.
+  Future<void> _onDownloadEvent(DownloadEvent e) async {
+    if (!mounted) return;
+    final String name = e.name.isEmpty ? l.fileFallbackName : e.name;
+    if (e.done && e.openWhenDone) {
+      final DownloadResult r = await _engine.openDownload(e.key);
+      if (r == DownloadResult.done || !mounted) return;
+    }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            !e.done
+                ? l.couldntSave(name)
+                : e.private
+                ? l.savedPrivately(name)
+                : l.savedToDownloads(name),
+          ),
+          // Flutter keeps a snackbar with an action open until it is tapped.
+          persist: false,
+          action: e.done
+              ? SnackBarAction(
+                  label: l.open,
+                  onPressed: () => _engine.openDownload(e.key).ignore(),
+                )
+              : SnackBarAction(
+                  label: l.show,
+                  onPressed: () => _push(const DownloadsPage()),
+                ),
+        ),
+      );
+  }
+
   Future<void> _onPrompt(TabPrompt p) async {
     if (!mounted) return;
     final TabEvent e = p.event;
@@ -334,33 +441,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       case 'external':
         await _openExternal(e.get<String>('url') ?? '', tab);
       case 'download':
-        _snack(
-          e.get<bool>('started') == true
-              ? l.downloadStarted(e.get<String>('name') ?? l.fileFallbackName)
-              : l.cantDownload,
-        );
-      case 'downloadDone':
-        if (e.get<bool>('ok') == true) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(
-              SnackBar(
-                content: Text(
-                  l.savedToDownloads(
-                    e.get<String>('name') ?? l.fileFallbackName,
-                  ),
-                ),
-                // Flutter keeps a snackbar with an action open until it is tapped.
-                persist: false,
-                action: SnackBarAction(
-                  label: l.show,
-                  onPressed: () => _push(const DownloadsPage()),
-                ),
-              ),
-            );
-        } else {
-          _snack(l.couldntSave(e.get<String>('name') ?? l.fileFallbackName));
-        }
+        // The page offered something that can't be downloaded.
+        if (e.get<bool>('started') != true) _snack(l.cantDownload);
+      case 'downloadRequest':
+        await _onDownloadRequest(DownloadRequest.fromMap(e.data));
       case 'translateFailed':
         _snack(l.translateFailed);
       case 'userScript':
