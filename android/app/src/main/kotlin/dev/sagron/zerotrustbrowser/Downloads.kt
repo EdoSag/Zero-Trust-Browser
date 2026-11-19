@@ -2,24 +2,27 @@ package dev.sagron.zerotrustbrowser
 
 import android.app.DownloadManager
 import android.content.ActivityNotFoundException
-import android.content.ContentValues
+import android.content.ClipData
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.BaseColumns
 import android.provider.MediaStore
 import android.util.Base64
 import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
 
 /**
- * The files ZT Browser downloaded, for the Downloads page: web downloads
- * through the system download manager, and data:/blob: files the page made
- * itself, written to Downloads directly. The list (names, not contents)
- * stays on this phone.
+ * The files ZT Browser downloaded, for the Downloads page: everything from
+ * [DownloadEngine] (B34), private downloads (B33) included, and the ones
+ * from before it (through the system download manager, or written straight
+ * to Downloads), which are only listed, opened, shared and deleted. The
+ * list (names, not contents) stays on this phone.
  */
-class Downloads(private val context: Context) {
+class Downloads(private val context: Context, private val engine: DownloadEngine) {
     private val prefs = context.getSharedPreferences("zt_downloads", Context.MODE_PRIVATE)
     private val manager = context.getSystemService(DownloadManager::class.java)
 
@@ -35,43 +38,13 @@ class Downloads(private val context: Context) {
         prefs.edit().putString("list", JSONArray(kept).toString()).apply()
     }
 
-    @Synchronized
-    fun addManaged(id: Long, name: String, mime: String?) {
-        store(entries() + entry(name, mime).put("dm", id))
-    }
-
-    /** Writes [bytes] to the phone's Downloads folder. */
-    @Synchronized
-    fun saveBytes(bytes: ByteArray, name: String, mime: String): Boolean {
-        val values = ContentValues().apply {
-            put(MediaStore.Downloads.DISPLAY_NAME, name)
-            put(MediaStore.Downloads.MIME_TYPE, mime)
-            put(MediaStore.Downloads.IS_PENDING, 1)
-        }
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return false
-        try {
-            resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: throw IllegalStateException("no stream")
-            values.clear()
-            values.put(MediaStore.Downloads.IS_PENDING, 0)
-            resolver.update(uri, values, null, null)
-        } catch (e: Exception) {
-            resolver.delete(uri, null, null)
-            return false
-        }
-        store(entries() + entry(name, mime).put("uri", uri.toString()))
-        return true
-    }
-
-    private fun entry(name: String, mime: String?) = JSONObject()
-        .put("key", UUID.randomUUID().toString())
-        .put("name", name)
-        .put("mime", mime ?: "application/octet-stream")
-        .put("time", System.currentTimeMillis())
-
     /** Newest first, with progress; files deleted elsewhere drop out. */
     @Synchronized
     fun list(): List<Map<String, Any?>> {
+        val jobs = engine.list().filter { j ->
+            // A finished file someone deleted in the Files app.
+            j.private || j.status != "done" || j.uri?.let { storedInfo(Uri.parse(it)) } != null
+        }
         val all = entries()
         val kept = ArrayList<JSONObject>()
         val out = ArrayList<Map<String, Any?>>()
@@ -85,11 +58,12 @@ class Downloads(private val context: Context) {
                     "name" to e.getString("name"),
                     "mime" to e.optString("mime"),
                     "time" to e.getLong("time"),
+                    "private" to false,
                 ) + info,
             )
         }
         if (kept.size != all.size) store(kept)
-        return out.reversed()
+        return (jobs.map { it.toMap() } + out.reversed()).sortedByDescending { (it["time"] as? Long) ?: 0L }
     }
 
     private fun managedInfo(id: Long): Map<String, Any?>? {
@@ -126,44 +100,169 @@ class Downloads(private val context: Context) {
 
     private fun find(key: String): JSONObject? = entries().firstOrNull { it.optString("key") == key }
 
-    private fun uriOf(e: JSONObject): Uri? =
-        if (e.has("dm")) manager?.getUriForDownloadedFile(e.getLong("dm")) else Uri.parse(e.getString("uri"))
+    /**
+     * What another app may be handed for [key]: a finished download's
+     * Downloads entry, or for a private one a plain copy in the app's cache
+     * (deleted with the private session) shared through [PrivateFiles].
+     * Null when it isn't one of the engine's downloads.
+     */
+    private fun engineTarget(key: String): Pair<JSONObject, List<Uri>>? {
+        val job = engine.job(key) ?: return null
+        val info = JSONObject().put("name", job.name).put("mime", job.mime)
+        if (job.status != "done") return info to emptyList()
+        if (job.private) {
+            val copy = engine.privateCopy(key) ?: return info to emptyList()
+            val uri = try {
+                FileProvider.getUriForFile(context, PrivateFiles.authority(context), copy)
+            } catch (e: Exception) {
+                null
+            }
+            return info to listOfNotNull(uri)
+        }
+        return info to listOfNotNull(job.uri?.let(Uri::parse))
+    }
 
-    /** Opens the file in an app that can show it; false when none can. */
-    fun open(key: String): Boolean {
-        val e = find(key) ?: return false
-        val uri = uriOf(e) ?: return false
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, e.optString("mime", "*/*"))
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    /**
+     * The links another app may be handed for this file, best first.
+     *
+     * A web download's own link from the download manager
+     * (content://downloads/all_downloads/..) can't be passed on: Android
+     * refuses with a SecurityException, so opening and sharing did nothing.
+     * The file's MediaStore entry (which ZT Browser owns) can be, so that
+     * goes first; the download manager's link stays as a last try.
+     */
+    private fun urisOf(e: JSONObject): List<Uri> {
+        if (!e.has("dm")) return listOfNotNull(e.optString("uri").takeIf { it.isNotEmpty() }?.let(Uri::parse))
+        val id = e.getLong("dm")
+        val dm = manager ?: return emptyList()
+        val out = ArrayList<Uri>()
+        var fileName: String? = null
+        try {
+            dm.query(DownloadManager.Query().setFilterById(id))?.use { c ->
+                if (c.moveToFirst()) {
+                    val media = c.getColumnIndex("mediaprovider_uri")
+                    if (media >= 0) c.getString(media)?.takeIf { it.isNotEmpty() }?.let { out.add(Uri.parse(it)) }
+                    val local = c.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)
+                    if (local >= 0) fileName = c.getString(local)?.let { Uri.parse(it).lastPathSegment }
+                }
+            }
+        } catch (ex: Exception) {
+            // Fall through to the lookups below.
+        }
+        // The download manager may have renamed the file ("report-1.pdf").
+        mediaStoreUri(fileName ?: e.optString("name"))?.let { if (it !in out) out.add(it) }
+        try {
+            dm.getUriForDownloadedFile(id)?.let { if (it !in out) out.add(it) }
+        } catch (ex: Exception) {
+            // Not finished, or removed.
+        }
+        return out
+    }
+
+    /** This app's own file of that name in Downloads, if MediaStore has it. */
+    private fun mediaStoreUri(name: String): Uri? {
+        if (name.isEmpty()) return null
         return try {
-            context.startActivity(intent)
-            true
-        } catch (ex: ActivityNotFoundException) {
-            false
+            context.contentResolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(BaseColumns._ID),
+                "${MediaStore.Downloads.DISPLAY_NAME} = ?",
+                arrayOf(name),
+                "${MediaStore.Downloads.DATE_ADDED} DESC",
+            )?.use { c ->
+                if (c.moveToFirst()) ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, c.getLong(0)) else null
+            }
+        } catch (ex: Exception) {
+            null
         }
     }
 
-    fun share(key: String): Boolean {
-        val e = find(key) ?: return false
-        val uri = uriOf(e) ?: return false
-        val send = Intent(Intent.ACTION_SEND)
-            .setType(e.optString("mime", "*/*"))
-            .putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        return try {
-            context.startActivity(
-                Intent.createChooser(send, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            true
-        } catch (ex: ActivityNotFoundException) {
-            false
+    /** A type other apps can match: the saved one, or one from the file. */
+    private fun typeOf(e: JSONObject, uri: Uri): String {
+        val resolved = try { context.contentResolver.getType(uri) } catch (ex: Exception) { null }
+        return pickMime(e.optString("mime"), resolved, e.optString("name"))
+    }
+
+    /**
+     * Opens the file in an app that can show it: "opened", "noApp" (nothing
+     * on this phone opens that kind of file), "missing" (the file is gone)
+     * or "failed".
+     */
+    fun open(key: String): String {
+        val target = engineTarget(key)
+        val e = target?.first ?: find(key) ?: return "missing"
+        val uris = target?.second ?: urisOf(e)
+        if (uris.isEmpty()) return "missing"
+        var noApp = false
+        for (uri in uris) {
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, typeOf(e, uri))
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            intent.clipData = ClipData.newRawUri(e.optString("name"), uri)
+            try {
+                context.startActivity(intent)
+                return "opened"
+            } catch (ex: ActivityNotFoundException) {
+                noApp = true
+            } catch (ex: Exception) {
+                // SecurityException: this link can't be passed on; try the next.
+            }
         }
+        return if (noApp) "noApp" else "failed"
+    }
+
+    /** The share sheet for the file: "opened", "missing" or "failed". */
+    fun share(key: String): String {
+        val target = engineTarget(key)
+        val e = target?.first ?: find(key) ?: return "missing"
+        val uris = target?.second ?: urisOf(e)
+        if (uris.isEmpty()) return "missing"
+        for (uri in uris) {
+            val send = Intent(Intent.ACTION_SEND)
+                .setType(typeOf(e, uri))
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = ClipData.newRawUri(e.optString("name"), uri)
+            try {
+                context.startActivity(
+                    Intent.createChooser(send, null)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                )
+                return "opened"
+            } catch (ex: Exception) {
+                // Try the next link.
+            }
+        }
+        return "failed"
+    }
+
+    /** The phone's own Downloads folder, for files no app here opens. */
+    fun showFolder(): Boolean {
+        val intents = listOf(
+            Intent(DownloadManager.ACTION_VIEW_DOWNLOADS),
+            Intent(Intent.ACTION_VIEW).setDataAndType(
+                Uri.parse("content://com.android.externalstorage.documents/root/primary"),
+                "vnd.android.document/root",
+            ),
+        )
+        for (i in intents) {
+            try {
+                context.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
+            } catch (ex: Exception) {
+                // Try the next.
+            }
+        }
+        return false
     }
 
     /** Deletes the file from the phone, or cancels a running download. */
     @Synchronized
     fun delete(key: String) {
+        if (engine.job(key) != null) {
+            engine.delete(key)
+            return
+        }
         val all = entries()
         val e = all.firstOrNull { it.optString("key") == key } ?: return
         try {
@@ -176,6 +275,29 @@ class Downloads(private val context: Context) {
     }
 
     companion object {
+        /** Types sites send when they don't say what the file is. */
+        private val VAGUE = setOf(
+            "", "*/*", "application/octet-stream", "binary/octet-stream",
+            "application/force-download", "application/download", "application/x-download",
+            "application/unknown", "application/binary",
+        )
+
+        /**
+         * The most specific of the type the site sent, the type Android has
+         * for the file, and the type its extension means. Viewers match on
+         * type, so "application/octet-stream" for a PDF finds no app.
+         */
+        fun pickMime(saved: String?, resolved: String?, name: String): String {
+            fun specific(t: String?) = t?.trim()?.lowercase()?.substringBefore(';')?.trim()?.takeIf { it !in VAGUE }
+            specific(saved)?.let { return it }
+            specific(resolved)?.let { return it }
+            val ext = name.substringAfterLast('.', "").lowercase()
+            if (ext.isNotEmpty()) {
+                MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)?.let { return it }
+            }
+            return "*/*"
+        }
+
         /** The bytes of a `data:` URL, base64 or percent-encoded. */
         fun decodeDataUrl(url: String): ByteArray? {
             if (!url.startsWith("data:")) return null

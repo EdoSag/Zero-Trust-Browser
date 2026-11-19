@@ -34,8 +34,13 @@ it is **ZT Browser**.
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
   unload when memory runs low and come back with their history.
-- **Downloads page** (open, share, delete), including files pages make
-  themselves (`blob:` and `data:` links).
+- **Download manager**: its own downloader with pause, resume where it
+  stopped and automatic retry when the connection drops, progress and
+  Pause/Cancel in a notification, and no size limit for files pages make
+  themselves (`blob:` links). "Save this file?" first (name, size, site),
+  with warnings for apps, programs, disguised names and plain http.
+  Downloads from private tabs stay encrypted in the app (key only in
+  memory) and are deleted with the private tabs, unless saved to the phone.
 - **Import bookmarks** from Chrome, Firefox, Edge or Safari (.html export).
 - **QR code scanner** (ZXing, offline) and voice search in the address bar;
   share a page as a QR code.
@@ -52,6 +57,14 @@ it is **ZT Browser**.
   row from your history.
 - **Search suggestions** (off until you turn them on; addresses and
   private tabs are never sent) and **your own search engines**.
+- **User scripts** in the Tampermonkey / Greasemonkey format (Greasy Fork
+  scripts work), the answer to "no extensions": add from a link, a file or
+  by pasting; tap a `.user.js` link to install. Before installing you see
+  which sites the script runs on, where it can send data and what else it
+  can do. Updates only after you review them; off in private tabs unless
+  you allow it. Scripts sync end-to-end encrypted; what they store stays
+  on the phone, encrypted. See "User scripts" below for the supported
+  `GM_*` functions.
 - **English and Hebrew**, with a right-to-left layout. The sign-in and
   unlock screens come from Zero-Trust-Core and are English for now.
 - Can be the default browser; "Share to" and "Search in ZT Browser" for
@@ -68,7 +81,10 @@ Play), shown in Flutter through a platform view. The native side lives in
 | `ZtTab.kt` | One tab: a WebView with the privacy settings above, blocking, HTTPS upgrade, per-site JavaScript, permissions, pop-ups, downloads, reader extraction, long-press menu, find in page |
 | `Blocker.kt` | Host-name blocking and element-hiding rules from `assets/blocklist/blocklist.txt` (hash-set lookups), or a newer signed download |
 | `PageScripts.kt` | The script every page gets first (Global Privacy Control, fingerprinting noise, hiding CSS), reader view, blob downloads |
-| `Downloads.kt` | The Downloads page's list, data:/blob: files saved to Downloads |
+| `DownloadEngine.kt` | The downloader: queue, pause/resume (HTTP Range), retry, writes into a hidden Downloads entry until done, private downloads into `PrivateVault` |
+| `DownloadService.kt` | Foreground service and notifications for running and finished downloads |
+| `PrivateVault.kt` | Private-tab downloads encrypted in 64 KiB AES-GCM chunks under a key held only in memory |
+| `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete |
 | `MainActivity.kt` | Tab registry and memory (unloading), the `zt_browser/engine` channel, file uploads, fullscreen video, downloads, permissions, print, shortcuts, QR, voice, autofill status, default-browser role |
 
 Tabs outlive the Flutter widget showing them, so switching tabs or locking
@@ -79,6 +95,32 @@ settings and look as every Zero-Trust app.
 Requires Android 10 (API 29). Private tabs need Android System WebView with
 multi-profile support (version 123 or newer); on older WebView versions they
 still keep no history and no cache, but share cookies with normal tabs.
+
+## User scripts (B41)
+
+Scripts run in the page itself, like Violentmonkey's "page" mode: the
+engine adds them as document-start scripts (`UserScripts.kt`, runtime in
+`assets/userscripts/runtime.js`) and each script's code is checked against
+its `@match` / `@include` / `@exclude` / `@exclude-match` rules on every
+page and frame. `@run-at` document-start, document-body, document-end and
+document-idle (the default) are honoured, and `@noframes`; `@require` and
+`@resource` files are fetched once at install and synced with the script.
+
+Supported (both `GM_x` and `GM.x`): `GM_info`, `GM_log`, `unsafeWindow`,
+`GM_addStyle`, `GM_addElement`, `GM_getValue` / `setValue` / `deleteValue`
+/ `listValues` (and the `…Values` forms), `GM_addValueChangeListener`
+(changes on the same page), `GM_getResourceText`, `GM_getResourceURL`,
+`GM_xmlhttpRequest` (cross-site, only to `@connect` sites when the script
+names any; blocked tracker hosts stay blocked; no cookies from private
+tabs; no streaming or progress events), `GM_openInTab`, `GM_setClipboard`,
+`GM_notification` (shown as a message in the app),
+`GM_registerMenuCommand` / `GM_unregisterMenuCommand` (menu → Script
+commands).
+
+Not supported: `GM_download`, `GM_cookie`, `GM_webRequest`, `GM_getTab` /
+`GM_saveTab` / `GM_getTabs`, `GM_audio`, `window.onurlchange`,
+`@run-at context-menu`, `@sandbox` and `@inject-into content` (everything
+runs in the page). The install screen lists any of these a script asks for.
 
 ## Texts and languages
 

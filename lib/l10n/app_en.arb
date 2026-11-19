@@ -189,7 +189,7 @@
   "passwordsTip": "ZT Browser never stores passwords. Your password manager (Bitwarden, Proton Pass, 1Password...) fills sign-in forms through Android's autofill, in private tabs too.",
   "chooseInAndroid": "Choose in Android",
   "gotIt": "Got it",
-  "privateExplain": "Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads and bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.",
+  "privateExplain": "Pages you open here are not saved to your history. Cookies and site data are kept apart from your normal tabs and deleted when you close the last private tab or the app locks. Downloads you keep private are encrypted and deleted at the same time; bookmarks you add are kept.\n\nPrivate tabs hide your browsing on this phone. Sites, your network and your internet provider can still see your visits.",
   "startBlurb": "Trackers and ads are blocked on every site. Your bookmarks and history are end-to-end encrypted in your Zero-Trust account: only your devices can read them.",
   "shortcuts": "Shortcuts",
   "mostVisited": "Most visited",
@@ -494,6 +494,9 @@
   },
   "fileFallbackName": "File",
   "noAppOpens": "No app on this phone opens this kind of file",
+  "showInFiles": "Show in Files",
+  "fileGone": "This file isn't on the phone any more",
+  "cantOpenFile": "Couldn't open this file",
   "cancelDownloadTitle": "Cancel download?",
   "deleteFileTitle": "Delete file?",
   "stopsDownloading": "{name} stops downloading.",
@@ -514,7 +517,7 @@
   },
   "keep": "Keep",
   "cancelDownload": "Cancel download",
-  "downloadsEmpty": "Files you download show here. They are saved in your phone's Downloads folder.",
+  "downloadsEmpty": "Files you download show here. They are saved in your phone's Downloads folder. Files from private tabs can stay encrypted in the app instead, until you close your private tabs.",
   "progressOf": "{done} of {total}",
   "@progressOf": {
     "placeholders": {
@@ -530,6 +533,73 @@
   "waitingConnection": "Waiting for a connection",
   "couldntDownload": "Couldn't download",
   "cantShare": "This file can't be shared",
+  "waitingToStart": "Waiting to start",
+  "pausedAt": "Paused · {progress}",
+  "@pausedAt": {
+    "placeholders": {
+      "progress": {
+        "type": "String"
+      }
+    }
+  },
+  "pauseDownload": "Pause",
+  "resumeDownload": "Resume",
+  "downloadFailedSpace": "Not enough space on the phone",
+  "downloadFailedRefused": "The site refused the download",
+  "downloadFailedGone": "The page closed before the file was saved",
+  "privateDownloads": "Private downloads",
+  "privateDownloadsSub": "Encrypted in the app and deleted when you close your private tabs. Use \"Save to phone\" to keep one.",
+  "privateDownload": "Private download",
+  "finishedDownloads": "Finished downloads",
+  "downloadComplete": "Download complete",
+  "downloadingFiles": "Downloading {count} files",
+  "@downloadingFiles": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingPrivately": "Downloading {name} privately",
+  "@downloadingPrivately": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "savedPrivately": "{name} is ready in private downloads",
+  "@savedPrivately": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFileTitle": "Save this file?",
+  "saveFilePrivateTitle": "Save this file from a private tab?",
+  "fileName": "File name",
+  "sizeUnknown": "Size unknown",
+  "fromSite": "from {site}",
+  "@fromSite": {
+    "placeholders": {
+      "site": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadWarnApp": "This is an Android app. Apps from websites can take over your phone; install apps only from sources you trust.",
+  "downloadWarnProgram": "This is a program or script that runs on a computer. Open it only if you trust the site it comes from.",
+  "downloadWarnDisguised": "The file's name hides what it really is. Files made to look like documents or photos are a common trick.",
+  "downloadWarnInsecure": "This file comes over an unencrypted connection, so someone on the network could have swapped it.",
+  "keepPrivate": "Keep private",
+  "keepPrivateSub": "Encrypted in the app, deleted when you close your private tabs",
+  "saveToPhone": "Save to phone",
+  "saveToPhoneSub": "In the phone's Downloads folder, where it stays",
+  "openWhenDone": "Open when done",
+  "saveAnyway": "Save anyway",
+  "askBeforeDownload": "Ask before downloading",
+  "askBeforeDownloadSub": "Show the name, size and where it goes before saving a file. Risky files are always asked about.",
   "readingListError": "The reading list couldn't load.",
   "readingListEmpty": "Save pages from the menu with \"Add to reading list\". Articles are kept to read offline, end-to-end encrypted in your account.",
   "savedOffline": "Saved offline",
@@ -734,6 +804,7 @@
   "privateLockSub": "After you leave the app, private tabs need your fingerprint, face or screen lock again.",
   "privateLockUnavailable": "Set a screen lock on your phone to use this.",
   "privateLocked": "Private tabs are locked.",
+  "privateDownloadsLocked": "Locked with your private tabs. Unlock to see them.",
   "privateUnlockReason": "Unlock your private tabs",
   "blockRules": "Your block rules",
   "blockRulesSub": "Block or allow a site yourself, add filter lists",
@@ -889,5 +960,140 @@
       }
     }
   },
-  "shareLink": "Share link"
+  "shareLink": "Share link",
+  "scripts": "Scripts",
+  "scriptsSub": "Your own scripts that change how sites look and work",
+  "scriptsCount": "{count, plural, =0{No scripts yet} =1{1 script} other{{count} scripts}}",
+  "@scriptsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scriptsExplain": "User scripts in the Tampermonkey and Greasemonkey format change pages on the sites they name: dark themes, hiding clutter, extra buttons. They sync end-to-end encrypted to your other devices. Only add scripts you trust: a script can read everything on the sites it runs on, including what you type.",
+  "addScript": "Add script",
+  "addScriptFromLink": "From a link",
+  "addScriptFromFile": "From a file",
+  "addScriptPaste": "Write or paste",
+  "findScripts": "Find scripts on Greasy Fork",
+  "scriptLinkHint": "Address of a .user.js file",
+  "scriptLinkInvalid": "That isn't a web address",
+  "scriptLoading": "Loading the script…",
+  "scriptNotAScript": "This isn't a user script: it needs a ==UserScript== block with a @name.",
+  "scriptDownloadFailed": "Couldn't load the script. Check the address and your connection.",
+  "scriptDependencyFailed": "Couldn't load a file the script needs: {url}",
+  "@scriptDependencyFailed": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptTooLarge": "This script is too large to sync (over 700 KB with its files).",
+  "scriptUnreadable": "Unreadable script",
+  "reviewScript": "Review script",
+  "installScript": "Install",
+  "updateScript": "Update",
+  "scriptWarning": "This script can read and change everything on the sites below, including passwords you type. Only install it if you trust where it comes from.",
+  "scriptRunsOn": "Runs on",
+  "scriptAllSites": "Every site you visit",
+  "scriptEverywhere": "Runs on every site",
+  "scriptSitesCount": "{count, plural, =1{Runs on 1 site} other{Runs on {count} sites}}",
+  "@scriptSitesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scriptSendsTo": "Can send data to",
+  "scriptSendsAnywhere": "Any site",
+  "scriptAlsoCan": "It can also",
+  "permStorage": "Keep its own data on this phone",
+  "permNetwork": "Send requests to other sites",
+  "permTabs": "Open new tabs",
+  "permClipboard": "Copy text to the clipboard",
+  "permNotifications": "Show messages",
+  "permMenu": "Add commands to the menu",
+  "scriptFilesFrom": "Loads code from",
+  "scriptUnsupported": "Not available in ZT Browser (parts of the script may not work)",
+  "scriptContextMenuUnsupported": "Scripts that run from the long-press menu aren't supported yet",
+  "scriptSource": "From",
+  "scriptVersion": "Version {version}",
+  "@scriptVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptVersionChange": "Version {from} to {to}",
+  "@scriptVersionChange": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "to": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptNew": "New",
+  "scriptShowCode": "Show code",
+  "scriptInstalled": "Installed {name}",
+  "@scriptInstalled": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptUpdated": "Updated {name}",
+  "@scriptUpdated": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "scriptOn": "On",
+  "scriptRunPrivate": "Run in private tabs",
+  "scriptRunPrivateSub": "Off unless you turn it on. What it stores there isn't kept.",
+  "checkForUpdate": "Check for update",
+  "checkForUpdateSub": "Updates are never installed without your OK",
+  "scriptUpToDate": "You have the newest version",
+  "editCode": "Edit code",
+  "newScript": "New script",
+  "scriptEditorHint": "Paste or write a user script, starting with // ==UserScript==",
+  "deleteScriptQ": "Delete {name}?",
+  "@deleteScriptQ": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteScriptExplain": "What it stored on this phone is deleted too.",
+  "scriptCommands": "Script commands",
+  "scriptNotice": "{script}: {text}",
+  "@scriptNotice": {
+    "placeholders": {
+      "script": {
+        "type": "String"
+      },
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "installScriptQ": "Install the user script from {host}?",
+  "@installScriptQ": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "review": "Review"
 }

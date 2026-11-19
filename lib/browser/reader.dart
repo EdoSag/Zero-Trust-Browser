@@ -58,7 +58,7 @@ String readerHtml(
     if (a.byline != null && a.byline!.isNotEmpty) a.byline!,
   ];
   return '''<!doctype html>
-<html lang="$lang" dir="$dir">
+<html lang="$lang" dir="$dir" data-zt-reader>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

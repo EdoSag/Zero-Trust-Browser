@@ -6,6 +6,7 @@ import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/pages/browser_home.dart';
+import 'email_links.dart';
 
 /// Routes between the shared account screens and the browser.
 ///
@@ -67,7 +68,7 @@ class _AppGateState extends ConsumerState<AppGate> with WidgetsBindingObserver {
   }
 
   void _forgotPassword() => Navigator.of(context).push(
-    MaterialPageRoute<void>(builder: (_) => const ZtForgotPasswordScreen()),
+    MaterialPageRoute<void>(builder: (_) => ZtForgotPasswordScreen(redirectTo: EmailLinks.passwordReset)),
   );
 
   @override
@@ -88,6 +89,8 @@ class _AppGateState extends ConsumerState<AppGate> with WidgetsBindingObserver {
         // The next account on this phone starts with a clean browser.
         ref.read(tabsProvider.notifier).closeEverything().ignore();
         ref.read(browserEngineProvider).clearBrowsingData().ignore();
+        // Scripts and what they stored belong to that account too (B41).
+        ref.read(browserEngineProvider).clearUserScripts().ignore();
         // Counts not saved yet belong to the account that just left.
         ref.read(privacyReportRecorderProvider).discard();
         setState(() => _signingIn = true);
@@ -119,6 +122,7 @@ class _AppGateState extends ConsumerState<AppGate> with WidgetsBindingObserver {
     final user = ref.watch(currentUserProvider);
     if (user == null || _signingIn) {
       return ZtSignInScreen(
+        emailRedirectTo: EmailLinks.confirmed,
         onUnlocked: _onUnlocked,
         onForgotPassword: _forgotPassword,
       );

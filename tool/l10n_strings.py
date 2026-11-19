@@ -177,14 +177,15 @@ S = [
     ("privateExplain",
      "Pages you open here are not saved to your history. Cookies and site "
      "data are kept apart from your normal tabs and deleted when you close "
-     "the last private tab or the app locks. Downloads and bookmarks you "
-     "add are kept.\n\nPrivate tabs hide your browsing on this phone. "
+     "the last private tab or the app locks. Downloads you keep private are "
+     "encrypted and deleted at the same time; bookmarks you add are kept.\n\n"
+     "Private tabs hide your browsing on this phone. "
      "Sites, your network and your internet provider can still see your "
      "visits.",
      "דפים שנפתחים כאן לא נשמרים בהיסטוריה. קובצי Cookie ונתוני אתרים "
      "נשמרים בנפרד מהכרטיסיות הרגילות, ונמחקים כשסוגרים את הכרטיסייה "
-     "הפרטית האחרונה או כשהאפליקציה ננעלת. הורדות וסימניות שמוסיפים "
-     "נשמרות.\n\nכרטיסיות פרטיות מסתירות את הגלישה בטלפון הזה. אתרים, "
+     "הפרטית האחרונה או כשהאפליקציה ננעלת. הורדות שנשמרות כפרטיות מוצפנות "
+     "ונמחקות באותו זמן; סימניות שמוסיפים נשמרות.\n\nכרטיסיות פרטיות מסתירות את הגלישה בטלפון הזה. אתרים, "
      "הרשת שלך וספק האינטרנט עדיין יכולים לראות את הביקורים שלך."),
     ("startBlurb",
      "Trackers and ads are blocked on every site. Your bookmarks and "
@@ -529,6 +530,9 @@ S = [
     ("fileFallbackName", "File", "קובץ"),
     ("noAppOpens", "No app on this phone opens this kind of file",
      "אין בטלפון הזה אפליקציה שפותחת קובץ מהסוג הזה"),
+    ("showInFiles", "Show in Files", "הצגה בקבצים"),
+    ("fileGone", "This file isn't on the phone any more", "הקובץ הזה כבר לא נמצא בטלפון"),
+    ("cantOpenFile", "Couldn't open this file", "אי אפשר לפתוח את הקובץ הזה"),
     ("cancelDownloadTitle", "Cancel download?", "לבטל את ההורדה?"),
     ("deleteFileTitle", "Delete file?", "למחוק את הקובץ?"),
     ("stopsDownloading", "{name} stops downloading.",
@@ -539,13 +543,82 @@ S = [
     ("cancelDownload", "Cancel download", "ביטול ההורדה"),
     ("downloadsEmpty",
      "Files you download show here. They are saved in your phone's "
-     "Downloads folder.",
-     "קבצים שמורידים מוצגים כאן. הם נשמרים בתיקיית ההורדות של הטלפון."),
+     "Downloads folder. Files from private tabs can stay encrypted in the "
+     "app instead, until you close your private tabs.",
+     "קבצים שמורידים מוצגים כאן. הם נשמרים בתיקיית ההורדות של הטלפון. "
+     "קבצים מכרטיסיות פרטיות יכולים להישאר במקום זה מוצפנים באפליקציה, עד "
+     "שסוגרים את הכרטיסיות הפרטיות."),
     ("progressOf", "{done} of {total}", "{done} מתוך {total}"),
     ("downloadingEllipsis", "Downloading…", "מוריד…"),
     ("waitingConnection", "Waiting for a connection", "ממתין לחיבור"),
     ("couldntDownload", "Couldn't download", "ההורדה נכשלה"),
     ("cantShare", "This file can't be shared", "אי אפשר לשתף את הקובץ הזה"),
+    ("waitingToStart", "Waiting to start", "ממתין להתחלה"),
+    ("pausedAt", "Paused · {progress}", "מושהה · {progress}"),
+    ("pauseDownload", "Pause", "השהיה"),
+    ("resumeDownload", "Resume", "המשך"),
+    ("downloadFailedSpace", "Not enough space on the phone",
+     "אין מספיק מקום בטלפון"),
+    ("downloadFailedRefused", "The site refused the download",
+     "האתר סירב להורדה"),
+    ("downloadFailedGone", "The page closed before the file was saved",
+     "הדף נסגר לפני שהקובץ נשמר"),
+    ("privateDownloads", "Private downloads", "הורדות פרטיות"),
+    ("privateDownloadsSub",
+     "Encrypted in the app and deleted when you close your private tabs. "
+     "Use \"Save to phone\" to keep one.",
+     "מוצפנות באפליקציה ונמחקות כשסוגרים את הכרטיסיות הפרטיות. כדי לשמור "
+     "קובץ, בוחרים \"שמירה בטלפון\"."),
+    ("privateDownload", "Private download", "הורדה פרטית"),
+    ("finishedDownloads", "Finished downloads", "הורדות שהסתיימו"),
+    ("downloadComplete", "Download complete", "ההורדה הסתיימה"),
+    ("downloadingFiles", "Downloading {count} files", "מוריד {count} קבצים"),
+    ("downloadingPrivately", "Downloading {name} privately",
+     "{name} יורד באופן פרטי"),
+    ("savedPrivately", "{name} is ready in private downloads",
+     "{name} מוכן בהורדות הפרטיות"),
+
+    # ---- Save this file? (B35) ----
+    ("saveFileTitle", "Save this file?", "לשמור את הקובץ?"),
+    ("saveFilePrivateTitle", "Save this file from a private tab?",
+     "לשמור את הקובץ מהכרטיסייה הפרטית?"),
+    ("fileName", "File name", "שם הקובץ"),
+    ("sizeUnknown", "Size unknown", "גודל לא ידוע"),
+    ("fromSite", "from {site}", "מ-{site}"),
+    ("downloadWarnApp",
+     "This is an Android app. Apps from websites can take over your phone; "
+     "install apps only from sources you trust.",
+     "זו אפליקציית Android. אפליקציות מאתרים יכולות להשתלט על הטלפון; כדאי "
+     "להתקין אפליקציות רק ממקורות שסומכים עליהם."),
+    ("downloadWarnProgram",
+     "This is a program or script that runs on a computer. Open it only if "
+     "you trust the site it comes from.",
+     "זו תוכנה או סקריפט שרצים במחשב. כדאי לפתוח אותם רק אם סומכים על האתר "
+     "שממנו הם הגיעו."),
+    ("downloadWarnDisguised",
+     "The file's name hides what it really is. Files made to look like "
+     "documents or photos are a common trick.",
+     "שם הקובץ מסתיר מה הוא באמת. קבצים שמתחפשים למסמכים או לתמונות הם "
+     "תרגיל נפוץ."),
+    ("downloadWarnInsecure",
+     "This file comes over an unencrypted connection, so someone on the "
+     "network could have swapped it.",
+     "הקובץ מגיע בחיבור לא מוצפן, כך שמישהו ברשת יכול היה להחליף אותו."),
+    ("keepPrivate", "Keep private", "שמירה כפרטי"),
+    ("keepPrivateSub",
+     "Encrypted in the app, deleted when you close your private tabs",
+     "מוצפן באפליקציה, נמחק כשסוגרים את הכרטיסיות הפרטיות"),
+    ("saveToPhone", "Save to phone", "שמירה בטלפון"),
+    ("saveToPhoneSub", "In the phone's Downloads folder, where it stays",
+     "בתיקיית ההורדות של הטלפון, ונשאר שם"),
+    ("openWhenDone", "Open when done", "פתיחה בסיום"),
+    ("saveAnyway", "Save anyway", "לשמור בכל זאת"),
+    ("askBeforeDownload", "Ask before downloading", "שאלה לפני הורדה"),
+    ("askBeforeDownloadSub",
+     "Show the name, size and where it goes before saving a file. Risky "
+     "files are always asked about.",
+     "הצגת השם, הגודל והמיקום לפני שמירת קובץ. על קבצים מסוכנים תמיד "
+     "נשאל."),
 
     # ---- Reading list ----
     ("readingListError", "The reading list couldn't load.",
@@ -727,6 +800,8 @@ S = [
      "Set a screen lock on your phone to use this.",
      "כדי להשתמש בזה צריך להגדיר נעילת מסך בטלפון."),
     ("privateLocked", "Private tabs are locked.", "הכרטיסיות הפרטיות נעולות."),
+    ("privateDownloadsLocked", "Locked with your private tabs. Unlock to see them.",
+     "נעולות יחד עם הכרטיסיות הפרטיות. יש לבטל את הנעילה כדי לראות אותן."),
     ("privateUnlockReason", "Unlock your private tabs",
      "ביטול הנעילה של הכרטיסיות הפרטיות"),
 
@@ -880,6 +955,66 @@ S = [
     # ---- QR ----
     ("qrFor", "QR code for {url}", "קוד QR עבור {url}"),
     ("shareLink", "Share link", "שיתוף הקישור"),
+    # ---- B41: user scripts ----
+    ("scripts", "Scripts", "סקריפטים"),
+    ("scriptsSub", "Your own scripts that change how sites look and work", "סקריפטים משלך שמשנים את המראה וההתנהגות של אתרים"),
+    ("scriptsCount", "{count, plural, =0{No scripts yet} =1{1 script} other{{count} scripts}}", "{count, plural, =0{אין עדיין סקריפטים} =1{סקריפט אחד} other{{count} סקריפטים}}"),
+    ("scriptsExplain", "User scripts in the Tampermonkey and Greasemonkey format change pages on the sites they name: dark themes, hiding clutter, extra buttons. They sync end-to-end encrypted to your other devices. Only add scripts you trust: a script can read everything on the sites it runs on, including what you type.", "סקריפטים בפורמט של Tampermonkey ו-Greasemonkey משנים דפים באתרים שהם מציינים: ערכות כהות, הסתרת עומס, כפתורים נוספים. הם מסונכרנים בהצפנה מקצה לקצה למכשירים האחרים שלך. כדאי להוסיף רק סקריפטים שסומכים עליהם: סקריפט יכול לקרוא כל מה שיש באתרים שהוא פועל בהם, כולל מה שמקלידים."),
+    ("addScript", "Add script", "הוספת סקריפט"),
+    ("addScriptFromLink", "From a link", "מקישור"),
+    ("addScriptFromFile", "From a file", "מקובץ"),
+    ("addScriptPaste", "Write or paste", "כתיבה או הדבקה"),
+    ("findScripts", "Find scripts on Greasy Fork", "חיפוש סקריפטים ב-Greasy Fork"),
+    ("scriptLinkHint", "Address of a .user.js file", "כתובת של קובץ ‎.user.js"),
+    ("scriptLinkInvalid", "That isn't a web address", "זו לא כתובת אינטרנט"),
+    ("scriptLoading", "Loading the script…", "הסקריפט נטען…"),
+    ("scriptNotAScript", "This isn't a user script: it needs a ==UserScript== block with a @name.", "זה לא סקריפט משתמש: חסר בלוק ‎==UserScript==‎ עם ‎@name."),
+    ("scriptDownloadFailed", "Couldn't load the script. Check the address and your connection.", "לא הצלחנו לטעון את הסקריפט. כדאי לבדוק את הכתובת ואת החיבור."),
+    ("scriptDependencyFailed", "Couldn't load a file the script needs: {url}", "לא הצלחנו לטעון קובץ שהסקריפט צריך: {url}"),
+    ("scriptTooLarge", "This script is too large to sync (over 700 KB with its files).", "הסקריפט גדול מדי לסנכרון (יותר מ-700KB עם הקבצים שלו)."),
+    ("scriptUnreadable", "Unreadable script", "סקריפט לא קריא"),
+    ("reviewScript", "Review script", "בדיקת הסקריפט"),
+    ("installScript", "Install", "התקנה"),
+    ("updateScript", "Update", "עדכון"),
+    ("scriptWarning", "This script can read and change everything on the sites below, including passwords you type. Only install it if you trust where it comes from.", "הסקריפט הזה יכול לקרוא ולשנות כל מה שיש באתרים שלמטה, כולל סיסמאות שמקלידים. כדאי להתקין אותו רק אם סומכים על המקור שלו."),
+    ("scriptRunsOn", "Runs on", "פועל באתרים"),
+    ("scriptAllSites", "Every site you visit", "כל אתר שנכנסים אליו"),
+    ("scriptEverywhere", "Runs on every site", "פועל בכל האתרים"),
+    ("scriptSitesCount", "{count, plural, =1{Runs on 1 site} other{Runs on {count} sites}}", "{count, plural, =1{פועל באתר אחד} other{פועל ב-{count} אתרים}}"),
+    ("scriptSendsTo", "Can send data to", "יכול לשלוח נתונים אל"),
+    ("scriptSendsAnywhere", "Any site", "כל אתר"),
+    ("scriptAlsoCan", "It can also", "הוא יכול גם"),
+    ("permStorage", "Keep its own data on this phone", "לשמור נתונים משלו בטלפון הזה"),
+    ("permNetwork", "Send requests to other sites", "לשלוח בקשות לאתרים אחרים"),
+    ("permTabs", "Open new tabs", "לפתוח כרטיסיות חדשות"),
+    ("permClipboard", "Copy text to the clipboard", "להעתיק טקסט ללוח"),
+    ("permNotifications", "Show messages", "להציג הודעות"),
+    ("permMenu", "Add commands to the menu", "להוסיף פקודות לתפריט"),
+    ("scriptFilesFrom", "Loads code from", "טוען קוד מ"),
+    ("scriptUnsupported", "Not available in ZT Browser (parts of the script may not work)", "לא זמין ב-ZT Browser (חלקים מהסקריפט עלולים לא לעבוד)"),
+    ("scriptContextMenuUnsupported", "Scripts that run from the long-press menu aren't supported yet", "עדיין אין תמיכה בסקריפטים שפועלים מתפריט הלחיצה הארוכה"),
+    ("scriptSource", "From", "מקור"),
+    ("scriptVersion", "Version {version}", "גרסה {version}"),
+    ("scriptVersionChange", "Version {from} to {to}", "מגרסה {from} לגרסה {to}"),
+    ("scriptNew", "New", "חדש"),
+    ("scriptShowCode", "Show code", "הצגת הקוד"),
+    ("scriptInstalled", "Installed {name}", "{name} הותקן"),
+    ("scriptUpdated", "Updated {name}", "{name} עודכן"),
+    ("scriptOn", "On", "פעיל"),
+    ("scriptRunPrivate", "Run in private tabs", "הפעלה בכרטיסיות פרטיות"),
+    ("scriptRunPrivateSub", "Off unless you turn it on. What it stores there isn't kept.", "כבוי עד שמפעילים אותו. מה שהוא שומר שם לא נשמר."),
+    ("checkForUpdate", "Check for update", "בדיקת עדכון"),
+    ("checkForUpdateSub", "Updates are never installed without your OK", "עדכון אף פעם לא מותקן בלי אישור שלך"),
+    ("scriptUpToDate", "You have the newest version", "זו הגרסה החדשה ביותר"),
+    ("editCode", "Edit code", "עריכת הקוד"),
+    ("newScript", "New script", "סקריפט חדש"),
+    ("scriptEditorHint", "Paste or write a user script, starting with // ==UserScript==", "אפשר להדביק או לכתוב סקריפט משתמש, שמתחיל ב-‎// ==UserScript=="),
+    ("deleteScriptQ", "Delete {name}?", "למחוק את {name}?"),
+    ("deleteScriptExplain", "What it stored on this phone is deleted too.", "גם מה שהוא שמר בטלפון הזה יימחק."),
+    ("scriptCommands", "Script commands", "פקודות של סקריפטים"),
+    ("scriptNotice", "{script}: {text}", "{script}: {text}"),
+    ("installScriptQ", "Install the user script from {host}?", "להתקין את סקריפט המשתמש מ-{host}?"),
+    ("review", "Review", "בדיקה"),
 ]
 
 INT_PLACEHOLDERS = {
@@ -894,6 +1029,8 @@ INT_PLACEHOLDERS = {
     "reportMonth": ["days", "count"],
     "reportCountOnSite": ["count"],
     "readAloudProgress": ["part", "count"],
+    "scriptsCount": ["count"],
+    "scriptSitesCount": ["count"],
 }
 
 

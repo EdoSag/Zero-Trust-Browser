@@ -377,7 +377,7 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get privateExplain =>
-      'דפים שנפתחים כאן לא נשמרים בהיסטוריה. קובצי Cookie ונתוני אתרים נשמרים בנפרד מהכרטיסיות הרגילות, ונמחקים כשסוגרים את הכרטיסייה הפרטית האחרונה או כשהאפליקציה ננעלת. הורדות וסימניות שמוסיפים נשמרות.\n\nכרטיסיות פרטיות מסתירות את הגלישה בטלפון הזה. אתרים, הרשת שלך וספק האינטרנט עדיין יכולים לראות את הביקורים שלך.';
+      'דפים שנפתחים כאן לא נשמרים בהיסטוריה. קובצי Cookie ונתוני אתרים נשמרים בנפרד מהכרטיסיות הרגילות, ונמחקים כשסוגרים את הכרטיסייה הפרטית האחרונה או כשהאפליקציה ננעלת. הורדות שנשמרות כפרטיות מוצפנות ונמחקות באותו זמן; סימניות שמוסיפים נשמרות.\n\nכרטיסיות פרטיות מסתירות את הגלישה בטלפון הזה. אתרים, הרשת שלך וספק האינטרנט עדיין יכולים לראות את הביקורים שלך.';
 
   @override
   String get startBlurb =>
@@ -929,6 +929,15 @@ class AppL10nHe extends AppL10n {
   String get noAppOpens => 'אין בטלפון הזה אפליקציה שפותחת קובץ מהסוג הזה';
 
   @override
+  String get showInFiles => 'הצגה בקבצים';
+
+  @override
+  String get fileGone => 'הקובץ הזה כבר לא נמצא בטלפון';
+
+  @override
+  String get cantOpenFile => 'אי אפשר לפתוח את הקובץ הזה';
+
+  @override
   String get cancelDownloadTitle => 'לבטל את ההורדה?';
 
   @override
@@ -952,7 +961,7 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get downloadsEmpty =>
-      'קבצים שמורידים מוצגים כאן. הם נשמרים בתיקיית ההורדות של הטלפון.';
+      'קבצים שמורידים מוצגים כאן. הם נשמרים בתיקיית ההורדות של הטלפון. קבצים מכרטיסיות פרטיות יכולים להישאר במקום זה מוצפנים באפליקציה, עד שסוגרים את הכרטיסיות הפרטיות.';
 
   @override
   String progressOf(String done, String total) {
@@ -970,6 +979,119 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get cantShare => 'אי אפשר לשתף את הקובץ הזה';
+
+  @override
+  String get waitingToStart => 'ממתין להתחלה';
+
+  @override
+  String pausedAt(String progress) {
+    return 'מושהה · $progress';
+  }
+
+  @override
+  String get pauseDownload => 'השהיה';
+
+  @override
+  String get resumeDownload => 'המשך';
+
+  @override
+  String get downloadFailedSpace => 'אין מספיק מקום בטלפון';
+
+  @override
+  String get downloadFailedRefused => 'האתר סירב להורדה';
+
+  @override
+  String get downloadFailedGone => 'הדף נסגר לפני שהקובץ נשמר';
+
+  @override
+  String get privateDownloads => 'הורדות פרטיות';
+
+  @override
+  String get privateDownloadsSub =>
+      'מוצפנות באפליקציה ונמחקות כשסוגרים את הכרטיסיות הפרטיות. כדי לשמור קובץ, בוחרים \"שמירה בטלפון\".';
+
+  @override
+  String get privateDownload => 'הורדה פרטית';
+
+  @override
+  String get finishedDownloads => 'הורדות שהסתיימו';
+
+  @override
+  String get downloadComplete => 'ההורדה הסתיימה';
+
+  @override
+  String downloadingFiles(String count) {
+    return 'מוריד $count קבצים';
+  }
+
+  @override
+  String downloadingPrivately(String name) {
+    return '$name יורד באופן פרטי';
+  }
+
+  @override
+  String savedPrivately(String name) {
+    return '$name מוכן בהורדות הפרטיות';
+  }
+
+  @override
+  String get saveFileTitle => 'לשמור את הקובץ?';
+
+  @override
+  String get saveFilePrivateTitle => 'לשמור את הקובץ מהכרטיסייה הפרטית?';
+
+  @override
+  String get fileName => 'שם הקובץ';
+
+  @override
+  String get sizeUnknown => 'גודל לא ידוע';
+
+  @override
+  String fromSite(String site) {
+    return 'מ-$site';
+  }
+
+  @override
+  String get downloadWarnApp =>
+      'זו אפליקציית Android. אפליקציות מאתרים יכולות להשתלט על הטלפון; כדאי להתקין אפליקציות רק ממקורות שסומכים עליהם.';
+
+  @override
+  String get downloadWarnProgram =>
+      'זו תוכנה או סקריפט שרצים במחשב. כדאי לפתוח אותם רק אם סומכים על האתר שממנו הם הגיעו.';
+
+  @override
+  String get downloadWarnDisguised =>
+      'שם הקובץ מסתיר מה הוא באמת. קבצים שמתחפשים למסמכים או לתמונות הם תרגיל נפוץ.';
+
+  @override
+  String get downloadWarnInsecure =>
+      'הקובץ מגיע בחיבור לא מוצפן, כך שמישהו ברשת יכול היה להחליף אותו.';
+
+  @override
+  String get keepPrivate => 'שמירה כפרטי';
+
+  @override
+  String get keepPrivateSub =>
+      'מוצפן באפליקציה, נמחק כשסוגרים את הכרטיסיות הפרטיות';
+
+  @override
+  String get saveToPhone => 'שמירה בטלפון';
+
+  @override
+  String get saveToPhoneSub => 'בתיקיית ההורדות של הטלפון, ונשאר שם';
+
+  @override
+  String get openWhenDone => 'פתיחה בסיום';
+
+  @override
+  String get saveAnyway => 'לשמור בכל זאת';
+
+  @override
+  String get askBeforeDownload => 'שאלה לפני הורדה';
+
+  @override
+  String get askBeforeDownloadSub =>
+      'הצגת השם, הגודל והמיקום לפני שמירת קובץ. על קבצים מסוכנים תמיד נשאל.';
 
   @override
   String get readingListError => 'לא ניתן היה לטעון את רשימת הקריאה.';
@@ -1311,6 +1433,10 @@ class AppL10nHe extends AppL10n {
   String get privateLocked => 'הכרטיסיות הפרטיות נעולות.';
 
   @override
+  String get privateDownloadsLocked =>
+      'נעולות יחד עם הכרטיסיות הפרטיות. יש לבטל את הנעילה כדי לראות אותן.';
+
+  @override
   String get privateUnlockReason => 'ביטול הנעילה של הכרטיסיות הפרטיות';
 
   @override
@@ -1543,4 +1669,223 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get shareLink => 'שיתוף הקישור';
+
+  @override
+  String get scripts => 'סקריפטים';
+
+  @override
+  String get scriptsSub => 'סקריפטים משלך שמשנים את המראה וההתנהגות של אתרים';
+
+  @override
+  String scriptsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סקריפטים',
+      one: 'סקריפט אחד',
+      zero: 'אין עדיין סקריפטים',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scriptsExplain =>
+      'סקריפטים בפורמט של Tampermonkey ו-Greasemonkey משנים דפים באתרים שהם מציינים: ערכות כהות, הסתרת עומס, כפתורים נוספים. הם מסונכרנים בהצפנה מקצה לקצה למכשירים האחרים שלך. כדאי להוסיף רק סקריפטים שסומכים עליהם: סקריפט יכול לקרוא כל מה שיש באתרים שהוא פועל בהם, כולל מה שמקלידים.';
+
+  @override
+  String get addScript => 'הוספת סקריפט';
+
+  @override
+  String get addScriptFromLink => 'מקישור';
+
+  @override
+  String get addScriptFromFile => 'מקובץ';
+
+  @override
+  String get addScriptPaste => 'כתיבה או הדבקה';
+
+  @override
+  String get findScripts => 'חיפוש סקריפטים ב-Greasy Fork';
+
+  @override
+  String get scriptLinkHint => 'כתובת של קובץ ‎.user.js';
+
+  @override
+  String get scriptLinkInvalid => 'זו לא כתובת אינטרנט';
+
+  @override
+  String get scriptLoading => 'הסקריפט נטען…';
+
+  @override
+  String get scriptNotAScript =>
+      'זה לא סקריפט משתמש: חסר בלוק ‎==UserScript==‎ עם ‎@name.';
+
+  @override
+  String get scriptDownloadFailed =>
+      'לא הצלחנו לטעון את הסקריפט. כדאי לבדוק את הכתובת ואת החיבור.';
+
+  @override
+  String scriptDependencyFailed(String url) {
+    return 'לא הצלחנו לטעון קובץ שהסקריפט צריך: $url';
+  }
+
+  @override
+  String get scriptTooLarge =>
+      'הסקריפט גדול מדי לסנכרון (יותר מ-700KB עם הקבצים שלו).';
+
+  @override
+  String get scriptUnreadable => 'סקריפט לא קריא';
+
+  @override
+  String get reviewScript => 'בדיקת הסקריפט';
+
+  @override
+  String get installScript => 'התקנה';
+
+  @override
+  String get updateScript => 'עדכון';
+
+  @override
+  String get scriptWarning =>
+      'הסקריפט הזה יכול לקרוא ולשנות כל מה שיש באתרים שלמטה, כולל סיסמאות שמקלידים. כדאי להתקין אותו רק אם סומכים על המקור שלו.';
+
+  @override
+  String get scriptRunsOn => 'פועל באתרים';
+
+  @override
+  String get scriptAllSites => 'כל אתר שנכנסים אליו';
+
+  @override
+  String get scriptEverywhere => 'פועל בכל האתרים';
+
+  @override
+  String scriptSitesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'פועל ב-$count אתרים',
+      one: 'פועל באתר אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get scriptSendsTo => 'יכול לשלוח נתונים אל';
+
+  @override
+  String get scriptSendsAnywhere => 'כל אתר';
+
+  @override
+  String get scriptAlsoCan => 'הוא יכול גם';
+
+  @override
+  String get permStorage => 'לשמור נתונים משלו בטלפון הזה';
+
+  @override
+  String get permNetwork => 'לשלוח בקשות לאתרים אחרים';
+
+  @override
+  String get permTabs => 'לפתוח כרטיסיות חדשות';
+
+  @override
+  String get permClipboard => 'להעתיק טקסט ללוח';
+
+  @override
+  String get permNotifications => 'להציג הודעות';
+
+  @override
+  String get permMenu => 'להוסיף פקודות לתפריט';
+
+  @override
+  String get scriptFilesFrom => 'טוען קוד מ';
+
+  @override
+  String get scriptUnsupported =>
+      'לא זמין ב-ZT Browser (חלקים מהסקריפט עלולים לא לעבוד)';
+
+  @override
+  String get scriptContextMenuUnsupported =>
+      'עדיין אין תמיכה בסקריפטים שפועלים מתפריט הלחיצה הארוכה';
+
+  @override
+  String get scriptSource => 'מקור';
+
+  @override
+  String scriptVersion(String version) {
+    return 'גרסה $version';
+  }
+
+  @override
+  String scriptVersionChange(String from, String to) {
+    return 'מגרסה $from לגרסה $to';
+  }
+
+  @override
+  String get scriptNew => 'חדש';
+
+  @override
+  String get scriptShowCode => 'הצגת הקוד';
+
+  @override
+  String scriptInstalled(String name) {
+    return '$name הותקן';
+  }
+
+  @override
+  String scriptUpdated(String name) {
+    return '$name עודכן';
+  }
+
+  @override
+  String get scriptOn => 'פעיל';
+
+  @override
+  String get scriptRunPrivate => 'הפעלה בכרטיסיות פרטיות';
+
+  @override
+  String get scriptRunPrivateSub =>
+      'כבוי עד שמפעילים אותו. מה שהוא שומר שם לא נשמר.';
+
+  @override
+  String get checkForUpdate => 'בדיקת עדכון';
+
+  @override
+  String get checkForUpdateSub => 'עדכון אף פעם לא מותקן בלי אישור שלך';
+
+  @override
+  String get scriptUpToDate => 'זו הגרסה החדשה ביותר';
+
+  @override
+  String get editCode => 'עריכת הקוד';
+
+  @override
+  String get newScript => 'סקריפט חדש';
+
+  @override
+  String get scriptEditorHint =>
+      'אפשר להדביק או לכתוב סקריפט משתמש, שמתחיל ב-‎// ==UserScript==';
+
+  @override
+  String deleteScriptQ(String name) {
+    return 'למחוק את $name?';
+  }
+
+  @override
+  String get deleteScriptExplain => 'גם מה שהוא שמר בטלפון הזה יימחק.';
+
+  @override
+  String get scriptCommands => 'פקודות של סקריפטים';
+
+  @override
+  String scriptNotice(String script, String text) {
+    return '$script: $text';
+  }
+
+  @override
+  String installScriptQ(String host) {
+    return 'להתקין את סקריפט המשתמש מ-$host?';
+  }
+
+  @override
+  String get review => 'בדיקה';
 }

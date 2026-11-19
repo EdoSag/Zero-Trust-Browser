@@ -68,9 +68,19 @@ class BrowserEngine {
         readAloud.value = ReadAloudState.fromMap(data);
       case 'appHidden':
         appHidden.add(null);
+      case 'downloadEvent':
+        final Map<Object?, Object?> data =
+            (call.arguments as Map<Object?, Object?>?) ?? const {};
+        _downloadEvents.add(DownloadEvent.fromMap(data));
     }
     return null;
   }
+
+  final StreamController<DownloadEvent> _downloadEvents =
+      StreamController<DownloadEvent>.broadcast();
+
+  /// A download finished (done or failed), whichever tab it came from.
+  Stream<DownloadEvent> get downloadEvents => _downloadEvents.stream;
 
   Future<T?> _call<T>(String method, [Map<String, Object?>? args]) async {
     try {
@@ -84,7 +94,7 @@ class BrowserEngine {
   Future<String?> consumePendingLink() => _call<String>('consumePending');
 
   /// A tap on the search bar widget, once: 'search', 'voice', 'private'
-  /// or 'qr'.
+  /// or 'qr'; or 'downloads' from a download notification.
   Future<String?> consumeWidgetAction() => _call<String>('consumeWidgetAction');
 
   Future<void> createTab(
@@ -223,13 +233,93 @@ class BrowserEngine {
       (await _call<List<Object?>>('downloads') ?? const <Object?>[])
           .whereType<Map<Object?, Object?>>()
           .toList();
-  Future<bool> openDownload(String key) async =>
-      await _call<bool>('openDownload', <String, Object?>{'key': key}) ?? false;
-  Future<bool> shareDownload(String key) async =>
-      await _call<bool>('shareDownload', <String, Object?>{'key': key}) ??
-      false;
-  Future<void> deleteDownload(String key) =>
-      _call<void>('deleteDownload', <String, Object?>{'key': key});
+
+  /// Opens a downloaded file in another app: [DownloadResult.done],
+  /// [DownloadResult.noApp], [DownloadResult.missing] or
+  /// [DownloadResult.failed]. Never throws.
+  Future<DownloadResult> openDownload(String key) =>
+      _downloadAction('openDownload', key);
+
+  /// The share sheet for a downloaded file.
+  Future<DownloadResult> shareDownload(String key) =>
+      _downloadAction('shareDownload', key);
+
+  Future<DownloadResult> _downloadAction(String method, String key) async {
+    try {
+      return DownloadResult.parse(
+        await _call<Object>(method, <String, Object?>{'key': key}),
+      );
+    } on PlatformException {
+      return DownloadResult.failed;
+    }
+  }
+
+  /// The phone's own Downloads folder (the Files app); false when none.
+  Future<bool> showDownloadsFolder() async {
+    try {
+      return await _call<bool>('showDownloadsFolder') ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// Starts a download the person said yes to (B35), under [name]. From a
+  /// private tab, [keepPrivate] keeps it encrypted in the app until the
+  /// private tabs close (B33). Returns its key, or null when the page's
+  /// offer has expired.
+  Future<String?> startDownload(
+    int requestId, {
+    required String name,
+    bool keepPrivate = true,
+    bool openWhenDone = false,
+  }) async {
+    try {
+      return await _call<String>('startDownload', <String, Object?>{
+        'requestId': requestId,
+        'name': name,
+        'keepPrivate': keepPrivate,
+        'openWhenDone': openWhenDone,
+      });
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// The person said no: let go of what the page offered.
+  Future<void> dismissDownload(int requestId) =>
+      _call<void>('dismissDownload', <String, Object?>{'requestId': requestId});
+
+  Future<void> pauseDownload(String key) =>
+      _call<void>('pauseDownload', <String, Object?>{'key': key});
+
+  /// Resumes a paused download, or tries a failed one again from where it
+  /// stopped.
+  Future<void> resumeDownload(String key) =>
+      _call<void>('resumeDownload', <String, Object?>{'key': key});
+
+  /// Moves a private download into the phone's Downloads, where it stays.
+  Future<bool> saveDownloadToPhone(String key) async {
+    try {
+      return await _call<bool>('saveDownloadToPhone', <String, Object?>{
+            'key': key,
+          }) ??
+          false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// The download notification's texts in the app's language.
+  Future<void> setDownloadLabels(Map<String, String> labels) =>
+      _call<void>('downloadLabels', <String, Object?>{'labels': labels});
+
+  Future<void> deleteDownload(String key) async {
+    try {
+      await _call<void>('deleteDownload', <String, Object?>{'key': key});
+    } on PlatformException {
+      // Already gone; the list refresh shows what's left.
+    }
+  }
 
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
@@ -471,6 +561,57 @@ class BrowserEngine {
   /// Picture-in-picture for the video playing full screen now, if any.
   Future<bool> pictureInPicture() async =>
       await _call<bool>('pictureInPicture') ?? false;
+
+  // ---- B41: user scripts ---------------------------------------------------
+
+  /// The scripts to run (see UserScripts.toEngine); tabs pick them up for
+  /// their next page.
+  Future<void> setUserScripts(List<Map<String, Object?>> scripts) =>
+      _call<void>('setUserScripts', <String, Object?>{'scripts': scripts});
+
+  /// Deletes what a removed script stored on this phone.
+  Future<void> forgetUserScript(String id) =>
+      _call<void>('forgetUserScript', <String, Object?>{'id': id});
+
+  /// No scripts and nothing they stored (signed out).
+  Future<void> clearUserScripts() => _call<void>('clearUserScripts');
+
+  /// Commands the page's scripts added to the menu.
+  Future<List<ScriptCommand>> scriptCommands(String tabId) async =>
+      <ScriptCommand>[
+        for (final Object? m
+            in await _call<List<Object?>>('scriptCommands', <String, Object?>{
+                  'tabId': tabId,
+                }) ??
+                const <Object?>[])
+          if (m is Map<Object?, Object?>)
+            ScriptCommand(
+              script: m['script'] as String? ?? '',
+              name: m['name'] as String? ?? '',
+              scriptId: m['s'] as String? ?? '',
+              id: m['i'] as int? ?? 0,
+            ),
+      ];
+
+  Future<void> runScriptCommand(String tabId, ScriptCommand c) => _call<void>(
+    'runScriptCommand',
+    <String, Object?>{'tabId': tabId, 's': c.scriptId, 'i': c.id},
+  );
+}
+
+/// A command a user script added to the menu (GM_registerMenuCommand).
+class ScriptCommand {
+  const ScriptCommand({
+    required this.script,
+    required this.name,
+    required this.scriptId,
+    required this.id,
+  });
+
+  final String script;
+  final String name;
+  final String scriptId;
+  final int id;
 }
 
 /// Read aloud, as the engine reports it.
@@ -500,4 +641,55 @@ class ReadAloudState {
   );
 }
 
+/// What came of opening or sharing a downloaded file.
+enum DownloadResult {
+  done,
+  noApp,
+  missing,
+  failed;
+
+  /// The engine's answer: "opened", "noApp", "missing" or "failed" (and
+  /// true/false from older engines).
+  static DownloadResult parse(Object? v) => switch (v) {
+    'opened' || true => done,
+    'noApp' => noApp,
+    'missing' => missing,
+    _ => failed,
+  };
+}
+
 final browserEngineProvider = Provider<BrowserEngine>((ref) => BrowserEngine());
+
+/// A download that finished, for a message on the browser screen.
+class DownloadEvent {
+  const DownloadEvent({
+    required this.key,
+    required this.name,
+    required this.status,
+    this.private = false,
+    this.error,
+    this.openWhenDone = false,
+  });
+
+  factory DownloadEvent.fromMap(Map<Object?, Object?> m) => DownloadEvent(
+    key: m['key'] as String? ?? '',
+    name: m['name'] as String? ?? '',
+    status: m['status'] as String? ?? 'failed',
+    private: m['private'] as bool? ?? false,
+    error: m['error'] as String?,
+    openWhenDone: m['openWhenDone'] as bool? ?? false,
+  );
+
+  final String key;
+  final String name;
+
+  /// done or failed.
+  final String status;
+  final bool private;
+
+  /// Why it failed: network, http, space or gone.
+  final String? error;
+  final bool openWhenDone;
+
+  bool get done => status == 'done';
+}

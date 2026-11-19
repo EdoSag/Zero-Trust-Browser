@@ -15,7 +15,7 @@ import java.security.SecureRandom
  *   when settings or the blocklist change ([invalidate]).
  * - [siteCss] adds a site's own hiding rules once the page shows.
  * - [extractArticle] and [readerable] use Mozilla Readability for reader mode.
- * - [fetchBlob] reads a blob: download back to the app.
+ * - [holdBlob] keeps a blob: download and reads it back a piece at a time.
  */
 object PageScripts {
     /** Fingerprinting protection, pushed from Dart (`setPrivacy`). */
@@ -73,18 +73,23 @@ object PageScripts {
     }
 
     /**
-     * Listens for one message carrying [key] and a port, then sends the
-     * blob at [url] back over the port as a data: URL (or "error").
+     * Listens for one message carrying [key] and a port, reads the blob at
+     * [url] and keeps it (the page may revoke the address), says its size
+     * ("size:N"), then sends it a [piece] at a time, each when the app asks
+     * ("next"), as "c:" + base64, then "end" (or "error"). "stop" lets go.
      */
-    fun fetchBlob(url: String, key: String, maxBytes: Long): String =
+    fun holdBlob(url: String, key: String, piece: Int): String =
         "(function(k,u){window.addEventListener('message',function f(e){" +
             "if(e.data!==k||!e.ports||!e.ports[0])return;window.removeEventListener('message',f,true);" +
-            "e.stopImmediatePropagation();var p=e.ports[0];" +
-            "fetch(u).then(function(r){return r.blob();}).then(function(b){" +
-            "if(b.size>$maxBytes){p.postMessage('error:size');return;}" +
-            "var fr=new FileReader();fr.onload=function(){p.postMessage(fr.result);};" +
-            "fr.onerror=function(){p.postMessage('error');};fr.readAsDataURL(b);" +
-            "}).catch(function(){p.postMessage('error');});},true);})(" +
+            "e.stopImmediatePropagation();var p=e.ports[0],b=null,o=0,w=false,S=$piece;" +
+            "function send(){if(!b)return;if(o>=b.size){p.postMessage('end');b=null;return;}" +
+            "var s=b.slice(o,o+S);o+=S;var fr=new FileReader();" +
+            "fr.onload=function(){var r=String(fr.result);p.postMessage('c:'+r.substring(r.indexOf(',')+1));};" +
+            "fr.onerror=function(){p.postMessage('error');};fr.readAsDataURL(s);}" +
+            "p.onmessage=function(m){if(m.data==='next'){if(b)send();else w=true;}" +
+            "else if(m.data==='stop'){b=null;try{p.close();}catch(x){}}};" +
+            "fetch(u).then(function(r){return r.blob();}).then(function(x){b=x;p.postMessage('size:'+x.size);" +
+            "if(w){w=false;send();}}).catch(function(){p.postMessage('error');});},true);})(" +
             JSONObject.quote(key) + "," + JSONObject.quote(url) + ");"
 
     /** The text selected on the page (top frame), as a JSON string. */

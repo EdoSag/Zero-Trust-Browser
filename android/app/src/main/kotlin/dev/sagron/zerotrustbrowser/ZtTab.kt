@@ -2,6 +2,9 @@ package dev.sagron.zerotrustbrowser
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.net.http.SslError
@@ -32,6 +35,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import org.json.JSONArray
+import org.json.JSONObject
 import org.json.JSONTokener
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -69,7 +73,7 @@ class ZtTab(
 
         fun showFullscreen(view: View, onHidden: () -> Unit)
         fun hideFullscreen()
-        fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?)
+        fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?, length: Long)
         fun onCrashed(tab: ZtTab)
 
         /**
@@ -92,6 +96,12 @@ class ZtTab(
     private val defaultUserAgent: String
     private var startScript: ScriptHandler? = null
     private var mediaScript: ScriptHandler? = null
+
+    /** B41: the user's scripts, added after the browser's own. */
+    private var userScripts: List<ScriptHandler> = emptyList()
+
+    /** Commands the page's user scripts added (GM_registerMenuCommand). */
+    private val scriptMenus = LinkedHashMap<String, Pair<JavaScriptReplyProxy, JSONArray>>()
 
     /** The frame whose media played last, to pause or play it again. */
     private var mediaFrame: JavaScriptReplyProxy? = null
@@ -159,11 +169,12 @@ class ZtTab(
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         listenForMedia()
+        listenForUserScripts()
         refreshScripts()
         webView.webViewClient = Client()
         webView.webChromeClient = Chrome()
-        webView.setDownloadListener { url, userAgent, disposition, mime, _ ->
-            host.download(this, url, userAgent, disposition, mime)
+        webView.setDownloadListener { url, userAgent, disposition, mime, length ->
+            host.download(this, url, userAgent, disposition, mime, length)
         }
         webView.setFindListener { active, count, done ->
             events("find", mapOf("active" to active, "count" to count, "done" to done))
@@ -224,6 +235,88 @@ class ZtTab(
             WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.media(backgroundPlay), setOf("*"))
         } else {
             null
+        }
+        refreshUserScripts()
+    }
+
+    // ---- User scripts (B41) ------------------------------------------------
+
+    /** Adds the user's scripts again (they or what they store changed). */
+    fun refreshUserScripts() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
+        for (h in userScripts) h.remove()
+        userScripts = UserScripts.injections(activity, isPrivate).map {
+            WebViewCompat.addDocumentStartJavaScript(webView, it, setOf("*"))
+        }
+    }
+
+    /**
+     * Messages from user scripts (see assets/userscripts/runtime.js). The
+     * site is the frame's real origin, never what the message says.
+     */
+    private fun listenForUserScripts() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) return
+        WebViewCompat.addWebMessageListener(webView, "ztUserScripts", setOf("*")) { _, message, origin, isMainFrame, reply ->
+            val msg = try {
+                JSONObject(message.data ?: return@addWebMessageListener)
+            } catch (e: Exception) {
+                return@addWebMessageListener
+            }
+            val script = UserScripts.script(msg.optString("s")) ?: return@addWebMessageListener
+            if (isPrivate && !script.allowPrivate) return@addWebMessageListener
+            val originHost = origin.host?.lowercase()
+            when (msg.optString("t")) {
+                "set" -> if (!isPrivate) UserScripts.setValue(activity, script.id, msg.optString("k"), msg.optString("v"))
+                "del" -> if (!isPrivate) UserScripts.setValue(activity, script.id, msg.optString("k"), null)
+                "xhr" -> UserScripts.request(msg, script, originHost, isPrivate, webView.settings.userAgentString) {
+                    try { reply.postMessage(it) } catch (e: Exception) { }
+                }
+                "abort" -> UserScripts.abort(script.id, msg.optString("n"))
+                "tab" -> {
+                    val url = msg.optString("url")
+                    if (script.grants.any { it.equals("GM_openInTab", true) || it.equals("GM.openInTab", true) } &&
+                        (url.startsWith("https://") || url.startsWith("http://"))
+                    ) {
+                        events("openTab", mapOf("url" to url, "private" to isPrivate))
+                    }
+                }
+                "clip" -> if (script.grants.any { it.equals("GM_setClipboard", true) || it.equals("GM.setClipboard", true) }) {
+                    val cm = activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText(script.name, msg.optString("text")))
+                }
+                "notify" -> if (script.grants.any { it.equals("GM_notification", true) || it.equals("GM.notification", true) }) {
+                    events(
+                        "scriptNotice",
+                        mapOf("script" to script.name, "title" to msg.optString("title"), "text" to msg.optString("text")),
+                    )
+                }
+                "menu" -> if (isMainFrame) {
+                    val cmds = msg.optJSONArray("cmds") ?: JSONArray()
+                    if (cmds.length() == 0) scriptMenus.remove(script.id) else scriptMenus[script.id] = reply to cmds
+                }
+            }
+        }
+    }
+
+    /** The page's user script commands: script, name, s (script id), i. */
+    fun scriptCommands(): List<Map<String, Any?>> {
+        val out = ArrayList<Map<String, Any?>>()
+        for ((id, entry) in scriptMenus) {
+            val name = UserScripts.script(id)?.name ?: continue
+            for (k in 0 until entry.second.length()) {
+                val c = entry.second.optJSONObject(k) ?: continue
+                out.add(mapOf("script" to name, "name" to c.optString("n"), "s" to id, "i" to c.optInt("i")))
+            }
+        }
+        return out
+    }
+
+    fun runScriptCommand(scriptId: String, commandId: Int) {
+        val proxy = scriptMenus[scriptId]?.first ?: return
+        try {
+            proxy.postMessage(JSONObject().put("t", "menu").put("s", scriptId).put("i", commandId).toString())
+        } catch (e: Exception) {
+            // The page is gone.
         }
     }
 
@@ -413,39 +506,85 @@ class ZtTab(
     }
 
     /**
-     * Reads a blob: URL the page offered as a download, as a data: URL.
-     * Null when the engine can't (old WebView) or the page refused.
+     * Holds on to a blob: file the page offered as a download (pages often
+     * revoke the address right after the click), and reads it back a piece
+     * at a time once the download starts (B34): no size limit, and never
+     * the whole file in memory. Null when the engine can't (old WebView,
+     * JavaScript off).
      */
-    fun fetchBlob(url: String, maxBytes: Long, done: (String?) -> Unit) {
+    fun holdBlob(url: String): BlobStream? {
         val supported = listOf(
             WebViewFeature.CREATE_WEB_MESSAGE_CHANNEL,
             WebViewFeature.POST_WEB_MESSAGE,
             WebViewFeature.WEB_MESSAGE_PORT_SET_MESSAGE_CALLBACK,
             WebViewFeature.WEB_MESSAGE_CALLBACK_ON_MESSAGE,
+            WebViewFeature.WEB_MESSAGE_PORT_POST_MESSAGE,
         ).all { WebViewFeature.isFeatureSupported(it) }
-        if (!supported || !webView.settings.javaScriptEnabled) {
-            done(null)
-            return
-        }
+        if (!supported || !webView.settings.javaScriptEnabled) return null
         val ports = WebViewCompat.createWebMessageChannel(webView)
-        var answered = false
-        fun finish(result: String?) {
-            if (answered) return
-            answered = true
-            try { ports[0].close() } catch (e: Exception) { }
-            done(result)
-        }
+        val stream = BlobStream(ports[0], main)
         ports[0].setWebMessageCallback(object : WebMessagePortCompat.WebMessageCallbackCompat() {
             override fun onMessage(port: WebMessagePortCompat, message: WebMessageCompat?) {
-                val data = message?.data
-                main.post { finish(if (data != null && data.startsWith("data:")) data else null) }
+                stream.receive(message?.data)
             }
         })
         val key = UUID.randomUUID().toString()
-        webView.evaluateJavascript(PageScripts.fetchBlob(url, key, maxBytes)) {
+        webView.evaluateJavascript(PageScripts.holdBlob(url, key, BlobStream.PIECE)) {
             WebViewCompat.postWebMessage(webView, WebMessageCompat(key, arrayOf(ports[1])), Uri.parse("*"))
         }
-        main.postDelayed({ finish(null) }, 60_000)
+        return stream
+    }
+
+    /** The pieces of a held blob, pulled by the download engine. */
+    class BlobStream(private val port: WebMessagePortCompat, private val main: Handler) : DownloadEngine.ChunkSource {
+        private val queue = java.util.concurrent.LinkedBlockingQueue<String>()
+        @Volatile private var closed = false
+
+        /** The blob's size once the page has read it; -1 until then. */
+        @Volatile var size: Long = -1
+            private set
+
+        fun receive(data: String?) {
+            if (data == null) return
+            if (data.startsWith("size:")) {
+                size = data.substring(5).toLongOrNull() ?: -1
+                return
+            }
+            queue.offer(data)
+        }
+
+        private fun post(text: String) = main.post {
+            try { port.postMessage(WebMessageCompat(text)) } catch (e: Exception) { }
+        }
+
+        override fun next(): ByteArray? {
+            if (closed) throw java.io.IOException("closed")
+            post("next")
+            val msg = queue.poll(60, java.util.concurrent.TimeUnit.SECONDS) ?: throw java.io.IOException("timeout")
+            return when {
+                msg == "end" -> {
+                    cancel()
+                    null
+                }
+                msg.startsWith("c:") -> android.util.Base64.decode(msg.substring(2), android.util.Base64.DEFAULT)
+                else -> throw java.io.IOException("page")
+            }
+        }
+
+        override fun cancel() {
+            if (closed) return
+            closed = true
+            queue.offer("error")
+            main.post {
+                try { port.postMessage(WebMessageCompat("stop")) } catch (e: Exception) { }
+                try { port.close() } catch (e: Exception) { }
+            }
+        }
+
+        companion object {
+            /** Bytes per piece read from the page. */
+            const val PIECE = 512 * 1024
+        }
     }
 
     fun destroy() {
@@ -582,6 +721,16 @@ class ZtTab(
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
             val url = request.url.toString()
+            // B41: a link to a user script offers to install it (as
+            // Tampermonkey does), instead of showing its code.
+            val scheme = request.url.scheme?.lowercase()
+            if ((scheme == "https" || scheme == "http") &&
+                (request.url.path ?: "").lowercase().endsWith(".user.js") &&
+                request.method.equals("GET", true)
+            ) {
+                events("userScript", mapOf("url" to url))
+                return true
+            }
             return when (request.url.scheme?.lowercase()) {
                 "https" -> {
                     // A wrapper on https can hold an http address: that one
@@ -617,6 +766,7 @@ class ZtTab(
 
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageHost = Uri.parse(url).host
+            scriptMenus.clear()
             // A new page: its translation (if any) starts again once loaded.
             translateGen++
             translatedFrom = null

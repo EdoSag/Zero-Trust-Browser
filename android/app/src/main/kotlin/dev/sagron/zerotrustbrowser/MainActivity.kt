@@ -1,7 +1,6 @@
 package dev.sagron.zerotrustbrowser
 
 import android.Manifest
-import android.app.DownloadManager
 import android.app.PictureInPictureParams
 import android.app.role.RoleManager
 import android.content.ActivityNotFoundException
@@ -22,7 +21,6 @@ import android.graphics.drawable.Icon
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.print.PrintAttributes
@@ -91,6 +89,12 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     private val waiting = HashMap<Int, MethodChannel.Result>()
 
     private lateinit var downloads: Downloads
+    private lateinit var downloadEngine: DownloadEngine
+
+    /** Downloads waiting for the person to say save or cancel (B35). */
+    private val pendingDownloads = HashMap<Int, PendingDownload>()
+    private var nextDownloadRequest = 1
+    private val downloadFinished: (DownloadEngine.Job) -> Unit = { job -> onDownloadFinished(job) }
     private lateinit var readAloud: ReadAloud
     private var readAloudPrivate = false
 
@@ -99,7 +103,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        downloads = Downloads(this)
+        downloadEngine = DownloadEngine.get(this)
+        downloads = Downloads(this, downloadEngine)
+        downloadEngine.onFinished.add(downloadFinished)
         readAloud = ReadAloud(this) { state -> onReadAloud(state) }
         MediaHub.control = { command -> mediaControl(command) }
         pendingUrl = linkFrom(intent)
@@ -109,6 +115,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             for (t in tabs.values) t.refreshScripts()
         }
         Blocker.load(this)
+        UserScripts.onChanged = { for (t in tabs.values) t.refreshUserScripts() }
         // A private profile left over from a crash: nothing may survive it.
         deletePrivateProfileIfUnused()
     }
@@ -125,10 +132,16 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         channel?.invokeMethod("openPending", null)
     }
 
+    private fun isOwnAuthLink(uri: Uri?): Boolean =
+        uri != null && uri.scheme == "https" && uri.host == "zerotrust.bz" &&
+            uri.path.orEmpty().startsWith("/auth/browser/")
+
     private fun linkFrom(intent: Intent?): String? {
         if (intent == null) return null
         return when (intent.action) {
-            Intent.ACTION_VIEW -> intent.dataString
+            // Our own password-reset link is for the account, not a page to
+            // show: supabase_flutter picks it up (see EmailLinks).
+            Intent.ACTION_VIEW -> intent.dataString.takeUnless { isOwnAuthLink(intent.data) }
             Intent.ACTION_WEB_SEARCH -> intent.getStringExtra("query")
             Intent.ACTION_SEND -> intent.getStringExtra(Intent.EXTRA_TEXT)
             Intent.ACTION_PROCESS_TEXT -> intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)?.toString()
@@ -182,6 +195,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         lastUsed.remove(tabId)
                         // Also after a crash, when the WebView is already gone.
                         deletePrivateProfileIfUnused()
+                        endPrivateDownloadsIfUnused()
                         result.success(null)
                     }
                     "select" -> {
@@ -280,8 +294,49 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         result.success(null)
                     }
                     "downloads" -> result.success(downloads.list())
-                    "openDownload" -> result.success(downloads.open(call.argument<String>("key") ?: ""))
-                    "shareDownload" -> result.success(downloads.share(call.argument<String>("key") ?: ""))
+                    "startDownload" -> result.success(
+                        startDownload(
+                            call.argument<Int>("requestId") ?: 0,
+                            call.argument<String>("name"),
+                            call.argument<Boolean>("keepPrivate") ?: true,
+                            call.argument<Boolean>("openWhenDone") ?: false,
+                        ),
+                    )
+                    "dismissDownload" -> {
+                        pendingDownloads.remove(call.argument<Int>("requestId") ?: 0)?.release()
+                        result.success(null)
+                    }
+                    "pauseDownload" -> {
+                        downloadEngine.pause(call.argument<String>("key") ?: "")
+                        result.success(null)
+                    }
+                    "resumeDownload" -> {
+                        resumeDownload(call.argument<String>("key") ?: "")
+                        result.success(null)
+                    }
+                    "saveDownloadToPhone" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        io.execute {
+                            val ok = downloadEngine.saveToPhone(key)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "downloadLabels" -> {
+                        downloadEngine.labels = call.argument<Map<String, String>>("labels") ?: emptyMap()
+                        result.success(null)
+                    }
+                    "openDownload", "shareDownload" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        // A private file is decrypted to a temporary copy first,
+                        // off the main thread; then the app or share sheet opens.
+                        io.execute {
+                            downloadEngine.privateCopy(key)
+                            main.post {
+                                result.success(if (call.method == "openDownload") downloads.open(key) else downloads.share(key))
+                            }
+                        }
+                    }
+                    "showDownloadsFolder" -> result.success(downloads.showFolder())
                     "deleteDownload" -> {
                         downloads.delete(call.argument<String>("key") ?: "")
                         result.success(null)
@@ -399,6 +454,27 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         result.success(null)
                     }
                     "pictureInPicture" -> result.success(enterPip())
+                    // ---- B41: user scripts ----
+                    "setUserScripts" -> {
+                        val list = (call.argument<List<Any?>>("scripts") ?: emptyList())
+                            .filterIsInstance<Map<*, *>>()
+                            .map { m -> m.entries.associate { it.key.toString() to it.value } }
+                        UserScripts.set(this, list)
+                        result.success(null)
+                    }
+                    "forgetUserScript" -> {
+                        call.argument<String>("id")?.let { UserScripts.forget(this, it) }
+                        result.success(null)
+                    }
+                    "clearUserScripts" -> {
+                        UserScripts.clear(this)
+                        result.success(null)
+                    }
+                    "scriptCommands" -> result.success(tab?.scriptCommands() ?: emptyList<Map<String, Any?>>())
+                    "runScriptCommand" -> {
+                        tab?.runScriptCommand(call.argument<String>("s") ?: "", call.argument<Int>("i") ?: 0)
+                        result.success(null)
+                    }
                     else -> result.notImplemented()
                 }
             } catch (e: Exception) {
@@ -607,60 +683,166 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         super.onBackPressed()
     }
 
-    override fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?) {
-        val name = URLUtil.guessFileName(url, disposition, mime)
-        when {
-            url.startsWith("data:") -> saveDataUrl(tab, url, disposition)
-            url.startsWith("blob:") -> {
-                val named = Downloads.withExtension(name, mime)
-                tabEvent(tab.id, "download", mapOf("name" to named, "started" to true))
-                tab.fetchBlob(url, MAX_INLINE_BYTES) { dataUrl ->
-                    if (dataUrl == null) {
-                        tabEvent(tab.id, "downloadDone", mapOf("name" to named, "ok" to false))
-                    } else {
-                        saveDataUrl(tab, dataUrl, disposition, fallbackName = named, announce = false)
-                    }
-                }
-            }
-            url.startsWith("http://") || url.startsWith("https://") -> {
-                val request = DownloadManager.Request(Uri.parse(url))
-                    .setMimeType(mime)
-                    .addRequestHeader("User-Agent", userAgent)
-                    .setTitle(name)
-                    .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                    .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, name)
-                // Each tab's own cookies: a private tab's come from its profile,
-                // never from normal tabs.
-                cookieManagerFor(tab).getCookie(url)?.let { request.addRequestHeader("Cookie", it) }
-                val id = getSystemService(DownloadManager::class.java)?.enqueue(request)
-                if (id != null) downloads.addManaged(id, name, mime)
-                tabEvent(tab.id, "download", mapOf("name" to name, "started" to (id != null)))
-            }
-            else -> tabEvent(tab.id, "download", mapOf("name" to name, "started" to false))
+    /** A download the page offered, until the person says save or cancel. */
+    private class PendingDownload(
+        val tabId: String,
+        val private: Boolean,
+        val name: String,
+        val mime: String,
+        val length: Long,
+        val time: Long,
+        /** http(s) */
+        val url: String? = null,
+        val cookie: String? = null,
+        val referer: String? = null,
+        val userAgent: String? = null,
+        /** blob: */
+        val blob: ZtTab.BlobStream? = null,
+        /** data: */
+        val bytes: ByteArray? = null,
+    ) {
+        fun release() {
+            blob?.cancel()
         }
     }
 
-    /** A data: URL (or a blob: read back as one) saved to Downloads. */
-    private fun saveDataUrl(
-        tab: ZtTab,
-        url: String,
-        disposition: String?,
-        fallbackName: String? = null,
-        announce: Boolean = true,
-    ) {
-        val head = url.substring(0, minOf(url.length, 200))
-        val mime = head.removePrefix("data:").substringBefore(',').substringBefore(';').ifEmpty { "text/plain" }
-        val name = Downloads.withExtension(fallbackName ?: URLUtil.guessFileName(head, disposition, mime), mime)
-        if (announce) tabEvent(tab.id, "download", mapOf("name" to name, "started" to true))
-        io.execute {
-            val ok = try {
-                val bytes = Downloads.decodeDataUrl(url)
-                bytes != null && bytes.size <= MAX_INLINE_BYTES && downloads.saveBytes(bytes, name, mime)
-            } catch (e: Exception) {
-                false
-            }
-            main.post { tabEvent(tab.id, "downloadDone", mapOf("name" to name, "ok" to ok)) }
+    /**
+     * The page offered a file: hold on to what's needed to download it and
+     * ask Dart (B35), which shows the "Save this file?" sheet or, when the
+     * person turned that off and nothing looks risky, starts it at once.
+     */
+    override fun download(tab: ZtTab, url: String, userAgent: String, disposition: String?, mime: String?, length: Long) {
+        // Requests nobody answered (the tab went away) don't pile up.
+        val now = System.currentTimeMillis()
+        pendingDownloads.entries.removeAll { (_, p) ->
+            (now - p.time > PENDING_DOWNLOAD_MS).also { old -> if (old) p.release() }
         }
+        val pageUrl = tab.webView.url
+        val pending: PendingDownload = when {
+            url.startsWith("data:") -> {
+                val head = url.substring(0, minOf(url.length, 200))
+                val type = head.removePrefix("data:").substringBefore(',').substringBefore(';').ifEmpty { "text/plain" }
+                val bytes = try { Downloads.decodeDataUrl(url) } catch (e: Exception) { null }
+                if (bytes == null || bytes.size > MAX_INLINE_BYTES) {
+                    tabEvent(tab.id, "download", mapOf("started" to false))
+                    return
+                }
+                val name = Downloads.withExtension(URLUtil.guessFileName(head, disposition, type), type)
+                PendingDownload(tab.id, tab.isPrivate, name, type, bytes.size.toLong(), now, bytes = bytes)
+            }
+            url.startsWith("blob:") -> {
+                val blob = tab.holdBlob(url)
+                if (blob == null) {
+                    tabEvent(tab.id, "download", mapOf("started" to false))
+                    return
+                }
+                val type = mime?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
+                val name = Downloads.withExtension(URLUtil.guessFileName(url, disposition, mime), mime)
+                PendingDownload(tab.id, tab.isPrivate, name, type, length, now, blob = blob)
+            }
+            url.startsWith("http://") || url.startsWith("https://") -> {
+                val name = Downloads.withExtension(URLUtil.guessFileName(url, disposition, mime), mime)
+                PendingDownload(
+                    tab.id, tab.isPrivate, name,
+                    mime?.takeIf { it.isNotBlank() } ?: "application/octet-stream",
+                    length, now,
+                    url = url,
+                    // Each tab's own cookies: a private tab's come from its
+                    // profile, never from normal tabs.
+                    cookie = cookieManagerFor(tab).getCookie(url),
+                    referer = refererFor(pageUrl, url),
+                    userAgent = userAgent,
+                )
+            }
+            else -> {
+                tabEvent(tab.id, "download", mapOf("started" to false))
+                return
+            }
+        }
+        val id = nextDownloadRequest++
+        pendingDownloads[id] = pending
+        tabEvent(
+            tab.id, "downloadRequest",
+            mapOf(
+                "requestId" to id,
+                "name" to pending.name,
+                "mime" to pending.mime,
+                "size" to pending.length,
+                "url" to (pending.url ?: url.substringBefore(',').take(64)),
+                "pageUrl" to pageUrl,
+                "private" to tab.isPrivate,
+            ),
+        )
+    }
+
+    /**
+     * Starts a download the person said yes to (B35), under [name] (they
+     * may have renamed it). From a private tab, [keepPrivate] keeps it in
+     * the private vault (B33) instead of the phone's Downloads.
+     * Returns its key, or null when it can't be started any more.
+     */
+    private fun startDownload(requestId: Int, name: String?, keepPrivate: Boolean, openWhenDone: Boolean): String? {
+        val p = pendingDownloads.remove(requestId) ?: return null
+        val finalName = Downloads.withExtension(DownloadEngine.cleanName(name?.takeIf { it.isNotBlank() } ?: p.name), p.mime)
+        val private = p.private && keepPrivate
+        val job = when {
+            p.url != null -> downloadEngine.startHttp(
+                url = p.url,
+                name = finalName,
+                mime = p.mime,
+                private = private,
+                cookie = p.cookie,
+                referer = p.referer,
+                userAgent = p.userAgent,
+                totalHint = p.length,
+                openWhenDone = openWhenDone,
+            )
+            p.blob != null -> downloadEngine.startInline(finalName, p.mime, private, p.blob, openWhenDone, maxOf(p.length, p.blob.size))
+            p.bytes != null -> downloadEngine.startInline(finalName, p.mime, private, BytesSource(p.bytes), openWhenDone, p.bytes.size.toLong())
+            else -> null
+        }
+        return job?.key
+    }
+
+    /** A data: download's bytes, handed over in one piece. */
+    private class BytesSource(private var bytes: ByteArray?) : DownloadEngine.ChunkSource {
+        override fun next(): ByteArray? = bytes.also { bytes = null }
+        override fun cancel() {
+            bytes = null
+        }
+    }
+
+    /** Resumes with fresh cookies, from the same kind of tab only. */
+    private fun resumeDownload(key: String) {
+        val job = downloadEngine.job(key) ?: return
+        val url = job.url ?: return
+        val cookie = if (job.private) {
+            tabs.values.firstOrNull { it.isPrivate }?.let { cookieManagerFor(it).getCookie(url) }
+        } else {
+            CookieManager.getInstance().getCookie(url)
+        }
+        downloadEngine.resume(key, cookie)
+    }
+
+    private fun onDownloadFinished(job: DownloadEngine.Job) {
+        channel?.invokeMethod(
+            "downloadEvent",
+            mapOf(
+                "key" to job.key,
+                "name" to job.name,
+                "status" to job.status,
+                "private" to job.private,
+                "error" to job.error,
+                "openWhenDone" to job.openWhenDone,
+            ),
+        )
+    }
+
+    /** The last private tab is gone: so are private downloads (B33). */
+    private fun endPrivateDownloadsIfUnused() {
+        if (tabs.values.any { it.isPrivate }) return
+        if (downloadEngine.hasPrivate()) downloadEngine.endPrivateSession()
+        pendingDownloads.entries.removeAll { (_, p) -> p.private.also { if (it) p.release() } }
     }
 
     private fun cookieManagerFor(tab: ZtTab): CookieManager =
@@ -1135,6 +1317,12 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         tabs.clear()
         MediaHub.set(this, null)
         deletePrivateProfileIfUnused()
+        // Private tabs closed with the app: their downloads go too. Normal
+        // downloads keep going in the background.
+        endPrivateDownloadsIfUnused()
+        downloadEngine.onFinished.remove(downloadFinished)
+        for (p in pendingDownloads.values) p.release()
+        pendingDownloads.clear()
         Blocker.onLoaded = null
         super.onDestroy()
     }
@@ -1151,7 +1339,29 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         private const val MAX_LIVE_TABS = 5
         private const val MAX_PICKED_BYTES = 20 * 1024 * 1024
 
-        /** data: and blob: downloads go through memory, so they're capped. */
+        /** data: downloads come whole in the address, so they're capped. */
         const val MAX_INLINE_BYTES = 50L * 1024 * 1024
+
+        /** An unanswered "Save this file?" is forgotten after this long. */
+        private const val PENDING_DOWNLOAD_MS = 30L * 60 * 1000
+
+        /**
+         * The Referer a browser sends by default (strict-origin-when-cross-
+         * origin): the page itself on the same site, only its origin on
+         * another site, nothing from https to http.
+         */
+        fun refererFor(pageUrl: String?, target: String): String? {
+            if (pageUrl == null) return null
+            val page = try { Uri.parse(pageUrl) } catch (e: Exception) { return null }
+            val to = try { Uri.parse(target) } catch (e: Exception) { return null }
+            if (page.scheme != "http" && page.scheme != "https") return null
+            if (page.scheme == "https" && to.scheme == "http") return null
+            val sameOrigin = page.scheme == to.scheme && page.host == to.host && page.port == to.port
+            return if (sameOrigin) {
+                pageUrl.substringBefore('#')
+            } else {
+                "${page.scheme}://${page.encodedAuthority?.substringAfter('@')}/"
+            }
+        }
     }
 }

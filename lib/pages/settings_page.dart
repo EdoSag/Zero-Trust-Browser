@@ -6,6 +6,7 @@ import 'package:zerotrust_browser/browser/blocklist_updater.dart';
 import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
+import 'package:zerotrust_browser/browser/user_scripts.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
@@ -14,6 +15,7 @@ import 'package:zerotrust_browser/pages/block_rules_page.dart';
 import 'package:zerotrust_browser/pages/encrypted_dns_page.dart';
 import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
+import 'package:zerotrust_browser/pages/scripts_page.dart';
 import 'package:zerotrust_browser/pages/shortcuts_page.dart';
 import 'package:zerotrust_browser/pages/site_permissions_page.dart';
 
@@ -54,6 +56,8 @@ class BrowserSettingsPage extends ConsumerWidget {
     final Map<Object?, Object?> dns =
         ref.watch(privateDnsProvider).value ?? const <Object?, Object?>{};
     final bool lockAvailable = ref.watch(_lockAvailableProvider).value ?? false;
+    final List<UserScript> scripts =
+        ref.watch(userScriptsProvider).value ?? const <UserScript>[];
     final int ownRules =
         s.blockedHosts.length + s.unblockedHosts.length + s.filterLists.length;
 
@@ -66,6 +70,9 @@ class BrowserSettingsPage extends ConsumerWidget {
       showSyncStatus: true,
       onSignedOut: () =>
           Navigator.of(context).popUntil((Route<dynamic> r) => r.isFirst),
+      privacyPolicyUrl: Uri.parse('https://zerotrust.bz/privacy/'),
+      termsUrl: Uri.parse('https://zerotrust.bz/terms/'),
+      supportUrl: Uri.parse('https://zerotrust.bz/support/'),
       onOpenUrl: (Uri url) =>
           launchUrl(url, mode: LaunchMode.externalApplication),
       appSection: <Widget>[
@@ -316,12 +323,28 @@ class BrowserSettingsPage extends ConsumerWidget {
           value: s.darkPages,
           onChanged: (bool v) => save(s.copyWith(darkPages: v)),
         ),
+        ListTile(
+          leading: const Icon(Icons.code),
+          title: Text(l.scripts),
+          subtitle: Text(
+            scripts.isEmpty ? l.scriptsSub : l.scriptsCount(scripts.length),
+          ),
+          onTap: () => push(const ScriptsPage()),
+        ),
         SwitchListTile(
           secondary: const Icon(Icons.headphones_outlined),
           title: Text(l.backgroundPlay),
           subtitle: Text(l.backgroundPlaySub),
           value: s.backgroundPlay,
           onChanged: (bool v) => save(s.copyWith(backgroundPlay: v)),
+        ),
+        _Header(l.downloads),
+        SwitchListTile(
+          secondary: const Icon(Icons.download_outlined),
+          title: Text(l.askBeforeDownload),
+          subtitle: Text(l.askBeforeDownloadSub),
+          value: s.askBeforeDownload,
+          onChanged: (bool v) => save(s.copyWith(askBeforeDownload: v)),
         ),
         _Header(l.tabsAndHistory),
         ListTile(
