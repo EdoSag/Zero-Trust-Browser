@@ -399,6 +399,42 @@ abstract final class SitePermission {
   static const String location = 'location';
 }
 
+/// B42: a browser identity the user made: a name and the user agent
+/// string sites are sent. The rest (Client Hints, `navigator` fields) is
+/// worked out from the string, see lib/browser/identity.dart.
+class CustomIdentity {
+  const CustomIdentity({
+    required this.id,
+    required this.name,
+    required this.userAgent,
+  });
+
+  final String id;
+  final String name;
+  final String userAgent;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'name': name,
+    'userAgent': userAgent,
+  };
+
+  static CustomIdentity? fromJson(Object? j) {
+    if (j is! Map) return null;
+    final Object? id = j['id'];
+    final Object? name = j['name'];
+    final Object? ua = j['userAgent'];
+    if (id is! String || id.isEmpty || ua is! String || ua.trim().isEmpty) {
+      return null;
+    }
+    return CustomIdentity(
+      id: id,
+      name: name is String && name.trim().isNotEmpty ? name.trim() : ua.trim(),
+      userAgent: ua.trim(),
+    );
+  }
+}
+
 /// Browser settings, synced so every device behaves the same.
 class BrowserSettings {
   const BrowserSettings({
@@ -434,6 +470,9 @@ class BrowserSettings {
     this.backgroundPlay = true,
     this.readAloudRate = 1.0,
     this.askBeforeDownload = true,
+    this.identity = 'default',
+    this.identityRules = const <String, String>{},
+    this.customIdentities = const <CustomIdentity>[],
   });
 
   static const String itemId = 'browser-settings';
@@ -533,6 +572,17 @@ class BrowserSettings {
   /// Show "Save this file?" (name, size, where it goes) before each
   /// download (B35). Files that look risky are always asked about.
   final bool askBeforeDownload;
+
+  /// B42: which browser sites are told this is (see `Identities`):
+  /// 'default', a preset, a random one per site, or one of
+  /// [customIdentities].
+  final String identity;
+
+  /// Sites (hosts, with their subdomains) that get another identity.
+  final Map<String, String> identityRules;
+
+  /// The user's own identities.
+  final List<CustomIdentity> customIdentities;
 
   static const List<double> readAloudRates = <double>[
     0.75,
@@ -657,6 +707,9 @@ class BrowserSettings {
     bool? backgroundPlay,
     double? readAloudRate,
     bool? askBeforeDownload,
+    String? identity,
+    Map<String, String>? identityRules,
+    List<CustomIdentity>? customIdentities,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -692,6 +745,9 @@ class BrowserSettings {
     backgroundPlay: backgroundPlay ?? this.backgroundPlay,
     readAloudRate: readAloudRate ?? this.readAloudRate,
     askBeforeDownload: askBeforeDownload ?? this.askBeforeDownload,
+    identity: identity ?? this.identity,
+    identityRules: identityRules ?? this.identityRules,
+    customIdentities: customIdentities ?? this.customIdentities,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -733,6 +789,11 @@ class BrowserSettings {
     'backgroundPlay': backgroundPlay,
     'readAloudRate': readAloudRate,
     'askBeforeDownload': askBeforeDownload,
+    'identity': identity,
+    'identityRules': identityRules,
+    'customIdentities': <Map<String, Object?>>[
+      for (final CustomIdentity c in customIdentities) c.toJson(),
+    ],
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -806,6 +867,18 @@ class BrowserSettings {
           ? rate.toDouble()
           : 1.0,
       askBeforeDownload: j['askBeforeDownload'] as bool? ?? true,
+      identity: j['identity'] as String? ?? 'default',
+      identityRules: <String, String>{
+        if (j['identityRules'] case final Map<Object?, Object?> rules)
+          for (final MapEntry<Object?, Object?> e in rules.entries)
+            if (e.key is String && e.value is String)
+              e.key! as String: e.value! as String,
+      },
+      customIdentities: <CustomIdentity>[
+        for (final Object? e
+            in (j['customIdentities'] as List<Object?>? ?? const <Object?>[]))
+          ?CustomIdentity.fromJson(e),
+      ],
     );
   }
 }

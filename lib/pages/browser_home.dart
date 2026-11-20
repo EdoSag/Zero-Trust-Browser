@@ -28,6 +28,7 @@ import 'package:zerotrust_browser/pages/bookmarks_page.dart';
 import 'package:zerotrust_browser/pages/download_sheet.dart';
 import 'package:zerotrust_browser/pages/downloads_page.dart';
 import 'package:zerotrust_browser/pages/history_page.dart';
+import 'package:zerotrust_browser/pages/identity_page.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/scripts_page.dart';
@@ -95,6 +96,16 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     _pushMedia(ref.read(browserSettingsProvider));
     _pushDownloadLabels();
     _pushScripts(ref.read(userScriptsProvider).value);
+    // B42: the first page must already go out as the browser the user
+    // picked, so the stored settings are waited for before a tab loads.
+    try {
+      await applyIdentity(
+        _engine,
+        await ref.read(loadedSettingsProvider.future),
+      );
+    } on Object {
+      // The settings arrive later, through the listener in build.
+    }
     await ref
         .read(tabsProvider.notifier)
         .restoreIfEmpty(closeAfterDays: _settings.closeTabsAfterDays);
@@ -1327,6 +1338,20 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                     onChanged: (bool v) =>
                         run(() => _tabs.setDesktop(tab.id, v)),
                   ),
+                if (onPage)
+                  ListTile(
+                    leading: const Icon(Icons.badge_outlined),
+                    title: Text(l.identity),
+                    subtitle: Text(
+                      identityName(
+                        l,
+                        tab.shownIdentity,
+                        _settings.customIdentities,
+                      ),
+                    ),
+                    onTap: () =>
+                        run(() => showTabIdentitySheet(context, ref, tab)),
+                  ),
                 ListTile(
                   leading: const Icon(Icons.local_fire_department_outlined),
                   title: Text(l.fireMenu),
@@ -1366,6 +1391,11 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     ) {
       _pushPrivacy(next);
       if (prev?.backgroundPlay != next.backgroundPlay) _pushMedia(next);
+      // One of the user's own identities changed (B42): tabs using it.
+      if (prev != null &&
+          !identical(prev.customIdentities, next.customIdentities)) {
+        _tabs.refreshIdentities().ignore();
+      }
       // Rules changed here or on another device (B30).
       if (prev == null ||
           !_same(prev.blockedHosts, next.blockedHosts) ||

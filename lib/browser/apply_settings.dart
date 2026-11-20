@@ -1,5 +1,6 @@
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/clean_url.dart';
+import 'package:zerotrust_browser/browser/identity.dart';
 import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 
@@ -16,6 +17,19 @@ Future<void> applySettings(BrowserEngine engine, BrowserSettings s) async {
     stripTracking: s.stripTracking,
   );
   await engine.setDisplay(textZoom: s.textZoom, darkPages: s.darkPages);
+  await applyIdentity(engine, s);
+}
+
+/// B42: hands the browser identity (for all sites and per site) to the
+/// engine. With the default and no site rules that is two empty values,
+/// and the engine does nothing per page.
+Future<void> applyIdentity(
+  BrowserEngine engine,
+  BrowserSettings s, {
+  DateTime? now,
+}) {
+  final config = Identities.config(s, now ?? DateTime.now());
+  return engine.setIdentity(global: config.global, rules: config.rules);
 }
 
 /// [url] as it should be copied or shared: without tracking tags, unless

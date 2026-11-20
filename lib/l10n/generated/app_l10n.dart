@@ -3222,6 +3222,294 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Review'**
   String get review;
+
+  /// No description provided for @identity.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser identity'**
+  String get identity;
+
+  /// No description provided for @identityExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Every site is told which browser and system you use (the \"user agent\"). Pick another one to get a site\'s desktop version, to open a site that turns your browser away, or to stand out less. The User-Agent header, the Client Hints headers and what a page\'s scripts can read are changed together, so they always agree. A site that looks closely can still tell which engine draws the page.'**
+  String get identityExplain;
+
+  /// No description provided for @identityDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get identityDefault;
+
+  /// No description provided for @identityDefaultSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Chrome on Android, at this phone\'s real version'**
+  String get identityDefaultSub;
+
+  /// No description provided for @identityOn.
+  ///
+  /// In en, this message translates to:
+  /// **'{browser} on {system}'**
+  String identityOn(String browser, String system);
+
+  /// No description provided for @identitySummaryRules.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} · {count, plural, =1{1 site with its own} other{{count} sites with their own}}'**
+  String identitySummaryRules(int count, String name);
+
+  /// No description provided for @identityAllSites.
+  ///
+  /// In en, this message translates to:
+  /// **'For all sites'**
+  String get identityAllSites;
+
+  /// No description provided for @identitySites.
+  ///
+  /// In en, this message translates to:
+  /// **'Sites with their own identity'**
+  String get identitySites;
+
+  /// No description provided for @identitySitesExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'A site and its subdomains always get the identity you pick for it.'**
+  String get identitySitesExplain;
+
+  /// No description provided for @identityAddSite.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a site'**
+  String get identityAddSite;
+
+  /// No description provided for @identityAddSiteExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Type the site\'s address, then pick what it is told.'**
+  String get identityAddSiteExplain;
+
+  /// No description provided for @identityOwn.
+  ///
+  /// In en, this message translates to:
+  /// **'Your own identities'**
+  String get identityOwn;
+
+  /// No description provided for @identityMakeOwn.
+  ///
+  /// In en, this message translates to:
+  /// **'Make your own'**
+  String get identityMakeOwn;
+
+  /// No description provided for @identityRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'Random'**
+  String get identityRandom;
+
+  /// No description provided for @identityRandomPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Random phone browser'**
+  String get identityRandomPhone;
+
+  /// No description provided for @identityRandomComputer.
+  ///
+  /// In en, this message translates to:
+  /// **'Random computer browser'**
+  String get identityRandomComputer;
+
+  /// No description provided for @identityRandomAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Random browser'**
+  String get identityRandomAny;
+
+  /// No description provided for @identityRandomSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Another one for each site, new every time the app starts'**
+  String get identityRandomSub;
+
+  /// No description provided for @identityShuffle.
+  ///
+  /// In en, this message translates to:
+  /// **'New random identities now'**
+  String get identityShuffle;
+
+  /// No description provided for @identityShuffled.
+  ///
+  /// In en, this message translates to:
+  /// **'Sites get new random identities from now on'**
+  String get identityShuffled;
+
+  /// No description provided for @identityPhones.
+  ///
+  /// In en, this message translates to:
+  /// **'Phones and tablets'**
+  String get identityPhones;
+
+  /// No description provided for @identityComputers.
+  ///
+  /// In en, this message translates to:
+  /// **'Computers'**
+  String get identityComputers;
+
+  /// No description provided for @identitySeen.
+  ///
+  /// In en, this message translates to:
+  /// **'What sites are told'**
+  String get identitySeen;
+
+  /// No description provided for @identityHintsSame.
+  ///
+  /// In en, this message translates to:
+  /// **'Client Hints and navigator.userAgentData say the same: {brand}.'**
+  String identityHintsSame(String brand);
+
+  /// No description provided for @identityHintsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'This browser has no Client Hints: they name no browser, and navigator.userAgentData is removed.'**
+  String get identityHintsNone;
+
+  /// No description provided for @identityHintsOld.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone\'s web engine is too old to change Client Hints.'**
+  String get identityHintsOld;
+
+  /// No description provided for @identitySeenRandom.
+  ///
+  /// In en, this message translates to:
+  /// **'A different browser for each site.'**
+  String get identitySeenRandom;
+
+  /// No description provided for @identityThisTab.
+  ///
+  /// In en, this message translates to:
+  /// **'This tab'**
+  String get identityThisTab;
+
+  /// No description provided for @identityThisSite.
+  ///
+  /// In en, this message translates to:
+  /// **'This site'**
+  String get identityThisSite;
+
+  /// No description provided for @identityThisTabSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Until the tab is closed'**
+  String get identityThisTabSub;
+
+  /// No description provided for @identityThisSiteSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Every time on {host}, in every tab'**
+  String identityThisSiteSub(String host);
+
+  /// No description provided for @identityAsSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Same as Settings'**
+  String get identityAsSettings;
+
+  /// No description provided for @identityNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New identity'**
+  String get identityNew;
+
+  /// No description provided for @identityEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit identity'**
+  String get identityEdit;
+
+  /// No description provided for @identityUserAgent.
+  ///
+  /// In en, this message translates to:
+  /// **'User agent'**
+  String get identityUserAgent;
+
+  /// No description provided for @identityUserAgentHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'{chrome} stands for this phone\'s engine version, so the identity never goes out of date.'**
+  String identityUserAgentHelp(String chrome);
+
+  /// No description provided for @identityStartFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Start from a browser'**
+  String get identityStartFrom;
+
+  /// No description provided for @identityUaEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Type a user agent'**
+  String get identityUaEmpty;
+
+  /// No description provided for @identityUaTooLong.
+  ///
+  /// In en, this message translates to:
+  /// **'Too long: 512 characters at most'**
+  String get identityUaTooLong;
+
+  /// No description provided for @identityUaNotAscii.
+  ///
+  /// In en, this message translates to:
+  /// **'Only English letters, digits and punctuation'**
+  String get identityUaNotAscii;
+
+  /// No description provided for @identityWorkedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Worked out from it'**
+  String get identityWorkedOut;
+
+  /// No description provided for @identityBrowserRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser'**
+  String get identityBrowserRow;
+
+  /// No description provided for @identitySystemRow.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get identitySystemRow;
+
+  /// No description provided for @identityUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Not recognized'**
+  String get identityUnknown;
+
+  /// No description provided for @identityHintsRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Client Hints'**
+  String get identityHintsRow;
+
+  /// No description provided for @identityHintsRowNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None, like the real one'**
+  String get identityHintsRowNone;
+
+  /// No description provided for @identityDeleteQ.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String identityDeleteQ(String name);
+
+  /// No description provided for @identityDeleteExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Sites and tabs that use it go back to the default.'**
+  String get identityDeleteExplain;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

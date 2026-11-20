@@ -1095,5 +1095,101 @@
       }
     }
   },
-  "review": "Review"
+  "review": "Review",
+  "identity": "Browser identity",
+  "identityExplain": "Every site is told which browser and system you use (the \"user agent\"). Pick another one to get a site's desktop version, to open a site that turns your browser away, or to stand out less. The User-Agent header, the Client Hints headers and what a page's scripts can read are changed together, so they always agree. A site that looks closely can still tell which engine draws the page.",
+  "identityDefault": "Default",
+  "identityDefaultSub": "Chrome on Android, at this phone's real version",
+  "identityOn": "{browser} on {system}",
+  "@identityOn": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "system": {
+        "type": "String"
+      }
+    }
+  },
+  "identitySummaryRules": "{name} · {count, plural, =1{1 site with its own} other{{count} sites with their own}}",
+  "@identitySummaryRules": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "identityAllSites": "For all sites",
+  "identitySites": "Sites with their own identity",
+  "identitySitesExplain": "A site and its subdomains always get the identity you pick for it.",
+  "identityAddSite": "Add a site",
+  "identityAddSiteExplain": "Type the site's address, then pick what it is told.",
+  "identityOwn": "Your own identities",
+  "identityMakeOwn": "Make your own",
+  "identityRandom": "Random",
+  "identityRandomPhone": "Random phone browser",
+  "identityRandomComputer": "Random computer browser",
+  "identityRandomAny": "Random browser",
+  "identityRandomSub": "Another one for each site, new every time the app starts",
+  "identityShuffle": "New random identities now",
+  "identityShuffled": "Sites get new random identities from now on",
+  "identityPhones": "Phones and tablets",
+  "identityComputers": "Computers",
+  "identitySeen": "What sites are told",
+  "identityHintsSame": "Client Hints and navigator.userAgentData say the same: {brand}.",
+  "@identityHintsSame": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "identityHintsNone": "This browser has no Client Hints: they name no browser, and navigator.userAgentData is removed.",
+  "identityHintsOld": "This phone's web engine is too old to change Client Hints.",
+  "identitySeenRandom": "A different browser for each site.",
+  "identityThisTab": "This tab",
+  "identityThisSite": "This site",
+  "identityThisTabSub": "Until the tab is closed",
+  "identityThisSiteSub": "Every time on {host}, in every tab",
+  "@identityThisSiteSub": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "identityAsSettings": "Same as Settings",
+  "identityNew": "New identity",
+  "identityEdit": "Edit identity",
+  "identityUserAgent": "User agent",
+  "identityUserAgentHelp": "{chrome} stands for this phone's engine version, so the identity never goes out of date.",
+  "@identityUserAgentHelp": {
+    "placeholders": {
+      "chrome": {
+        "type": "String"
+      }
+    }
+  },
+  "identityStartFrom": "Start from a browser",
+  "identityUaEmpty": "Type a user agent",
+  "identityUaTooLong": "Too long: 512 characters at most",
+  "identityUaNotAscii": "Only English letters, digits and punctuation",
+  "identityWorkedOut": "Worked out from it",
+  "identityBrowserRow": "Browser",
+  "identitySystemRow": "System",
+  "identityUnknown": "Not recognized",
+  "identityHintsRow": "Client Hints",
+  "identityHintsRowNone": "None, like the real one",
+  "identityDeleteQ": "Delete {name}?",
+  "@identityDeleteQ": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "identityDeleteExplain": "Sites and tabs that use it go back to the default."
 }
