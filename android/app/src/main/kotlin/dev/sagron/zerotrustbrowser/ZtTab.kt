@@ -63,6 +63,7 @@ class ZtTab(
     desktop: Boolean,
     private val events: (String, Map<String, Any?>) -> Unit,
     private val host: TabHost,
+    identity: Identity.Target? = null,
 ) {
     /** What a tab needs from the activity. */
     interface TabHost {
@@ -93,8 +94,18 @@ class ZtTab(
     val webView: WebView = WebView(activity)
     private val main = Handler(Looper.getMainLooper())
     private val blocked = AtomicInteger(0)
-    private val defaultUserAgent: String
     private var startScript: ScriptHandler? = null
+
+    /** B42: this tab's own identity (null follows the settings and site rules). */
+    private var identityTarget: Identity.Target? = identity
+
+    /** The identity the WebView has now, and its page script. */
+    private var applied: Identity.Spec? = null
+    private var identityScript: ScriptHandler? = null
+    private var identityScriptText: String? = null
+
+    /** The identity changed while this tab was in the background. */
+    private var identityStale = false
     private var mediaScript: ScriptHandler? = null
 
     /** B41: the user's scripts, added after the browser's own. */
@@ -161,11 +172,8 @@ class ZtTab(
         // in private tabs too (nothing is saved by the browser itself).
         webView.importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_YES
         // Look like Chrome rather than an in-app WebView ("; wv" makes some
-        // sign-in pages refuse), and keep the original for desktop mode.
-        defaultUserAgent = s.userAgentString
-            .replace("; wv)", ")")
-            .replace(Regex("Version/\\d+\\.\\d+ "), "")
-        applyUserAgent()
+        // sign-in pages refuse), or like the browser the user picked (B42).
+        applyIdentity(null)
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         listenForMedia()
@@ -187,13 +195,40 @@ class ZtTab(
     fun load(url: String) {
         val target = upgrade(untracked(url))
         applyJavaScript(target)
+        applyIdentity(target)
         webView.loadUrl(target, privacyHeaders())
     }
 
     fun loadInsecure(url: String) {
         Uri.parse(url).host?.let { insecureAllowed.add(it.lowercase()) }
         applyJavaScript(url)
+        applyIdentity(url)
         webView.loadUrl(url, privacyHeaders())
+    }
+
+    // Back, forward and reload don't pass shouldOverrideUrlLoading: the
+    // identity for the page they lead to is set before they start.
+
+    fun back() {
+        identityForHistory(-1)
+        webView.goBack()
+    }
+
+    fun forward() {
+        identityForHistory(1)
+        webView.goForward()
+    }
+
+    fun reload() {
+        if (identityBySite) applyIdentity(webView.url)
+        webView.reload()
+    }
+
+    private fun identityForHistory(step: Int) {
+        if (!identityBySite) return
+        val list = webView.copyBackForwardList()
+        val item = list.getItemAtIndex(list.currentIndex + step) ?: return
+        applyIdentity(item.url)
     }
 
     /** Shows [html] as if it were [baseUrl]: reader mode or a saved page. */
@@ -202,15 +237,80 @@ class ZtTab(
         webView.loadDataWithBaseURL(baseUrl, html, "text/html", "utf-8", baseUrl)
     }
 
-    /** Brings back an unloaded tab's history and page. */
-    fun restore(state: Bundle): Boolean = webView.restoreState(state) != null
+    /** Brings back an unloaded tab's history and page (it showed [url]). */
+    fun restore(state: Bundle, url: String?): Boolean {
+        applyIdentity(url)
+        return webView.restoreState(state) != null
+    }
 
     fun saveState(): Bundle = Bundle().also { webView.saveState(it) }
 
     fun setDesktop(on: Boolean) {
         if (desktopMode == on) return
         desktopMode = on
-        applyUserAgent()
+        applyIdentity(webView.url)
+        webView.reload()
+    }
+
+    // ---- Identity (B42) ----------------------------------------------------
+
+    /** True when this tab's identity can differ from one site to the next. */
+    private val identityBySite: Boolean
+        get() = identityTarget?.let { it.pool != null } ?: Identity.bySite
+
+    /**
+     * Sets the identity for a page at [url] (null: no page yet): the user
+     * agent, its Client Hints, and the page script for the rest. True when
+     * it changed. With the default and nothing chosen this is one
+     * comparison.
+     */
+    private fun applyIdentity(url: String?): Boolean {
+        val host = url?.let { Uri.parse(it).host }
+        val spec = Identity.resolve(activity, identityTarget, desktopMode, isPrivate, host)
+        if (spec == applied) return false
+        applied = spec
+        val s = webView.settings
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.USER_AGENT_METADATA)) {
+            try {
+                WebSettingsCompat.setUserAgentMetadata(s, Identity.metadata(spec))
+            } catch (e: Exception) {
+                // An engine that refuses a value keeps its own hints.
+            }
+        }
+        s.userAgentString = spec.userAgent
+        val script = Identity.script(spec)
+        if (script != identityScriptText) {
+            identityScriptText = script
+            // Before the user's scripts, so they see the same browser.
+            if (startScript != null) refreshScripts()
+        }
+        return true
+    }
+
+    /** The user picked an identity for this tab (null: follow the settings). */
+    fun setIdentity(target: Identity.Target?) {
+        identityTarget = target
+        if (applyIdentity(webView.url)) reloadForIdentity(true)
+    }
+
+    /** The settings' identity or a site rule changed. */
+    fun identityChanged(showing: Boolean) {
+        if (applyIdentity(webView.url)) reloadForIdentity(showing)
+    }
+
+    /**
+     * The page loaded as the old browser: the tab on screen loads it
+     * again now, one in the background when it is next shown.
+     */
+    private fun reloadForIdentity(showing: Boolean) {
+        if (webView.url == null || inReader) return
+        if (showing) webView.reload() else identityStale = true
+    }
+
+    /** This tab came to the front. */
+    fun shown() {
+        if (!identityStale) return
+        identityStale = false
         webView.reload()
     }
 
@@ -230,6 +330,10 @@ class ZtTab(
         if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) return
         startScript?.remove()
         startScript = WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.documentStart(), setOf("*"))
+        identityScript?.remove()
+        identityScript = identityScriptText?.let {
+            WebViewCompat.addDocumentStartJavaScript(webView, it, setOf("*"))
+        }
         mediaScript?.remove()
         mediaScript = if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) {
             WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.media(backgroundPlay), setOf("*"))
@@ -619,6 +723,7 @@ class ZtTab(
                 "secure" to (url != null && url.startsWith("https://") && !sslError),
                 "blocked" to blocked.get(),
                 "desktop" to desktopMode,
+                "identity" to (applied?.id ?: Identity.DEFAULT),
                 "readerable" to readerable,
                 "reader" to inReader,
                 "javascript" to webView.settings.javaScriptEnabled,
@@ -632,10 +737,6 @@ class ZtTab(
     }
 
     // ---- Internals ---------------------------------------------------------
-
-    private fun applyUserAgent() {
-        webView.settings.userAgentString = if (desktopMode) desktopAgent(defaultUserAgent) else defaultUserAgent
-    }
 
     /** JavaScript off on sites the user chose; applies from the next load. */
     private fun applyJavaScript(url: String): Boolean {
@@ -737,7 +838,10 @@ class ZtTab(
                     // goes through HTTPS-only like any other.
                     val target = upgrade(untracked(url))
                     applyJavaScript(target)
-                    if (target == url) {
+                    // B42: a site with another identity starts again as
+                    // that browser (this request already said the old one).
+                    val switched = identityBySite && applyIdentity(target)
+                    if (target == url && !switched) {
                         false
                     } else {
                         view.loadUrl(target, privacyHeaders())
@@ -747,11 +851,11 @@ class ZtTab(
                 "about", "data", "blob", "javascript" -> false
                 "http" -> {
                     val target = upgrade(untracked(url))
-                    if (target == url) {
-                        applyJavaScript(url)
+                    applyJavaScript(target)
+                    val switched = identityBySite && applyIdentity(target)
+                    if (target == url && !switched) {
                         false
                     } else {
-                        applyJavaScript(target)
                         view.loadUrl(target, privacyHeaders())
                         true
                     }
@@ -766,6 +870,7 @@ class ZtTab(
 
         override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
             pageHost = Uri.parse(url).host
+            identityStale = false
             scriptMenus.clear()
             // A new page: its translation (if any) starts again once loaded.
             translateGen++
@@ -981,10 +1086,5 @@ class ZtTab(
         private fun isLocal(host: String) =
             host == "localhost" || host.endsWith(".local") || host.startsWith("192.168.") ||
                 host.startsWith("10.") || host == "127.0.0.1"
-
-        private fun desktopAgent(mobile: String): String {
-            val chrome = Regex("Chrome/[\\d.]+").find(mobile)?.value ?: "Chrome/130.0.0.0"
-            return "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) $chrome Safari/537.36"
-        }
     }
 }

@@ -1899,4 +1899,175 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get review => 'Review';
+
+  @override
+  String get identity => 'Browser identity';
+
+  @override
+  String get identityExplain =>
+      'Every site is told which browser and system you use (the \"user agent\"). Pick another one to get a site\'s desktop version, to open a site that turns your browser away, or to stand out less. The User-Agent header, the Client Hints headers and what a page\'s scripts can read are changed together, so they always agree. A site that looks closely can still tell which engine draws the page.';
+
+  @override
+  String get identityDefault => 'Default';
+
+  @override
+  String get identityDefaultSub =>
+      'Chrome on Android, at this phone\'s real version';
+
+  @override
+  String identityOn(String browser, String system) {
+    return '$browser on $system';
+  }
+
+  @override
+  String identitySummaryRules(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sites with their own',
+      one: '1 site with its own',
+    );
+    return '$name · $_temp0';
+  }
+
+  @override
+  String get identityAllSites => 'For all sites';
+
+  @override
+  String get identitySites => 'Sites with their own identity';
+
+  @override
+  String get identitySitesExplain =>
+      'A site and its subdomains always get the identity you pick for it.';
+
+  @override
+  String get identityAddSite => 'Add a site';
+
+  @override
+  String get identityAddSiteExplain =>
+      'Type the site\'s address, then pick what it is told.';
+
+  @override
+  String get identityOwn => 'Your own identities';
+
+  @override
+  String get identityMakeOwn => 'Make your own';
+
+  @override
+  String get identityRandom => 'Random';
+
+  @override
+  String get identityRandomPhone => 'Random phone browser';
+
+  @override
+  String get identityRandomComputer => 'Random computer browser';
+
+  @override
+  String get identityRandomAny => 'Random browser';
+
+  @override
+  String get identityRandomSub =>
+      'Another one for each site, new every time the app starts';
+
+  @override
+  String get identityShuffle => 'New random identities now';
+
+  @override
+  String get identityShuffled => 'Sites get new random identities from now on';
+
+  @override
+  String get identityPhones => 'Phones and tablets';
+
+  @override
+  String get identityComputers => 'Computers';
+
+  @override
+  String get identitySeen => 'What sites are told';
+
+  @override
+  String identityHintsSame(String brand) {
+    return 'Client Hints and navigator.userAgentData say the same: $brand.';
+  }
+
+  @override
+  String get identityHintsNone =>
+      'This browser has no Client Hints: they name no browser, and navigator.userAgentData is removed.';
+
+  @override
+  String get identityHintsOld =>
+      'This phone\'s web engine is too old to change Client Hints.';
+
+  @override
+  String get identitySeenRandom => 'A different browser for each site.';
+
+  @override
+  String get identityThisTab => 'This tab';
+
+  @override
+  String get identityThisSite => 'This site';
+
+  @override
+  String get identityThisTabSub => 'Until the tab is closed';
+
+  @override
+  String identityThisSiteSub(String host) {
+    return 'Every time on $host, in every tab';
+  }
+
+  @override
+  String get identityAsSettings => 'Same as Settings';
+
+  @override
+  String get identityNew => 'New identity';
+
+  @override
+  String get identityEdit => 'Edit identity';
+
+  @override
+  String get identityUserAgent => 'User agent';
+
+  @override
+  String identityUserAgentHelp(String chrome) {
+    return '$chrome stands for this phone\'s engine version, so the identity never goes out of date.';
+  }
+
+  @override
+  String get identityStartFrom => 'Start from a browser';
+
+  @override
+  String get identityUaEmpty => 'Type a user agent';
+
+  @override
+  String get identityUaTooLong => 'Too long: 512 characters at most';
+
+  @override
+  String get identityUaNotAscii =>
+      'Only English letters, digits and punctuation';
+
+  @override
+  String get identityWorkedOut => 'Worked out from it';
+
+  @override
+  String get identityBrowserRow => 'Browser';
+
+  @override
+  String get identitySystemRow => 'System';
+
+  @override
+  String get identityUnknown => 'Not recognized';
+
+  @override
+  String get identityHintsRow => 'Client Hints';
+
+  @override
+  String get identityHintsRowNone => 'None, like the real one';
+
+  @override
+  String identityDeleteQ(String name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get identityDeleteExplain =>
+      'Sites and tabs that use it go back to the default.';
 }

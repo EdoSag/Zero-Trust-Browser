@@ -67,8 +67,9 @@ flutter {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
-    // Private-tab profiles (MULTI_PROFILE) and document-start scripts.
-    implementation("androidx.webkit:webkit:1.14.0")
+    // Private-tab profiles (MULTI_PROFILE), document-start scripts, and the
+    // user agent's Client Hints (1.16 adds their form factor, B42).
+    implementation("androidx.webkit:webkit:1.16.0")
     // QR code scanner (Apache 2.0), works offline with no Google services.
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }

@@ -1888,4 +1888,173 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get review => 'בדיקה';
+
+  @override
+  String get identity => 'זהות הדפדפן';
+
+  @override
+  String get identityExplain =>
+      'כל אתר מקבל מידע על הדפדפן והמערכת שלך (ה-\"user agent\"). אפשר לבחור זהות אחרת כדי לקבל את גרסת המחשב של אתר, לפתוח אתר שדוחה את הדפדפן שלך, או לבלוט פחות. כותרת ה-User-Agent, כותרות ה-Client Hints ומה שסקריפטים בדף יכולים לקרוא משתנים יחד, כך שהם תמיד תואמים. אתר שבודק לעומק עדיין יכול לזהות איזה מנוע מציג את הדף.';
+
+  @override
+  String get identityDefault => 'ברירת מחדל';
+
+  @override
+  String get identityDefaultSub =>
+      'Chrome ב-Android, בגרסה האמיתית של הטלפון הזה';
+
+  @override
+  String identityOn(String browser, String system) {
+    return '$browser ב-$system';
+  }
+
+  @override
+  String identitySummaryRules(int count, String name) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count אתרים עם זהות משלהם',
+      one: 'אתר אחד עם זהות משלו',
+    );
+    return '$name · $_temp0';
+  }
+
+  @override
+  String get identityAllSites => 'לכל האתרים';
+
+  @override
+  String get identitySites => 'אתרים עם זהות משלהם';
+
+  @override
+  String get identitySitesExplain =>
+      'אתר ותת-הדומיינים שלו תמיד מקבלים את הזהות שנבחרה עבורו.';
+
+  @override
+  String get identityAddSite => 'הוספת אתר';
+
+  @override
+  String get identityAddSiteExplain =>
+      'יש להקליד את כתובת האתר, ואז לבחור מה ייאמר לו.';
+
+  @override
+  String get identityOwn => 'זהויות משלך';
+
+  @override
+  String get identityMakeOwn => 'יצירת זהות משלך';
+
+  @override
+  String get identityRandom => 'אקראי';
+
+  @override
+  String get identityRandomPhone => 'דפדפן אקראי של טלפון';
+
+  @override
+  String get identityRandomComputer => 'דפדפן אקראי של מחשב';
+
+  @override
+  String get identityRandomAny => 'דפדפן אקראי';
+
+  @override
+  String get identityRandomSub => 'אחר לכל אתר, וחדש בכל הפעלה של האפליקציה';
+
+  @override
+  String get identityShuffle => 'זהויות אקראיות חדשות עכשיו';
+
+  @override
+  String get identityShuffled => 'מעכשיו האתרים מקבלים זהויות אקראיות חדשות';
+
+  @override
+  String get identityPhones => 'טלפונים וטאבלטים';
+
+  @override
+  String get identityComputers => 'מחשבים';
+
+  @override
+  String get identitySeen => 'מה נאמר לאתרים';
+
+  @override
+  String identityHintsSame(String brand) {
+    return 'גם Client Hints ו-navigator.userAgentData אומרים אותו דבר: $brand.';
+  }
+
+  @override
+  String get identityHintsNone =>
+      'לדפדפן הזה אין Client Hints: הם לא מציינים שום דפדפן, ו-navigator.userAgentData מוסר.';
+
+  @override
+  String get identityHintsOld =>
+      'מנוע האינטרנט של הטלפון הזה ישן מדי כדי לשנות Client Hints.';
+
+  @override
+  String get identitySeenRandom => 'דפדפן אחר לכל אתר.';
+
+  @override
+  String get identityThisTab => 'הכרטיסייה הזו';
+
+  @override
+  String get identityThisSite => 'האתר הזה';
+
+  @override
+  String get identityThisTabSub => 'עד שהכרטיסייה נסגרת';
+
+  @override
+  String identityThisSiteSub(String host) {
+    return 'בכל פעם ב-$host, בכל כרטיסייה';
+  }
+
+  @override
+  String get identityAsSettings => 'כמו בהגדרות';
+
+  @override
+  String get identityNew => 'זהות חדשה';
+
+  @override
+  String get identityEdit => 'עריכת זהות';
+
+  @override
+  String get identityUserAgent => 'מחרוזת user agent';
+
+  @override
+  String identityUserAgentHelp(String chrome) {
+    return '$chrome מייצג את גרסת המנוע של הטלפון הזה, כך שהזהות לא מתיישנת.';
+  }
+
+  @override
+  String get identityStartFrom => 'להתחיל מדפדפן קיים';
+
+  @override
+  String get identityUaEmpty => 'יש להקליד user agent';
+
+  @override
+  String get identityUaTooLong => 'ארוך מדי: 512 תווים לכל היותר';
+
+  @override
+  String get identityUaNotAscii => 'רק אותיות באנגלית, ספרות וסימני פיסוק';
+
+  @override
+  String get identityWorkedOut => 'מה שנגזר ממנה';
+
+  @override
+  String get identityBrowserRow => 'דפדפן';
+
+  @override
+  String get identitySystemRow => 'מערכת';
+
+  @override
+  String get identityUnknown => 'לא מזוהה';
+
+  @override
+  String get identityHintsRow => 'רמזי לקוח (Client Hints)';
+
+  @override
+  String get identityHintsRowNone => 'אין, כמו בדפדפן האמיתי';
+
+  @override
+  String identityDeleteQ(String name) {
+    return 'למחוק את $name?';
+  }
+
+  @override
+  String get identityDeleteExplain =>
+      'אתרים וכרטיסיות שמשתמשים בה יחזרו לברירת המחדל.';
 }
