@@ -543,7 +543,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 title: Text(l.openInNewTab),
                 onTap: () {
                   Navigator.pop(sheet);
-                  _tabs.open(url: link);
+                  // The new tab is the same browser as this one (B42).
+                  _tabs.open(url: link, identity: tab?.identity);
                 },
               ),
             if (link != null && web)
@@ -552,7 +553,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 title: Text(l.openInPrivateTab),
                 onTap: () {
                   Navigator.pop(sheet);
-                  _tabs.open(url: link, private: true);
+                  _tabs.open(url: link, private: true, identity: tab?.identity);
                 },
               ),
             if (link != null && web && !private)
@@ -575,7 +576,11 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 title: Text(l.openImageInNewTab),
                 onTap: () {
                   Navigator.pop(sheet);
-                  _tabs.open(url: image, private: private);
+                  _tabs.open(
+                    url: image,
+                    private: private,
+                    identity: tab?.identity,
+                  );
                 },
               ),
             ListTile(
