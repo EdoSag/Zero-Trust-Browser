@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
+import 'package:zerotrust_browser/browser/identity.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
@@ -39,6 +40,8 @@ class BrowserTab {
     this.translating = false,
     this.translateDone = 0,
     this.translateTotal = 0,
+    this.identity,
+    this.shownIdentity = Identities.defaultId,
   });
 
   final String id;
@@ -89,6 +92,14 @@ class BrowserTab {
   final int translateDone;
   final int translateTotal;
 
+  /// B42: the identity picked for this tab (see `Identities`), or null to
+  /// follow the settings and site rules. Lasts as long as the tab.
+  final String? identity;
+
+  /// The identity the page was loaded with, as the engine reports it: a
+  /// preset or custom id, or the default (with or without "Desktop site").
+  final String shownIdentity;
+
   bool get isStartPage => url == null || url!.isEmpty || url == 'about:blank';
 
   String get label =>
@@ -118,6 +129,8 @@ class BrowserTab {
     bool? translating,
     int? translateDone,
     int? translateTotal,
+    String? Function()? identity,
+    String? shownIdentity,
   }) => BrowserTab(
     id: id,
     private: private,
@@ -145,6 +158,8 @@ class BrowserTab {
     translating: translating ?? this.translating,
     translateDone: translateDone ?? this.translateDone,
     translateTotal: translateTotal ?? this.translateTotal,
+    identity: identity != null ? identity() : this.identity,
+    shownIdentity: shownIdentity ?? this.shownIdentity,
   );
 }
 
@@ -159,6 +174,13 @@ class TabsState {
       if (t.id == currentId) return t;
     }
     return tabs.isEmpty ? null : tabs.last;
+  }
+
+  BrowserTab? byId(String id) {
+    for (final BrowserTab t in tabs) {
+      if (t.id == id) return t;
+    }
+    return null;
   }
 
   List<BrowserTab> get normal =>
@@ -213,10 +235,13 @@ class TabsController extends Notifier<TabsState> {
   }
 
   /// Opens a tab and shows it. [url] null shows the start page.
+  /// [identity] is the opening tab's own identity (B42), which a page it
+  /// opens keeps.
   Future<BrowserTab> open({
     String? url,
     bool private = false,
     String? group,
+    String? identity,
   }) async {
     final BrowserTab tab = BrowserTab(
       id: newItemId(),
@@ -224,12 +249,18 @@ class TabsController extends Notifier<TabsState> {
       url: url,
       group: private ? null : group,
       lastUsed: DateTime.now(),
+      identity: identity,
     );
     state = TabsState(
       tabs: <BrowserTab>[...state.tabs, tab],
       currentId: tab.id,
     );
-    await _engine.createTab(tab.id, private: private, url: url);
+    await _engine.createTab(
+      tab.id,
+      private: private,
+      url: url,
+      identity: _identityOf(tab),
+    );
     await _engine.select(tab.id);
     _queueSave();
     return tab;
@@ -256,6 +287,7 @@ class TabsController extends Notifier<TabsState> {
         private: t.private,
         url: t.url,
         desktop: t.desktop,
+        identity: _identityOf(t),
       );
     }
     await _engine.select(id);
@@ -386,6 +418,7 @@ class TabsController extends Notifier<TabsState> {
         id,
         private: before.private,
         desktop: before.desktop,
+        identity: _identityOf(before),
       );
     }
     await _engine.load(id, url);
@@ -401,12 +434,47 @@ class TabsController extends Notifier<TabsState> {
       private: t.private,
       url: t.url,
       desktop: t.desktop,
+      identity: _identityOf(t),
     );
   }
 
   Future<void> setDesktop(String id, bool on) async {
     _update(id, (BrowserTab t) => t.copyWith(desktop: on));
     await _engine.setDesktop(id, on);
+  }
+
+  // ---- Identity (B42) -------------------------------------------------------
+
+  /// What the engine is told for a tab with its own identity; null when
+  /// it follows the settings. "The default, in this tab" is an identity
+  /// with nothing in it.
+  Map<String, Object?>? _identityOf(BrowserTab t) {
+    final String? choice = t.identity;
+    if (choice == null) return null;
+    return Identities.target(
+          choice,
+          ref.read(browserSettingsProvider).customIdentities,
+          DateTime.now(),
+        ) ??
+        const <String, Object?>{};
+  }
+
+  /// Makes tab [id] the browser [choice] names (see `Identities`) until it
+  /// closes; null follows the settings and site rules again.
+  Future<void> setIdentity(String id, String? choice) async {
+    _update(id, (BrowserTab t) => t.copyWith(identity: () => choice));
+    final BrowserTab? t = byId(id);
+    if (t == null || t.unloaded) return;
+    await _engine.setTabIdentity(id, _identityOf(t));
+  }
+
+  /// One of the user's own identities was edited or removed: tabs using
+  /// one are told again.
+  Future<void> refreshIdentities() async {
+    for (final BrowserTab t in state.tabs) {
+      if (t.identity == null || t.unloaded) continue;
+      await _engine.setTabIdentity(t.id, _identityOf(t));
+    }
   }
 
   /// Reopens this device's tabs from last time, once per unlock. Only the
@@ -499,6 +567,7 @@ class TabsController extends Notifier<TabsState> {
             secure: e.get<bool>('secure'),
             blocked: e.get<int>('blocked'),
             desktop: e.get<bool>('desktop'),
+            shownIdentity: e.get<String>('identity'),
             readerable: e.get<bool>('readerable'),
             reader: e.get<bool>('reader'),
             javascript: e.get<bool>('javascript'),
@@ -545,6 +614,7 @@ class TabsController extends Notifier<TabsState> {
           url: e.get<String>('url'),
           private: tab.private,
           group: tab.group,
+          identity: tab.identity,
         ).ignore();
       case 'unloaded':
         _update(

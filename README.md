@@ -65,6 +65,12 @@ it is **ZT Browser**.
   you allow it. Scripts sync end-to-end encrypted; what they store stays
   on the phone, encrypted. See "User scripts" below for the supported
   `GM_*` functions.
+- **Browser identity** (user agent switcher): be Firefox, Safari, Edge or
+  Chrome on another system, a random browser, or a user agent string you
+  write yourself, for all sites, for one site or for one tab. The
+  `User-Agent` header, the Client Hints headers and what scripts read from
+  `navigator` change together. With the default nothing runs at all. See
+  "Browser identity" below.
 - **English and Hebrew**, with a right-to-left layout. The sign-in and
   unlock screens come from Zero-Trust-Core and are English for now.
 - Can be the default browser; "Share to" and "Search in ZT Browser" for
@@ -121,6 +127,47 @@ Not supported: `GM_download`, `GM_cookie`, `GM_webRequest`, `GM_getTab` /
 `GM_saveTab` / `GM_getTabs`, `GM_audio`, `window.onurlchange`,
 `@run-at context-menu`, `@sandbox` and `@inject-into content` (everything
 runs in the page). The install screen lists any of these a script asks for.
+
+## Browser identity (B42)
+
+Settings → Browser identity, and "Browser identity" in the page menu for
+one tab or one site. The order is: the tab's own choice, then the site's
+(a rule covers the site and its subdomains), then the one for all sites,
+then the default. "Desktop site" gives the computer version of whichever
+identity is in use.
+
+An identity is one user agent string; everything else is worked out from
+it (`lib/browser/identity.dart`) so the parts cannot disagree:
+
+- the `User-Agent` header and `navigator.userAgent`, in every frame and
+  worker (`WebSettings.setUserAgentString`);
+- the `Sec-CH-UA*` Client Hints headers and `navigator.userAgentData`,
+  set in the engine itself (`WebSettingsCompat.setUserAgentMetadata`), with
+  the brand list in the order Chrome uses for that version;
+- `navigator.platform`, `vendor`, `oscpu`, `appVersion`, `productSub` and
+  `maxTouchPoints`, from a document-start script, only for identities that
+  need it (`Identity.kt`).
+
+The default is Chrome on Android at the phone's real engine version, in
+the short form Chrome itself sends (`Android 10; K`). With the default and
+no site rules the engine does nothing per page and injects no script.
+`{chrome}` and `{android}` in a string stand for the phone's own versions,
+so the list never goes out of date; Firefox and Safari versions follow the
+date. "Random" picks one identity per site and keeps it until the app
+restarts or you ask for new ones; private tabs get their own picks.
+
+Limits, because the engine is Android System WebView:
+
+- Firefox and Safari have no Client Hints. The engine cannot leave the
+  three basic `Sec-CH-UA` headers out, so they name the claimed system
+  and no browser, and `navigator.userAgentData` is removed.
+- The `navigator` fields set by script are not changed inside web workers.
+- A page reached by a form post or by a script's `history.back()` to
+  another site keeps the previous site's identity until it is reloaded.
+- When a link leads to a site with another identity the page load is
+  started again with it, so that request carries no `Referer`.
+- A site that looks closely (TLS, fonts, drawing) can still tell the
+  engine is Chromium on Android.
 
 ## Texts and languages
 

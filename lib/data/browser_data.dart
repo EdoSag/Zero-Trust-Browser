@@ -96,6 +96,15 @@ final browserSettingsProvider = Provider<BrowserSettings>((ref) {
       : stored.first;
 });
 
+/// The settings once they are read from the phone's store (defaults for
+/// a new account), for what must be right before the first page loads.
+final loadedSettingsProvider = FutureProvider<BrowserSettings>((ref) async {
+  final List<BrowserSettings> stored = await ref.watch(
+    _storedSettingsProvider.future,
+  );
+  return stored.isEmpty ? const BrowserSettings() : stored.first;
+});
+
 final browserDataProvider = Provider<BrowserData>(BrowserData.new);
 
 /// Writes to the account's encrypted browser data.

@@ -74,6 +74,8 @@ Future<DownloadChoice?> showDownloadSheet(
   context: context,
   showDragHandle: true,
   isScrollControlled: true,
+  // Never under the status bar, however tall the sheet gets.
+  useSafeArea: true,
   builder: (_) => DownloadSheet(request: request),
 );
 
@@ -127,100 +129,132 @@ class _DownloadSheetState extends State<DownloadSheet> {
     final String type = r.mime.isEmpty || r.mime == 'application/octet-stream'
         ? fileExtension(_name.text).toUpperCase()
         : r.mime;
+    // Cancel and Save stay pinned under the rest, above the keyboard and the
+    // gesture bar; only the part over them scrolls when it doesn't fit.
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsetsDirectional.fromSTEB(24, 0, 24, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Text(
-                r.private ? l.saveFilePrivateTitle : l.saveFileTitle,
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                key: const ValueKey<String>('download-name'),
-                controller: _name,
-                decoration: InputDecoration(
-                  labelText: l.fileName,
-                  border: const OutlineInputBorder(),
-                ),
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _save(),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                <String>[
-                  if (r.size >= 0) l.fileSize(r.size) else l.sizeUnknown,
-                  if (type.isNotEmpty) type,
-                  if (r.site.isNotEmpty) l.fromSite(r.site),
-                ].join(' · '),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              for (final DownloadWarning w in _warnings) ...<Widget>[
-                const SizedBox(height: 12),
-                _Warning(text: _warningText(l, w)),
-              ],
-              if (r.private) ...<Widget>[
-                const SizedBox(height: 8),
-                RadioGroup<bool>(
-                  groupValue: _keepPrivate,
-                  onChanged: (bool? v) =>
-                      setState(() => _keepPrivate = v ?? true),
-                  child: Column(
-                    children: <Widget>[
-                      RadioListTile<bool>(
-                        key: const ValueKey<String>('download-keep-private'),
-                        contentPadding: EdgeInsets.zero,
-                        value: true,
-                        title: Text(l.keepPrivate),
-                        subtitle: Text(l.keepPrivateSub),
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsetsDirectional.fromSTEB(24, 0, 24, 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Text(
+                      r.private ? l.saveFilePrivateTitle : l.saveFileTitle,
+                      style: theme.textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      key: const ValueKey<String>('download-name'),
+                      controller: _name,
+                      decoration: InputDecoration(
+                        labelText: l.fileName,
+                        border: const OutlineInputBorder(),
                       ),
-                      RadioListTile<bool>(
-                        key: const ValueKey<String>('download-save-phone'),
-                        contentPadding: EdgeInsets.zero,
-                        value: false,
-                        title: Text(l.saveToPhone),
-                        subtitle: Text(l.saveToPhoneSub),
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _save(),
+                      onChanged: (_) => setState(() {}),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      <String>[
+                        if (r.size >= 0) l.fileSize(r.size) else l.sizeUnknown,
+                        if (type.isNotEmpty) type,
+                        if (r.site.isNotEmpty) l.fromSite(r.site),
+                      ].join(' · '),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    for (final DownloadWarning w in _warnings) ...<Widget>[
+                      const SizedBox(height: 12),
+                      _Warning(text: _warningText(l, w)),
+                    ],
+                    if (r.private) ...<Widget>[
+                      const SizedBox(height: 8),
+                      RadioGroup<bool>(
+                        groupValue: _keepPrivate,
+                        onChanged: (bool? v) =>
+                            setState(() => _keepPrivate = v ?? true),
+                        child: Column(
+                          children: <Widget>[
+                            RadioListTile<bool>(
+                              key: const ValueKey<String>(
+                                'download-keep-private',
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              value: true,
+                              title: Text(l.keepPrivate),
+                              subtitle: Text(l.keepPrivateSub),
+                            ),
+                            RadioListTile<bool>(
+                              key: const ValueKey<String>(
+                                'download-save-phone',
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              value: false,
+                              title: Text(l.saveToPhone),
+                              subtitle: Text(l.saveToPhoneSub),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
-                  ),
+                    CheckboxListTile(
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: _openWhenDone,
+                      onChanged: (bool? v) =>
+                          setState(() => _openWhenDone = v ?? false),
+                      title: Text(l.openWhenDone),
+                    ),
+                  ],
                 ),
-              ],
-              CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                controlAffinity: ListTileControlAffinity.leading,
-                value: _openWhenDone,
-                onChanged: (bool? v) =>
-                    setState(() => _openWhenDone = v ?? false),
-                title: Text(l.openWhenDone),
               ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(24, 8, 24, 16),
+              // Each button gets half the row. The shared look makes filled
+              // and outlined buttons as wide as they are allowed to be, so
+              // one put in a row without Expanded has no width to take and
+              // is not drawn at all.
+              child: Row(
                 children: <Widget>[
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(l.cancel),
+                  Expanded(
+                    child: OutlinedButton(
+                      key: const ValueKey<String>('download-cancel'),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(l.cancel, textAlign: TextAlign.center),
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  if (risky)
-                    FilledButton.tonal(
-                      onPressed: _save,
-                      child: Text(l.saveAnyway),
-                    )
-                  else
-                    FilledButton(onPressed: _save, child: Text(l.save)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: risky
+                        ? FilledButton.tonal(
+                            key: const ValueKey<String>('download-save'),
+                            onPressed: _save,
+                            child: Text(
+                              l.saveAnyway,
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : FilledButton(
+                            key: const ValueKey<String>('download-save'),
+                            onPressed: _save,
+                            child: Text(l.save, textAlign: TextAlign.center),
+                          ),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

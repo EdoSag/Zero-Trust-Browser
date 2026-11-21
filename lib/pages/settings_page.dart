@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
 import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
+import 'package:zerotrust_browser/browser/identity.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/browser/user_scripts.dart';
@@ -13,6 +14,7 @@ import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/block_rules_page.dart';
 import 'package:zerotrust_browser/pages/encrypted_dns_page.dart';
+import 'package:zerotrust_browser/pages/identity_page.dart';
 import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/scripts_page.dart';
@@ -60,6 +62,12 @@ class BrowserSettingsPage extends ConsumerWidget {
         ref.watch(userScriptsProvider).value ?? const <UserScript>[];
     final int ownRules =
         s.blockedHosts.length + s.unblockedHosts.length + s.filterLists.length;
+    // B42: which browser sites are told this is.
+    final String identityLine = identityName(
+      l,
+      Identities.known(s.identity, s.customIdentities),
+      s.customIdentities,
+    );
 
     Future<void> save(BrowserSettings next) => data.saveSettings(next);
     void push(Widget page) => Navigator.of(
@@ -144,6 +152,16 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(l.fingerprintingSub),
           value: s.fingerprinting,
           onChanged: (bool v) => save(s.copyWith(fingerprinting: v)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.badge_outlined),
+          title: Text(l.identity),
+          subtitle: Text(
+            s.identityRules.isEmpty
+                ? identityLine
+                : l.identitySummaryRules(s.identityRules.length, identityLine),
+          ),
+          onTap: () => push(const IdentityPage()),
         ),
         SwitchListTile(
           secondary: const Icon(Icons.lock_outline),

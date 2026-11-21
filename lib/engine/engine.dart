@@ -102,11 +102,13 @@ class BrowserEngine {
     required bool private,
     String? url,
     bool desktop = false,
+    Map<String, Object?>? identity,
   }) => _call<void>('createTab', <String, Object?>{
     'tabId': tabId,
     'private': private,
     'url': url,
     'desktop': desktop,
+    'identity': identity,
   });
 
   Future<void> closeTab(String tabId) =>
@@ -136,6 +138,34 @@ class BrowserEngine {
 
   Future<void> setDesktop(String tabId, bool on) =>
       _call<void>('setDesktop', <String, Object?>{'tabId': tabId, 'on': on});
+
+  // ---- B42: browser identity (user agent) ----
+
+  /// The identity for all sites ([global], null for the default) and for
+  /// sites with their own ([rules], host to identity), as
+  /// `Identities.config` builds them.
+  Future<void> setIdentity({
+    required Map<String, Object?>? global,
+    required Map<String, Object?> rules,
+  }) => _call<void>('setIdentity', <String, Object?>{
+    'global': global,
+    'rules': rules,
+  });
+
+  /// The identity of one tab; null follows the settings again.
+  Future<void> setTabIdentity(String tabId, Map<String, Object?>? identity) =>
+      _call<void>('setTabIdentity', <String, Object?>{
+        'tabId': tabId,
+        'identity': identity,
+      });
+
+  /// New random identities from now on.
+  Future<void> shuffleIdentity() => _call<void>('shuffleIdentity');
+
+  /// The phone's engine version and what the default identity sends.
+  Future<Map<Object?, Object?>> identityInfo() async =>
+      await _call<Map<Object?, Object?>>('identityInfo') ??
+      const <Object?, Object?>{};
 
   Future<void> find(String tabId, String text) =>
       _call<void>('find', <String, Object?>{'tabId': tabId, 'text': text});

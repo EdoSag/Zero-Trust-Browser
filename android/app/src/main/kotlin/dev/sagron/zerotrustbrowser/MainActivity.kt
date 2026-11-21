@@ -176,12 +176,14 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                                 desktop = call.argument<Boolean>("desktop") ?: false,
                                 events = { type, data -> tabEvent(tabId, type, data) },
                                 host = this,
+                                identity = Identity.target(this, call.argument<Map<String, Any?>>("identity")),
                             )
                             tabs[tabId] = t
                             lastUsed[tabId] = System.currentTimeMillis()
                             val saved = savedStates.remove(tabId)
-                            if (saved == null || !t.restore(saved)) {
-                                call.argument<String>("url")?.let { t.load(it) }
+                            val url = call.argument<String>("url")
+                            if (saved == null || !t.restore(saved, url)) {
+                                url?.let { t.load(it) }
                             }
                         }
                         result.success(null)
@@ -201,6 +203,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "select" -> {
                         currentTab = tabId
                         if (tabId != null) lastUsed[tabId] = System.currentTimeMillis()
+                        tab?.shown()
                         unloadOldTabs(MAX_LIVE_TABS)
                         result.success(null)
                     }
@@ -221,9 +224,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "article" -> {
                         if (tab == null) result.success(null) else tab.extractArticle { result.success(it) }
                     }
-                    "back" -> { tab?.webView?.goBack(); result.success(null) }
-                    "forward" -> { tab?.webView?.goForward(); result.success(null) }
-                    "reload" -> { tab?.webView?.reload(); result.success(null) }
+                    "back" -> { tab?.back(); result.success(null) }
+                    "forward" -> { tab?.forward(); result.success(null) }
+                    "reload" -> { tab?.reload(); result.success(null) }
                     "stop" -> { tab?.webView?.stopLoading(); result.success(null) }
                     "setDesktop" -> { tab?.setDesktop(call.argument<Boolean>("on") ?: false); result.success(null) }
                     "find" -> {
@@ -454,6 +457,26 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         result.success(null)
                     }
                     "pictureInPicture" -> result.success(enterPip())
+                    // ---- B42: browser identity (user agent) ----
+                    "identityInfo" -> result.success(Identity.info(this))
+                    "setIdentity" -> {
+                        Identity.set(
+                            this,
+                            call.argument<Map<String, Any?>>("global"),
+                            call.argument<Map<String, Any?>>("rules"),
+                        )
+                        for (t in tabs.values) t.identityChanged(t.id == currentTab)
+                        result.success(null)
+                    }
+                    "setTabIdentity" -> {
+                        tab?.setIdentity(Identity.target(this, call.argument<Map<String, Any?>>("identity")))
+                        result.success(null)
+                    }
+                    "shuffleIdentity" -> {
+                        Identity.shuffle()
+                        for (t in tabs.values) t.identityChanged(t.id == currentTab)
+                        result.success(null)
+                    }
                     // ---- B41: user scripts ----
                     "setUserScripts" -> {
                         val list = (call.argument<List<Any?>>("scripts") ?: emptyList())
@@ -1240,8 +1263,10 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     // ---- Engine ----------------------------------------------------------
 
     private fun deletePrivateProfileIfUnused() {
-        if (!ZtTab.privateProfileSupported()) return
         if (tabs.values.any { it.isPrivate }) return
+        // B42: the next private session gets new random identities.
+        Identity.forgetPrivate()
+        if (!ZtTab.privateProfileSupported()) return
         try {
             val store = ProfileStore.getInstance()
             if (store.getProfile(ZtTab.PRIVATE_PROFILE) != null) {
