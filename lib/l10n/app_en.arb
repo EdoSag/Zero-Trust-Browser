@@ -1230,5 +1230,74 @@
   "unsafeDetails": "Details",
   "unsafeDetailsBody": "ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.",
   "unsafeProceed": "Open the site anyway (not safe)",
-  "downloadWarnDangerousSite": "This file comes from a site known for phishing or malware."
+  "downloadWarnDangerousSite": "This file comes from a site known for phishing or malware.",
+  "searchDownloads": "Search downloads",
+  "selectAll": "Select all",
+  "removeFromList": "Remove from list",
+  "selectedCount": "{count} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearDownloadList": "Clear list (keep files)",
+  "clearDownloadListSub": "The list of finished downloads is cleared. The files stay on your phone, in the Files app. Private downloads stay on the list.",
+  "deleteFilesTitle": "{count, plural, =1{Delete 1 file?} other{Delete {count} files?}}",
+  "@deleteFilesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteFilesSub": "They are deleted from your phone. Unfinished downloads are canceled.",
+  "renameFile": "Rename",
+  "couldntRename": "Couldn't rename the file",
+  "kindImages": "Images",
+  "kindVideo": "Videos",
+  "kindAudio": "Audio",
+  "kindDocuments": "Documents",
+  "kindArchives": "Archives",
+  "kindApps": "Apps",
+  "kindOther": "Other",
+  "downloadsUsed": "{count, plural, =1{1 download} other{{count} downloads}} · {size} on your phone",
+  "@downloadsUsed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noMatchingDownloads": "No downloads match",
+  "waitingWifi": "Waiting for Wi-Fi",
+  "downloadWifiOnly": "Download on Wi-Fi only",
+  "downloadWifiOnlySub": "On mobile data, downloads wait and start on Wi-Fi",
+  "downloadsAtOnce": "Downloads at the same time",
+  "downloadsAtOnceValue": "{count, plural, =1{One at a time} other{Up to {count}}}",
+  "@downloadsAtOnceValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDownloadsTo": "Save downloads to",
+  "phoneDownloadsFolder": "The phone's Downloads folder",
+  "chooseAnotherFolder": "Choose another folder",
+  "usePhoneDownloads": "Use the phone's Downloads folder",
+  "autoDeleteDownloads": "Delete old downloads",
+  "autoDeleteDownloadsSub": "Finished downloads still on the list are deleted from your phone after this time. Files you removed from the list stay.",
+  "autoDeleteDownloadsValue": "{days, plural, =0{Never delete} =1{After 1 day} other{After {days} days}}",
+  "@autoDeleteDownloadsValue": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  }
 }

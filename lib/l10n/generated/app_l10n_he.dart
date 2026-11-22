@@ -2149,4 +2149,136 @@ class AppL10nHe extends AppL10n {
   @override
   String get downloadWarnDangerousSite =>
       'הקובץ מגיע מאתר שידוע בפישינג או בנוזקות.';
+
+  @override
+  String get searchDownloads => 'חיפוש בהורדות';
+
+  @override
+  String get selectAll => 'בחירת הכול';
+
+  @override
+  String get removeFromList => 'הסרה מהרשימה';
+
+  @override
+  String selectedCount(int count) {
+    return '$count נבחרו';
+  }
+
+  @override
+  String get clearDownloadList => 'ניקוי הרשימה (הקבצים נשארים)';
+
+  @override
+  String get clearDownloadListSub =>
+      'רשימת ההורדות שהסתיימו תתנקה. הקבצים נשארים בטלפון, באפליקציית הקבצים. הורדות פרטיות נשארות ברשימה.';
+
+  @override
+  String deleteFilesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'למחוק $count קבצים?',
+      one: 'למחוק קובץ אחד?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteFilesSub => 'הם יימחקו מהטלפון. הורדות שלא הסתיימו יבוטלו.';
+
+  @override
+  String get renameFile => 'שינוי שם';
+
+  @override
+  String get couldntRename => 'לא ניתן לשנות את שם הקובץ';
+
+  @override
+  String get kindImages => 'תמונות';
+
+  @override
+  String get kindVideo => 'סרטונים';
+
+  @override
+  String get kindAudio => 'שמע';
+
+  @override
+  String get kindDocuments => 'מסמכים';
+
+  @override
+  String get kindArchives => 'ארכיונים';
+
+  @override
+  String get kindApps => 'אפליקציות';
+
+  @override
+  String get kindOther => 'אחר';
+
+  @override
+  String downloadsUsed(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count הורדות',
+      one: 'הורדה אחת',
+    );
+    return '$_temp0 · $size בטלפון';
+  }
+
+  @override
+  String get noMatchingDownloads => 'אין הורדות תואמות';
+
+  @override
+  String get waitingWifi => 'ממתין ל-Wi-Fi';
+
+  @override
+  String get downloadWifiOnly => 'הורדה רק ב-Wi-Fi';
+
+  @override
+  String get downloadWifiOnlySub =>
+      'בחבילת גלישה ההורדות ממתינות ומתחילות ב-Wi-Fi';
+
+  @override
+  String get downloadsAtOnce => 'הורדות בו-זמנית';
+
+  @override
+  String downloadsAtOnceValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'עד $count הורדות',
+      one: 'הורדה אחת בכל פעם',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveDownloadsTo => 'שמירת הורדות ב';
+
+  @override
+  String get phoneDownloadsFolder => 'תיקיית ההורדות של הטלפון';
+
+  @override
+  String get chooseAnotherFolder => 'בחירת תיקייה אחרת';
+
+  @override
+  String get usePhoneDownloads => 'שימוש בתיקיית ההורדות של הטלפון';
+
+  @override
+  String get autoDeleteDownloads => 'מחיקת הורדות ישנות';
+
+  @override
+  String get autoDeleteDownloadsSub =>
+      'הורדות שהסתיימו ועדיין ברשימה יימחקו מהטלפון אחרי הזמן הזה. קבצים שהסרת מהרשימה נשארים.';
+
+  @override
+  String autoDeleteDownloadsValue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'אחרי $days ימים',
+      two: 'אחרי יומיים',
+      one: 'אחרי יום',
+      zero: 'אף פעם',
+    );
+    return '$_temp0';
+  }
 }

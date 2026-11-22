@@ -24,10 +24,19 @@ import org.json.JSONObject
  */
 class Downloads(private val context: Context, private val engine: DownloadEngine) {
     private val prefs = context.getSharedPreferences("zt_downloads", Context.MODE_PRIVATE)
+
+    /** B37: the list, encrypted on this phone (it used to be in [prefs]). */
+    private val store = EncryptedStore(context, "download-legacy")
     private val manager = context.getSystemService(DownloadManager::class.java)
 
     private fun entries(): MutableList<JSONObject> {
-        val raw = prefs.getString("list", "[]") ?: "[]"
+        val old = prefs.getString("list", null)
+        if (old != null) {
+            // Once: the plain list moves into the encrypted one.
+            store.write(old)
+            prefs.edit().remove("list").apply()
+        }
+        val raw = store.read() ?: "[]"
         val arr = try { JSONArray(raw) } catch (e: Exception) { JSONArray() }
         return MutableList(arr.length()) { arr.getJSONObject(it) }
     }
@@ -35,7 +44,7 @@ class Downloads(private val context: Context, private val engine: DownloadEngine
     private fun store(list: List<JSONObject>) {
         // The newest 200 are plenty for a phone browser.
         val kept = list.takeLast(200)
-        prefs.edit().putString("list", JSONArray(kept).toString()).apply()
+        store.write(JSONArray(kept).toString())
     }
 
     /** Newest first, with progress; files deleted elsewhere drop out. */
@@ -59,6 +68,8 @@ class Downloads(private val context: Context, private val engine: DownloadEngine
                     "mime" to e.optString("mime"),
                     "time" to e.getLong("time"),
                     "private" to false,
+                    // From before the download engine: no rename or link.
+                    "legacy" to true,
                 ) + info,
             )
         }
@@ -254,6 +265,16 @@ class Downloads(private val context: Context, private val engine: DownloadEngine
             }
         }
         return false
+    }
+
+    /** B36: takes files off the list; the files themselves stay. */
+    @Synchronized
+    fun forget(keys: List<String>) {
+        val set = keys.toSet()
+        engine.forget(keys.filter { engine.job(it) != null })
+        val all = entries()
+        val kept = all.filter { it.optString("key") !in set }
+        if (kept.size != all.size) store(kept)
     }
 
     /** Deletes the file from the phone, or cancels a running download. */

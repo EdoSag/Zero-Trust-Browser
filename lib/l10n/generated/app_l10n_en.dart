@@ -2164,4 +2164,136 @@ class AppL10nEn extends AppL10n {
   @override
   String get downloadWarnDangerousSite =>
       'This file comes from a site known for phishing or malware.';
+
+  @override
+  String get searchDownloads => 'Search downloads';
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get removeFromList => 'Remove from list';
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get clearDownloadList => 'Clear list (keep files)';
+
+  @override
+  String get clearDownloadListSub =>
+      'The list of finished downloads is cleared. The files stay on your phone, in the Files app. Private downloads stay on the list.';
+
+  @override
+  String deleteFilesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Delete $count files?',
+      one: 'Delete 1 file?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteFilesSub =>
+      'They are deleted from your phone. Unfinished downloads are canceled.';
+
+  @override
+  String get renameFile => 'Rename';
+
+  @override
+  String get couldntRename => 'Couldn\'t rename the file';
+
+  @override
+  String get kindImages => 'Images';
+
+  @override
+  String get kindVideo => 'Videos';
+
+  @override
+  String get kindAudio => 'Audio';
+
+  @override
+  String get kindDocuments => 'Documents';
+
+  @override
+  String get kindArchives => 'Archives';
+
+  @override
+  String get kindApps => 'Apps';
+
+  @override
+  String get kindOther => 'Other';
+
+  @override
+  String downloadsUsed(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downloads',
+      one: '1 download',
+    );
+    return '$_temp0 · $size on your phone';
+  }
+
+  @override
+  String get noMatchingDownloads => 'No downloads match';
+
+  @override
+  String get waitingWifi => 'Waiting for Wi-Fi';
+
+  @override
+  String get downloadWifiOnly => 'Download on Wi-Fi only';
+
+  @override
+  String get downloadWifiOnlySub =>
+      'On mobile data, downloads wait and start on Wi-Fi';
+
+  @override
+  String get downloadsAtOnce => 'Downloads at the same time';
+
+  @override
+  String downloadsAtOnceValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Up to $count',
+      one: 'One at a time',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveDownloadsTo => 'Save downloads to';
+
+  @override
+  String get phoneDownloadsFolder => 'The phone\'s Downloads folder';
+
+  @override
+  String get chooseAnotherFolder => 'Choose another folder';
+
+  @override
+  String get usePhoneDownloads => 'Use the phone\'s Downloads folder';
+
+  @override
+  String get autoDeleteDownloads => 'Delete old downloads';
+
+  @override
+  String get autoDeleteDownloadsSub =>
+      'Finished downloads still on the list are deleted from your phone after this time. Files you removed from the list stay.';
+
+  @override
+  String autoDeleteDownloadsValue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'After $days days',
+      one: 'After 1 day',
+      zero: 'Never delete',
+    );
+    return '$_temp0';
+  }
 }

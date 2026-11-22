@@ -51,6 +51,14 @@ it is **ZT Browser**.
   with warnings for apps, programs, disguised names and plain http.
   Downloads from private tabs stay encrypted in the app (key only in
   memory) and are deleted with the private tabs, unless saved to the phone.
+- **Downloads page**: search, filter by kind (images, videos, documents...),
+  grouped by day, the space downloads take, select several to delete or
+  take off the list, rename, try again, copy the link, and clear the list
+  while keeping the files. The list itself is stored encrypted on the phone
+  (Android Keystore) and never synced.
+- **Download rules**: Wi-Fi only, how many downloads run at once, a folder
+  of your choice (an SD card too) instead of Downloads, and deleting
+  finished downloads after 7, 30 or 90 days.
 - **Import bookmarks** from Chrome, Firefox, Edge or Safari (.html export).
 - **QR code scanner** (ZXing, offline) and voice search in the address bar;
   share a page as a QR code.
@@ -100,7 +108,8 @@ Play), shown in Flutter through a platform view. The native side lives in
 | `DownloadEngine.kt` | The downloader: queue, pause/resume (HTTP Range), retry, writes into a hidden Downloads entry until done, private downloads into `PrivateVault` |
 | `DownloadService.kt` | Foreground service and notifications for running and finished downloads |
 | `PrivateVault.kt` | Private-tab downloads encrypted in 64 KiB AES-GCM chunks under a key held only in memory |
-| `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete |
+| `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete, remove from the list |
+| `EncryptedStore.kt` | Small phone-only files (the download list) encrypted with AES-GCM under an Android Keystore key |
 | `MainActivity.kt` | Tab registry and memory (unloading), the `zt_browser/engine` channel, file uploads, fullscreen video, downloads, permissions, print, shortcuts, QR, voice, autofill status, default-browser role |
 
 Tabs outlive the Flutter widget showing them, so switching tabs or locking

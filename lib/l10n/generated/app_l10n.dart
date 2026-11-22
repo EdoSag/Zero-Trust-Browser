@@ -3660,6 +3660,192 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'This file comes from a site known for phishing or malware.'**
   String get downloadWarnDangerousSite;
+
+  /// No description provided for @searchDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Search downloads'**
+  String get searchDownloads;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAll;
+
+  /// No description provided for @removeFromList.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from list'**
+  String get removeFromList;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCount(int count);
+
+  /// No description provided for @clearDownloadList.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear list (keep files)'**
+  String get clearDownloadList;
+
+  /// No description provided for @clearDownloadListSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The list of finished downloads is cleared. The files stay on your phone, in the Files app. Private downloads stay on the list.'**
+  String get clearDownloadListSub;
+
+  /// No description provided for @deleteFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete 1 file?} other{Delete {count} files?}}'**
+  String deleteFilesTitle(int count);
+
+  /// No description provided for @deleteFilesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'They are deleted from your phone. Unfinished downloads are canceled.'**
+  String get deleteFilesSub;
+
+  /// No description provided for @renameFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get renameFile;
+
+  /// No description provided for @couldntRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t rename the file'**
+  String get couldntRename;
+
+  /// No description provided for @kindImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get kindImages;
+
+  /// No description provided for @kindVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get kindVideo;
+
+  /// No description provided for @kindAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get kindAudio;
+
+  /// No description provided for @kindDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get kindDocuments;
+
+  /// No description provided for @kindArchives.
+  ///
+  /// In en, this message translates to:
+  /// **'Archives'**
+  String get kindArchives;
+
+  /// No description provided for @kindApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps'**
+  String get kindApps;
+
+  /// No description provided for @kindOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get kindOther;
+
+  /// No description provided for @downloadsUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 download} other{{count} downloads}} · {size} on your phone'**
+  String downloadsUsed(int count, String size);
+
+  /// No description provided for @noMatchingDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'No downloads match'**
+  String get noMatchingDownloads;
+
+  /// No description provided for @waitingWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Wi-Fi'**
+  String get waitingWifi;
+
+  /// No description provided for @downloadWifiOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Download on Wi-Fi only'**
+  String get downloadWifiOnly;
+
+  /// No description provided for @downloadWifiOnlySub.
+  ///
+  /// In en, this message translates to:
+  /// **'On mobile data, downloads wait and start on Wi-Fi'**
+  String get downloadWifiOnlySub;
+
+  /// No description provided for @downloadsAtOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads at the same time'**
+  String get downloadsAtOnce;
+
+  /// No description provided for @downloadsAtOnceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{One at a time} other{Up to {count}}}'**
+  String downloadsAtOnceValue(int count);
+
+  /// No description provided for @saveDownloadsTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Save downloads to'**
+  String get saveDownloadsTo;
+
+  /// No description provided for @phoneDownloadsFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'The phone\'s Downloads folder'**
+  String get phoneDownloadsFolder;
+
+  /// No description provided for @chooseAnotherFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another folder'**
+  String get chooseAnotherFolder;
+
+  /// No description provided for @usePhoneDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the phone\'s Downloads folder'**
+  String get usePhoneDownloads;
+
+  /// No description provided for @autoDeleteDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete old downloads'**
+  String get autoDeleteDownloads;
+
+  /// No description provided for @autoDeleteDownloadsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished downloads still on the list are deleted from your phone after this time. Files you removed from the list stay.'**
+  String get autoDeleteDownloadsSub;
+
+  /// No description provided for @autoDeleteDownloadsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =0{Never delete} =1{After 1 day} other{After {days} days}}'**
+  String autoDeleteDownloadsValue(int days);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

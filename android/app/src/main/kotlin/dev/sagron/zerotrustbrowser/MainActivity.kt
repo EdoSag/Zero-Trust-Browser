@@ -359,6 +359,42 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         }
                     }
                     "showDownloadsFolder" -> result.success(downloads.showFolder())
+                    "forgetDownloads" -> {
+                        val keys = call.argument<List<String>>("keys") ?: emptyList()
+                        io.execute {
+                            downloads.forget(keys)
+                            main.post { result.success(null) }
+                        }
+                    }
+                    "renameDownload" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val name = call.argument<String>("name") ?: ""
+                        io.execute {
+                            val ok = downloadEngine.rename(key, name)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "setDownloadRules" -> {
+                        downloadEngine.wifiOnly = call.argument<Boolean>("wifiOnly") ?: false
+                        downloadEngine.maxParallel = call.argument<Int>("maxParallel") ?: 3
+                        downloadEngine.autoDeleteDays = call.argument<Int>("autoDeleteDays") ?: 0
+                        io.execute { downloadEngine.deleteOld() }
+                        result.success(null)
+                    }
+                    "downloadFolder" -> result.success(downloadFolderName())
+                    "pickDownloadFolder" -> pickDownloadFolder(result)
+                    "clearDownloadFolder" -> {
+                        downloadEngine.folder?.let { old ->
+                            try {
+                                contentResolver.releasePersistableUriPermission(
+                                    old,
+                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                                )
+                            } catch (e: Exception) { }
+                        }
+                        downloadEngine.setFolder(null)
+                        result.success(null)
+                    }
                     "deleteDownload" -> {
                         downloads.delete(call.argument<String>("key") ?: "")
                         result.success(null)
@@ -625,6 +661,25 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                 fileCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
                 fileCallback = null
                 systemUi(false)
+            }
+            REQUEST_FOLDER -> {
+                systemUi(false)
+                val result = waiting.remove(REQUEST_FOLDER) ?: return
+                val tree = data?.data
+                if (resultCode != RESULT_OK || tree == null) {
+                    result.success(null)
+                    return
+                }
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        tree,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                    downloadEngine.setFolder(tree)
+                    result.success(downloadFolderName())
+                } catch (e: Exception) {
+                    result.success(null)
+                }
             }
             REQUEST_PICK -> {
                 systemUi(false)
@@ -1017,6 +1072,35 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         return bmp
     }
 
+    /** B38: the person picks a folder (SD card too) for new downloads. */
+    private fun pickDownloadFolder(result: MethodChannel.Result) {
+        waiting.remove(REQUEST_FOLDER)?.success(null)
+        try {
+            waiting[REQUEST_FOLDER] = result
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_FOLDER)
+            systemUi(true)
+        } catch (e: ActivityNotFoundException) {
+            waiting.remove(REQUEST_FOLDER)
+            result.success(null)
+        }
+    }
+
+    /** The picked folder's name, or null for the phone's Downloads. */
+    private fun downloadFolderName(): String? {
+        val tree = downloadEngine.folder ?: return null
+        return try {
+            val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                tree, android.provider.DocumentsContract.getTreeDocumentId(tree),
+            )
+            contentResolver.query(doc, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            } ?: tree.lastPathSegment
+        } catch (e: Exception) {
+            tree.lastPathSegment
+        }
+    }
+
     private fun pickFile(mimeTypes: List<String>, result: MethodChannel.Result) {
         waiting.remove(REQUEST_PICK)?.success(null)
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -1383,6 +1467,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         private const val REQUEST_PICK = 4104
         private const val REQUEST_QR = 4105
         private const val REQUEST_VOICE = 4106
+        private const val REQUEST_FOLDER = 4107
 
         /** Normal tabs kept loaded; older ones unload until shown again. */
         private const val MAX_LIVE_TABS = 5

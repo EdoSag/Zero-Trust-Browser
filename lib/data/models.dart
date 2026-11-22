@@ -476,6 +476,9 @@ class BrowserSettings {
     this.swipeTabs = true,
     this.pullToRefresh = true,
     this.safeBrowsing = true,
+    this.downloadWifiOnly = false,
+    this.downloadsAtOnce = 3,
+    this.autoDeleteDownloadsDays = 0,
   });
 
   static const String itemId = 'browser-settings';
@@ -597,6 +600,22 @@ class BrowserSettings {
   /// B-1: warn before opening a known phishing or malware site (list checked
   /// on the phone).
   final bool safeBrowsing;
+
+  /// B38: downloads wait for Wi-Fi (or another unmetered network).
+  final bool downloadWifiOnly;
+
+  /// B38: how many downloads run at the same time (1 to 5).
+  final int downloadsAtOnce;
+
+  /// B38: finished downloads are deleted after this many days; 0 keeps
+  /// them.
+  final int autoDeleteDownloadsDays;
+
+  /// B38: the choices for [downloadsAtOnce].
+  static const List<int> downloadsAtOnceChoices = <int>[1, 2, 3, 4, 5];
+
+  /// B38: the choices for [autoDeleteDownloadsDays] (0 keeps files).
+  static const List<int> autoDeleteDownloadsChoices = <int>[0, 7, 30, 90];
 
   static const List<double> readAloudRates = <double>[
     0.75,
@@ -727,6 +746,9 @@ class BrowserSettings {
     bool? swipeTabs,
     bool? pullToRefresh,
     bool? safeBrowsing,
+    bool? downloadWifiOnly,
+    int? downloadsAtOnce,
+    int? autoDeleteDownloadsDays,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -768,6 +790,10 @@ class BrowserSettings {
     swipeTabs: swipeTabs ?? this.swipeTabs,
     pullToRefresh: pullToRefresh ?? this.pullToRefresh,
     safeBrowsing: safeBrowsing ?? this.safeBrowsing,
+    downloadWifiOnly: downloadWifiOnly ?? this.downloadWifiOnly,
+    downloadsAtOnce: downloadsAtOnce ?? this.downloadsAtOnce,
+    autoDeleteDownloadsDays:
+        autoDeleteDownloadsDays ?? this.autoDeleteDownloadsDays,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -817,6 +843,9 @@ class BrowserSettings {
     'swipeTabs': swipeTabs,
     'pullToRefresh': pullToRefresh,
     'safeBrowsing': safeBrowsing,
+    'downloadWifiOnly': downloadWifiOnly,
+    'downloadsAtOnce': downloadsAtOnce,
+    'autoDeleteDownloadsDays': autoDeleteDownloadsDays,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -905,6 +934,13 @@ class BrowserSettings {
       swipeTabs: j['swipeTabs'] as bool? ?? true,
       pullToRefresh: j['pullToRefresh'] as bool? ?? true,
       safeBrowsing: j['safeBrowsing'] as bool? ?? true,
+      downloadWifiOnly: j['downloadWifiOnly'] as bool? ?? false,
+      downloadsAtOnce: ((j['downloadsAtOnce'] as num?)?.toInt() ?? 3).clamp(
+        1,
+        5,
+      ),
+      autoDeleteDownloadsDays:
+          (j['autoDeleteDownloadsDays'] as num?)?.toInt() ?? 0,
     );
   }
 }
