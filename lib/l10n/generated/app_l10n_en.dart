@@ -2070,4 +2070,21 @@ class AppL10nEn extends AppL10n {
   @override
   String get identityDeleteExplain =>
       'Sites and tabs that use it go back to the default.';
+
+  @override
+  String get gesturesSection => 'Gestures';
+
+  @override
+  String get swipeTabs => 'Swipe to switch tabs';
+
+  @override
+  String get swipeTabsSub =>
+      'Swipe the address bar or the bottom bar sideways for the next tab, or the bottom bar up to see all tabs';
+
+  @override
+  String get pullToRefresh => 'Pull down to reload';
+
+  @override
+  String get pullToRefreshSub =>
+      'At the top of a page, pull down to load it again';
 }

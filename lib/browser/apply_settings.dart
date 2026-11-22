@@ -5,7 +5,7 @@ import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 
 /// Hands the synced settings to the web engine: protection, scripts, text
-/// size and dark pages.
+/// size, dark pages and pull to reload.
 Future<void> applySettings(BrowserEngine engine, BrowserSettings s) async {
   await engine.setPrivacy(
     blockTrackers: s.blockTrackers,
@@ -16,7 +16,11 @@ Future<void> applySettings(BrowserEngine engine, BrowserSettings s) async {
     javascriptOff: s.javascriptOff,
     stripTracking: s.stripTracking,
   );
-  await engine.setDisplay(textZoom: s.textZoom, darkPages: s.darkPages);
+  await engine.setDisplay(
+    textZoom: s.textZoom,
+    darkPages: s.darkPages,
+    pullToRefresh: s.pullToRefresh,
+  );
   await applyIdentity(engine, s);
 }
 

@@ -2057,4 +2057,20 @@ class AppL10nHe extends AppL10n {
   @override
   String get identityDeleteExplain =>
       'אתרים וכרטיסיות שמשתמשים בה יחזרו לברירת המחדל.';
+
+  @override
+  String get gesturesSection => 'מחוות';
+
+  @override
+  String get swipeTabs => 'החלקה למעבר בין כרטיסיות';
+
+  @override
+  String get swipeTabsSub =>
+      'החליקו את שורת הכתובת או את הסרגל התחתון הצידה לכרטיסייה הבאה, או את הסרגל התחתון למעלה כדי לראות את כל הכרטיסיות';
+
+  @override
+  String get pullToRefresh => 'משיכה למטה לטעינה מחדש';
+
+  @override
+  String get pullToRefreshSub => 'בראש הדף, משכו למטה כדי לטעון אותו שוב';
 }

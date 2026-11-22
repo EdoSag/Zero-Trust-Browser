@@ -261,6 +261,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "setDisplay" -> {
                         ZtTab.textZoom = call.argument<Int>("textZoom") ?: 100
                         ZtTab.darkPages = call.argument<Boolean>("darkPages") ?: true
+                        ZtTab.pullToRefresh = call.argument<Boolean>("pullToRefresh") ?: true
                         for (t in tabs.values) t.applyDisplay()
                         result.success(null)
                     }
@@ -528,7 +529,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
             val tabId = (args as? Map<*, *>)?.get("tabId") as? String
             val tab = tabId?.let { tabs[it] }
-            val view: View = tab?.webView?.also { (it.parent as? ViewGroup)?.removeView(it) }
+            val view: View = tab?.view?.also { (it.parent as? ViewGroup)?.removeView(it) }
                 ?: View(context).apply { setBackgroundColor(Color.TRANSPARENT) }
             return object : PlatformView {
                 override fun getView(): View = view

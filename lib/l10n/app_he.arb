@@ -568,5 +568,10 @@
   "identityHintsRow": "רמזי לקוח (Client Hints)",
   "identityHintsRowNone": "אין, כמו בדפדפן האמיתי",
   "identityDeleteQ": "למחוק את {name}?",
-  "identityDeleteExplain": "אתרים וכרטיסיות שמשתמשים בה יחזרו לברירת המחדל."
+  "identityDeleteExplain": "אתרים וכרטיסיות שמשתמשים בה יחזרו לברירת המחדל.",
+  "gesturesSection": "מחוות",
+  "swipeTabs": "החלקה למעבר בין כרטיסיות",
+  "swipeTabsSub": "החליקו את שורת הכתובת או את הסרגל התחתון הצידה לכרטיסייה הבאה, או את הסרגל התחתון למעלה כדי לראות את כל הכרטיסיות",
+  "pullToRefresh": "משיכה למטה לטעינה מחדש",
+  "pullToRefreshSub": "בראש הדף, משכו למטה כדי לטעון אותו שוב"
 }

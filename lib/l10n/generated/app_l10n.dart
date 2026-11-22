@@ -3510,6 +3510,36 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Sites and tabs that use it go back to the default.'**
   String get identityDeleteExplain;
+
+  /// No description provided for @gesturesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Gestures'**
+  String get gesturesSection;
+
+  /// No description provided for @swipeTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to switch tabs'**
+  String get swipeTabs;
+
+  /// No description provided for @swipeTabsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe the address bar or the bottom bar sideways for the next tab, or the bottom bar up to see all tabs'**
+  String get swipeTabsSub;
+
+  /// No description provided for @pullToRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull down to reload'**
+  String get pullToRefresh;
+
+  /// No description provided for @pullToRefreshSub.
+  ///
+  /// In en, this message translates to:
+  /// **'At the top of a page, pull down to load it again'**
+  String get pullToRefreshSub;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

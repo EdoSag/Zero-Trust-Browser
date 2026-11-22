@@ -200,12 +200,17 @@ class BrowserEngine {
     'javascriptOff': javascriptOff,
   });
 
-  /// Page text size (percent) and darkening of pages in dark mode.
-  Future<void> setDisplay({required int textZoom, required bool darkPages}) =>
-      _call<void>('setDisplay', <String, Object?>{
-        'textZoom': textZoom,
-        'darkPages': darkPages,
-      });
+  /// Page text size (percent), darkening of pages in dark mode and pull
+  /// down to reload (B28).
+  Future<void> setDisplay({
+    required int textZoom,
+    required bool darkPages,
+    bool pullToRefresh = true,
+  }) => _call<void>('setDisplay', <String, Object?>{
+    'textZoom': textZoom,
+    'darkPages': darkPages,
+    'pullToRefresh': pullToRefresh,
+  });
 
   /// The tab now on screen: the engine keeps it, and unloads old ones.
   Future<void> select(String tabId) =>

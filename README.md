@@ -34,6 +34,9 @@ it is **ZT Browser**.
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
   unload when memory runs low and come back with their history.
+- **Swipe gestures**: swipe the address bar or the bottom bar sideways to
+  switch tabs, up to see all tabs, and pull down at the top of a page to
+  reload it (each can be turned off in Settings, Gestures).
 - **Download manager**: its own downloader with pause, resume where it
   stopped and automatic retry when the connection drops, progress and
   Pause/Cancel in a notification, and no size limit for files pages make
