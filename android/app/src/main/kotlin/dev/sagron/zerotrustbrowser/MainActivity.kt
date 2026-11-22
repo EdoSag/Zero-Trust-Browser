@@ -424,6 +424,71 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                             main.post { result.success(r) }
                         }
                     }
+                    // B40: send a download to ZT Notes or to my other devices.
+                    "sendDownloadTo" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val pkg = call.argument<String>("package") ?: ""
+                        io.execute {
+                            downloadEngine.privateCopy(key)
+                            main.post { result.success(downloads.share(key, pkg)) }
+                        }
+                    }
+                    "vaultSendTo" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val pkg = call.argument<String>("package") ?: ""
+                        io.execute {
+                            val r = DownloadVault.get(this).share(id, pkg)
+                            main.post { result.success(r) }
+                        }
+                    }
+                    "downloadBytes" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val max = (call.argument<Number>("max") ?: 0).toLong()
+                        io.execute {
+                            val job = downloadEngine.job(key)
+                            val bytes = if (job == null || job.bytes > max) {
+                                null
+                            } else {
+                                try {
+                                    downloadEngine.openInput(key)?.use { input ->
+                                        val out = java.io.ByteArrayOutputStream()
+                                        val buf = ByteArray(64 * 1024)
+                                        var total = 0L
+                                        while (true) {
+                                            val n = input.read(buf)
+                                            if (n < 0) break
+                                            total += n
+                                            if (total > max) return@use null
+                                            out.write(buf, 0, n)
+                                        }
+                                        out.toByteArray()
+                                    }
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+                            main.post { result.success(bytes) }
+                        }
+                    }
+                    "vaultBytes" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val max = (call.argument<Number>("max") ?: 0).toLong()
+                        io.execute {
+                            val bytes = try { DownloadVault.get(this).bytes(id, max) } catch (e: Exception) { null }
+                            main.post { result.success(bytes) }
+                        }
+                    }
+                    "saveBytesToDownloads" -> {
+                        val name = call.argument<String>("name") ?: "file"
+                        val mime = call.argument<String>("mime") ?: "application/octet-stream"
+                        val bytes = call.argument<ByteArray>("bytes") ?: ByteArray(0)
+                        io.execute {
+                            val ok = downloadEngine.saveFromVault(DownloadEngine.cleanName(name).ifEmpty { "file" }, mime, bytes.size.toLong()) {
+                                it.write(bytes)
+                            }
+                            main.post { result.success(ok) }
+                        }
+                    }
                     "vaultMoveToPhone" -> {
                         val id = call.argument<String>("id") ?: ""
                         io.execute {

@@ -216,22 +216,12 @@ class DownloadVault(context: Context) {
         }
     }
 
-    fun share(id: String): String {
+    /** The share sheet, or straight to [toPackage] (B40), like [Downloads.share]. */
+    fun share(id: String, toPackage: String? = null): String {
+        if (toPackage != null && !Downloads.installed(app, toPackage)) return "notInstalled"
         val (e, uri) = plainCopy(id) ?: return if (find(id) == null) "missing" else "failed"
-        val send = Intent(Intent.ACTION_SEND)
-            .setType(Downloads.pickMime(e.optString("mime"), null, e.optString("name")))
-            .putExtra(Intent.EXTRA_STREAM, uri)
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        send.clipData = ClipData.newRawUri(e.optString("name"), uri)
-        return try {
-            app.startActivity(
-                Intent.createChooser(send, null)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
-            )
-            "opened"
-        } catch (ex: Exception) {
-            "failed"
-        }
+        val type = Downloads.pickMime(e.optString("mime"), null, e.optString("name"))
+        return Downloads.send(app, uri, type, e.optString("name"), toPackage)
     }
 
     /** Takes [id] out of the vault into Downloads (or the picked folder). */
@@ -245,8 +235,12 @@ class DownloadVault(context: Context) {
         return ok
     }
 
-    /** B40: the plain bytes of [id], to send it on. */
-    fun reader(id: String): InputStream? = if (file(id).isFile) PrivateVault.reader(file(id), key()) else null
+    /** B40: the plain bytes of [id] (up to [max]), to send it on; null when bigger. */
+    fun bytes(id: String, max: Long): ByteArray? {
+        val e = find(id) ?: return null
+        if (e.optLong("size") > max || !file(id).isFile) return null
+        return PrivateVault.reader(file(id), key()).use { it.readBytes() }
+    }
 
     @Synchronized
     fun rename(id: String, name: String): Boolean {

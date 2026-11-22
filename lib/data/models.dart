@@ -232,6 +232,50 @@ class SentTab {
       );
 }
 
+/// B40: a file sent from another of the account's devices. The file itself
+/// is an end-to-end encrypted attachment; its key is only in [file], inside
+/// this (also encrypted) item.
+class SentFile {
+  const SentFile({
+    required this.id,
+    required this.file,
+    required this.fromDevice,
+    required this.fromName,
+    required this.toDevice,
+    required this.sentAt,
+  });
+
+  final String id;
+  final ZtAttachmentRef file;
+  final String fromDevice;
+  final String fromName;
+  final String toDevice;
+  final DateTime sentAt;
+
+  String get name => file.name ?? 'file';
+  String get mime => file.mimeType ?? 'application/octet-stream';
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'file': file.toJson(),
+    'fromDevice': fromDevice,
+    'fromName': fromName,
+    'toDevice': toDevice,
+    'sentAt': sentAt.millisecondsSinceEpoch,
+  };
+
+  static SentFile fromJson(String id, Map<String, Object?> j, DateTime at) =>
+      SentFile(
+        id: id,
+        file: ZtAttachmentRef.fromJson(
+          (j['file'] as Map<Object?, Object?>).cast<String, Object?>(),
+        ),
+        fromDevice: j['fromDevice'] as String? ?? '',
+        fromName: j['fromName'] as String? ?? 'Another device',
+        toDevice: j['toDevice'] as String? ?? '',
+        sentAt: _ms(j['sentAt'], at),
+      );
+}
+
 /// A search engine the address bar can use.
 class SearchEngine {
   const SearchEngine(
@@ -1212,6 +1256,14 @@ abstract final class BrowserCollections {
     fromJson: SentTab.fromJson,
     toJson: (SentTab t) => t.toJson(),
     idOf: (SentTab t) => t.id,
+  );
+
+  /// B40: files sent to another device.
+  static final ZtCollection<SentFile> sentFiles = ZtCollection<SentFile>(
+    kind: 'sent-file',
+    fromJson: SentFile.fromJson,
+    toJson: (SentFile f) => f.toJson(),
+    idOf: (SentFile f) => f.id,
   );
 
   static final ZtCollection<BrowserSettings> settings =

@@ -2376,4 +2376,52 @@ class AppL10nHe extends AppL10n {
   String deletedFromVault(String name) {
     return '$name יימחק מהכספת לתמיד.';
   }
+
+  @override
+  String get sendFileTo => 'שליחה אל…';
+
+  @override
+  String sendFileTitle(String name) {
+    return 'שליחת $name';
+  }
+
+  @override
+  String get sendToNotes => 'פתק ב-ZT Notes';
+
+  @override
+  String get sendToNotesSub => 'לפתק חדש, מוצפן על ידי ZT Notes';
+
+  @override
+  String get sendFileEncrypted =>
+      'מוצפן מקצה לקצה. רק ZT Browser שם יכול לפתוח אותו.';
+
+  @override
+  String get fileTooBigToSend => 'אי אפשר לשלוח למכשירים קבצים מעל 20 MB';
+
+  @override
+  String get notesNotInstalled => 'ZT Notes לא מותקנת בטלפון הזה';
+
+  @override
+  String get notesCantTakeFile => 'ZT Notes עדיין לא יכולה לקבל קובץ מהסוג הזה';
+
+  @override
+  String sendingFile(String name) {
+    return 'שולח את $name…';
+  }
+
+  @override
+  String sentFileToDevice(String name, String device) {
+    return '$name נשלח אל $device';
+  }
+
+  @override
+  String get sentFromDevices => 'נשלחו מהמכשירים שלך';
+
+  @override
+  String sentFileFrom(String device, String size) {
+    return 'מ-$device · $size';
+  }
+
+  @override
+  String get dismissSentFile => 'סגירה (נמחק מהחשבון שלך)';
 }

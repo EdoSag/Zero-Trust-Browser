@@ -464,8 +464,9 @@ class DownloadEngine private constructor(private val app: Context) {
     }
 
     /**
-     * B39: a file taken out of the vault, saved into Downloads (or the
-     * picked folder) and listed like any finished download.
+     * B39: a file taken out of the vault (or B40: one another device sent),
+     * saved into Downloads (or the picked folder) and listed like any
+     * finished download.
      */
     fun saveFromVault(name: String, mime: String, size: Long, write: (OutputStream) -> Unit): Boolean {
         val uri = newEntry(name, mime) ?: return false

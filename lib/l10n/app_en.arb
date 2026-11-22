@@ -1358,5 +1358,52 @@
         "type": "String"
       }
     }
-  }
+  },
+  "sendFileTo": "Send to…",
+  "sendFileTitle": "Send {name}",
+  "@sendFileTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendToNotes": "A note in ZT Notes",
+  "sendToNotesSub": "Into a new note, encrypted by ZT Notes",
+  "sendFileEncrypted": "End-to-end encrypted. Only ZT Browser there can open it.",
+  "fileTooBigToSend": "Files over 20 MB can't be sent to devices",
+  "notesNotInstalled": "ZT Notes isn't on this phone",
+  "notesCantTakeFile": "ZT Notes can't take this kind of file yet",
+  "sendingFile": "Sending {name}…",
+  "@sendingFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sentFileToDevice": "Sent {name} to {device}",
+  "@sentFileToDevice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sentFromDevices": "Sent from your devices",
+  "sentFileFrom": "From {device} · {size}",
+  "@sentFileFrom": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "dismissSentFile": "Dismiss (deletes it from your account)"
 }

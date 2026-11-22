@@ -520,6 +520,58 @@ class BrowserEngine {
     }
   }
 
+  // ---- B40: send a download on --------------------------------------
+
+  /// ZT Notes' app id, for "Send to ZT Notes".
+  static const String notesPackage = 'dev.sagron.zerotrustnotes';
+
+  /// Hands a finished download straight to [package] (ZT Notes).
+  Future<SendResult> sendDownloadTo(String key, String package) => _send(
+    'sendDownloadTo',
+    <String, Object?>{'key': key, 'package': package},
+  );
+
+  /// Hands a file from the vault straight to [package] (ZT Notes).
+  Future<SendResult> vaultSendTo(String id, String package) =>
+      _send('vaultSendTo', <String, Object?>{'id': id, 'package': package});
+
+  Future<SendResult> _send(String method, Map<String, Object?> args) async {
+    try {
+      return SendResult.parse(await _call<Object>(method, args));
+    } on PlatformException {
+      return SendResult.failed;
+    }
+  }
+
+  /// The bytes of a finished download, or null when it is over [max] bytes
+  /// or can't be read.
+  Future<Uint8List?> downloadBytes(String key, int max) =>
+      _bytes('downloadBytes', <String, Object?>{'key': key, 'max': max});
+
+  /// The bytes of a file in the vault, or null when it is over [max].
+  Future<Uint8List?> vaultBytes(String id, int max) =>
+      _bytes('vaultBytes', <String, Object?>{'id': id, 'max': max});
+
+  Future<Uint8List?> _bytes(String method, Map<String, Object?> args) async {
+    try {
+      return await _call<Uint8List>(method, args);
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// Saves a received file into Downloads (or the picked folder) and lists
+  /// it with the downloads.
+  Future<bool> saveBytesToDownloads(
+    String name,
+    String mime,
+    Uint8List bytes,
+  ) => _bool('saveBytesToDownloads', <String, Object?>{
+    'name': name,
+    'mime': mime,
+    'bytes': bytes,
+  });
+
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
       _call<void>('print', <String, Object?>{'tabId': tabId, 'title': title});
@@ -852,6 +904,27 @@ enum DownloadResult {
   static DownloadResult parse(Object? v) => switch (v) {
     'opened' || true => done,
     'noApp' => noApp,
+    'missing' => missing,
+    _ => failed,
+  };
+}
+
+/// How handing a file straight to another app went (B40).
+enum SendResult {
+  sent,
+
+  /// The app isn't on this phone.
+  notInstalled,
+
+  /// The app doesn't take this kind of file.
+  unsupported,
+  missing,
+  failed;
+
+  static SendResult parse(Object? v) => switch (v) {
+    'opened' => sent,
+    'notInstalled' => notInstalled,
+    'unsupported' => unsupported,
     'missing' => missing,
     _ => failed,
   };

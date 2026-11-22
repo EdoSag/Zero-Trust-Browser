@@ -222,29 +222,26 @@ class Downloads(private val context: Context, private val engine: DownloadEngine
         return if (noApp) "noApp" else "failed"
     }
 
-    /** The share sheet for the file: "opened", "missing" or "failed". */
-    fun share(key: String): String {
+    /**
+     * The share sheet for the file: "opened", "missing" or "failed". With
+     * [toPackage] (B40: ZT Notes) it goes straight to that app instead:
+     * "notInstalled" when it isn't on the phone, "unsupported" when it
+     * doesn't take this kind of file.
+     */
+    fun share(key: String, toPackage: String? = null): String {
         val target = engineTarget(key)
         val e = target?.first ?: find(key) ?: return "missing"
         val uris = target?.second ?: urisOf(e)
         if (uris.isEmpty()) return "missing"
+        if (toPackage != null && !installed(context, toPackage)) return "notInstalled"
+        var unsupported = false
         for (uri in uris) {
-            val send = Intent(Intent.ACTION_SEND)
-                .setType(typeOf(e, uri))
-                .putExtra(Intent.EXTRA_STREAM, uri)
-                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            send.clipData = ClipData.newRawUri(e.optString("name"), uri)
-            try {
-                context.startActivity(
-                    Intent.createChooser(send, null)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
-                )
-                return "opened"
-            } catch (ex: Exception) {
-                // Try the next link.
+            when (val r = send(context, uri, typeOf(e, uri), e.optString("name"), toPackage)) {
+                "opened" -> return r
+                "unsupported" -> unsupported = true
             }
         }
-        return "failed"
+        return if (unsupported) "unsupported" else "failed"
     }
 
     /** The phone's own Downloads folder, for files no app here opens. */
@@ -296,6 +293,40 @@ class Downloads(private val context: Context, private val engine: DownloadEngine
     }
 
     companion object {
+        fun installed(context: Context, pkg: String): Boolean = try {
+            context.packageManager.getPackageInfo(pkg, 0)
+            true
+        } catch (e: Exception) {
+            false
+        }
+
+        /**
+         * Hands [uri] to the share sheet, or straight to [toPackage]:
+         * "opened", "unsupported" (that app takes no such file) or "failed".
+         */
+        fun send(context: Context, uri: Uri, type: String, name: String, toPackage: String?): String {
+            val send = Intent(Intent.ACTION_SEND)
+                .setType(type)
+                .putExtra(Intent.EXTRA_STREAM, uri)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            send.clipData = ClipData.newRawUri(name, uri)
+            return try {
+                if (toPackage != null) {
+                    context.startActivity(send.setPackage(toPackage).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } else {
+                    context.startActivity(
+                        Intent.createChooser(send, null)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                    )
+                }
+                "opened"
+            } catch (ex: ActivityNotFoundException) {
+                if (toPackage != null) "unsupported" else "failed"
+            } catch (ex: Exception) {
+                "failed"
+            }
+        }
+
         /** Types sites send when they don't say what the file is. */
         private val VAGUE = setOf(
             "", "*/*", "application/octet-stream", "binary/octet-stream",

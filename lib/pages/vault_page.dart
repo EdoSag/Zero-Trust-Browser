@@ -7,6 +7,7 @@ import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/downloads_page.dart';
+import 'package:zerotrust_browser/pages/send_file_sheet.dart';
 
 /// One file in the download vault.
 class VaultItem {
@@ -184,6 +185,26 @@ class _VaultPageState extends ConsumerState<VaultPage> {
     await _report(await _engine.vaultShare(v.id), failed);
   }
 
+  /// B40: to ZT Notes or another of my devices.
+  Future<void> _send(VaultItem v) => showSendFileSheet(
+    context,
+    ref,
+    name: v.name,
+    mime: v.mime,
+    size: v.size,
+    readBytes: (int max) => _engine.vaultBytes(v.id, max),
+    toNotes: () async {
+      // ZT Notes comes up in front: that doesn't lock the vault.
+      _handedOff = true;
+      final SendResult r = await _engine.vaultSendTo(
+        v.id,
+        BrowserEngine.notesPackage,
+      );
+      if (r != SendResult.sent) _handedOff = false;
+      return r;
+    },
+  );
+
   Future<void> _moveToPhone(VaultItem v) async {
     final String done = l.movedToPhone(v.name);
     final String failed = l.couldntSave(v.name);
@@ -349,6 +370,8 @@ class _VaultPageState extends ConsumerState<VaultPage> {
         switch (a) {
           case 'share':
             await _share(v);
+          case 'send':
+            await _send(v);
           case 'phone':
             await _moveToPhone(v);
           case 'rename':
@@ -359,6 +382,7 @@ class _VaultPageState extends ConsumerState<VaultPage> {
       },
       itemBuilder: (_) => <PopupMenuEntry<String>>[
         PopupMenuItem<String>(value: 'share', child: Text(l.share)),
+        PopupMenuItem<String>(value: 'send', child: Text(l.sendFileTo)),
         PopupMenuItem<String>(value: 'phone', child: Text(l.moveToPhone)),
         PopupMenuItem<String>(value: 'rename', child: Text(l.renameFile)),
         PopupMenuItem<String>(value: 'delete', child: Text(l.delete)),
