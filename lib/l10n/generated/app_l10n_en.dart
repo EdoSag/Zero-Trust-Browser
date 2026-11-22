@@ -2087,4 +2087,28 @@ class AppL10nEn extends AppL10n {
   @override
   String get pullToRefreshSub =>
       'At the top of a page, pull down to load it again';
+
+  @override
+  String get pageBrokenTurnOff => 'Page not working? Turn off blocking here';
+
+  @override
+  String get blockedOnPageTap => 'Tap to see what was blocked';
+
+  @override
+  String blockedRequests(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count requests',
+      one: '1 request',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get allowHost => 'Allow';
+
+  @override
+  String get allowHostSub =>
+      'Allow lets that address load on every site. Undo it in Settings, Your block rules.';
 }

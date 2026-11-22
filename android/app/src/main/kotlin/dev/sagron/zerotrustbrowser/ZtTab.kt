@@ -97,6 +97,9 @@ class ZtTab(
     val view: PullToRefreshLayout = PullToRefreshLayout(activity, webView) { reload() }
     private val main = Handler(Looper.getMainLooper())
     private val blocked = AtomicInteger(0)
+
+    /** B-7: what was blocked on this page, host to how many requests. */
+    private val blockedHosts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private var startScript: ScriptHandler? = null
 
     /** B42: this tab's own identity (null follows the settings and site rules). */
@@ -703,6 +706,9 @@ class ZtTab(
         webView.destroy()
     }
 
+    /** B-7: the hosts blocked on the page now showing, with counts. */
+    fun blockedHosts(): Map<String, Int> = HashMap(blockedHosts)
+
     fun queueState() {
         if (stateQueued) return
         stateQueued = true
@@ -887,6 +893,7 @@ class ZtTab(
                 host.mediaChanged(this@ZtTab, false, null)
             }
             blocked.set(0)
+            blockedHosts.clear()
             sslError = false
             loading = true
             readerable = false
@@ -939,6 +946,11 @@ class ZtTab(
             if (request.isForMainFrame) return null
             if (Blocker.shouldBlock(request.url.host, pageHost)) {
                 blocked.incrementAndGet()
+                request.url.host?.lowercase()?.let { h ->
+                    if (blockedHosts.size < MAX_BLOCKED_HOSTS || blockedHosts.containsKey(h)) {
+                        blockedHosts.merge(h, 1, Int::plus)
+                    }
+                }
                 main.post { queueState() }
                 return WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
             }
@@ -1082,6 +1094,9 @@ class ZtTab(
         /** Page text size in percent, and dark pages; pushed from Dart. */
         @Volatile var textZoom = 100
         @Volatile var darkPages = true
+
+        /** Hosts remembered per page for the shield panel (B-7). */
+        const val MAX_BLOCKED_HOSTS = 300
 
         /** B28: pull down at the top of a page to reload it. */
         @Volatile var pullToRefresh = true
