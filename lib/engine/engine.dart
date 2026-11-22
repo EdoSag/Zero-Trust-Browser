@@ -386,6 +386,59 @@ class BrowserEngine {
     }
   }
 
+  /// B36: takes downloads off the list. Files in the phone's storage stay
+  /// where they are; private ones, which live only in the app, go.
+  Future<void> forgetDownloads(List<String> keys) =>
+      _call<void>('forgetDownloads', <String, Object?>{'keys': keys});
+
+  /// B36: renames a finished download; false when it couldn't.
+  Future<bool> renameDownload(String key, String name) async {
+    try {
+      return await _call<bool>('renameDownload', <String, Object?>{
+            'key': key,
+            'name': name,
+          }) ??
+          false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// B38: Wi-Fi only, how many at once and auto-delete after N days (0
+  /// keeps files).
+  Future<void> setDownloadRules({
+    required bool wifiOnly,
+    required int maxParallel,
+    required int autoDeleteDays,
+  }) => _call<void>('setDownloadRules', <String, Object?>{
+    'wifiOnly': wifiOnly,
+    'maxParallel': maxParallel,
+    'autoDeleteDays': autoDeleteDays,
+  });
+
+  /// B38: the folder downloads are saved to (one the person chose, such as
+  /// on an SD card), or null for the phone's Downloads.
+  Future<String?> downloadFolder() async {
+    try {
+      return await _call<String>('downloadFolder');
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// B38: the system folder picker; the chosen folder's name, or null when
+  /// the person backed out.
+  Future<String?> pickDownloadFolder() async {
+    try {
+      return await _call<String>('pickDownloadFolder');
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// B38: back to the phone's Downloads folder.
+  Future<void> clearDownloadFolder() => _call<void>('clearDownloadFolder');
+
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
       _call<void>('print', <String, Object?>{'tabId': tabId, 'title': title});
