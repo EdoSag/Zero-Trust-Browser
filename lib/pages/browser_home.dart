@@ -43,6 +43,7 @@ import 'package:zerotrust_browser/widgets/qr_sheet.dart';
 import 'package:zerotrust_browser/widgets/read_aloud_bar.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 import 'package:zerotrust_browser/widgets/tab_strip.dart';
+import 'package:zerotrust_browser/widgets/tab_swipe.dart';
 
 /// The browser once unlocked: address bar, the current tab, toolbar.
 class BrowserHome extends ConsumerStatefulWidget {
@@ -1441,24 +1442,39 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       if (mounted) _updateWindowPrivacy(settings, tabs);
     });
 
-    final Widget addressBar = _AddressBar(
-      tab: tab,
-      editing: _editing,
-      controller: _address,
-      focus: _addressFocus,
-      onTap: () => _startEditing(tab),
-      onSubmit: go,
-      onCancel: _stopEditing,
-      onShield: tab == null || tab.isStartPage
-          ? null
-          : () => showSiteSheet(context, ref, tab),
-      onReader:
-          tab != null && !tab.isStartPage && (tab.readerable || tab.reader)
-          ? () => _toggleReader(tab)
-          : null,
-      onVoice: _voice ? _voiceSearch : null,
-      onScan: _scanQr,
-      engines: settings.engines,
+    // B28: the tabs a sideways swipe moves through (this kind only).
+    final List<String> swipeIds = <String>[
+      for (final BrowserTab t in private ? tabs.private : tabs.normal) t.id,
+    ];
+    bool canSwitch(int step) => neighborTab(swipeIds, tab?.id, step) != null;
+    void switchTab(int step) {
+      final String? id = neighborTab(swipeIds, tab?.id, step);
+      if (id != null) _tabs.select(id);
+    }
+
+    final Widget addressBar = TabSwipe(
+      enabled: settings.swipeTabs && !_editing,
+      canSwitch: canSwitch,
+      onSwitch: switchTab,
+      child: _AddressBar(
+        tab: tab,
+        editing: _editing,
+        controller: _address,
+        focus: _addressFocus,
+        onTap: () => _startEditing(tab),
+        onSubmit: go,
+        onCancel: _stopEditing,
+        onShield: tab == null || tab.isStartPage
+            ? null
+            : () => showSiteSheet(context, ref, tab),
+        onReader:
+            tab != null && !tab.isStartPage && (tab.readerable || tab.reader)
+            ? () => _toggleReader(tab)
+            : null,
+        onVoice: _voice ? _voiceSearch : null,
+        onScan: _scanQr,
+        engines: settings.engines,
+      ),
     );
 
     // Locked private tabs (B29): nothing of the page shows, and none of its
@@ -1529,18 +1545,24 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                   TranslateBar(tab: tab),
                 if (reading.active) ReadAloudBar(state: reading),
                 if (!wide)
-                  _Toolbar(
-                    tab: tab,
-                    tabCount: private
-                        ? tabs.private.length
-                        : tabs.normal.length,
-                    onBack: tab != null && tab.canGoBack && !tab.isStartPage
-                        ? () => _engine.back(tab.id)
-                        : null,
-                    onHome: () => go(_settings.engine.home),
-                    onNewTab: () => _tabs.open(private: private),
-                    onTabs: () => _push(TabsPage(startPrivate: private)),
-                    onMenu: () => _menu(tab),
+                  TabSwipe(
+                    enabled: settings.swipeTabs,
+                    canSwitch: canSwitch,
+                    onSwitch: switchTab,
+                    onSwipeUp: () => _push(TabsPage(startPrivate: private)),
+                    child: _Toolbar(
+                      tab: tab,
+                      tabCount: private
+                          ? tabs.private.length
+                          : tabs.normal.length,
+                      onBack: tab != null && tab.canGoBack && !tab.isStartPage
+                          ? () => _engine.back(tab.id)
+                          : null,
+                      onHome: () => go(_settings.engine.home),
+                      onNewTab: () => _tabs.open(private: private),
+                      onTabs: () => _push(TabsPage(startPrivate: private)),
+                      onMenu: () => _menu(tab),
+                    ),
                   ),
               ],
             ),

@@ -473,6 +473,8 @@ class BrowserSettings {
     this.identity = 'default',
     this.identityRules = const <String, String>{},
     this.customIdentities = const <CustomIdentity>[],
+    this.swipeTabs = true,
+    this.pullToRefresh = true,
   });
 
   static const String itemId = 'browser-settings';
@@ -583,6 +585,13 @@ class BrowserSettings {
 
   /// The user's own identities.
   final List<CustomIdentity> customIdentities;
+
+  /// B28: swipe the address bar or the bottom bar sideways to switch tabs,
+  /// and up on the bottom bar to see all tabs.
+  final bool swipeTabs;
+
+  /// B28: pull down at the top of a page to reload it.
+  final bool pullToRefresh;
 
   static const List<double> readAloudRates = <double>[
     0.75,
@@ -710,6 +719,8 @@ class BrowserSettings {
     String? identity,
     Map<String, String>? identityRules,
     List<CustomIdentity>? customIdentities,
+    bool? swipeTabs,
+    bool? pullToRefresh,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -748,6 +759,8 @@ class BrowserSettings {
     identity: identity ?? this.identity,
     identityRules: identityRules ?? this.identityRules,
     customIdentities: customIdentities ?? this.customIdentities,
+    swipeTabs: swipeTabs ?? this.swipeTabs,
+    pullToRefresh: pullToRefresh ?? this.pullToRefresh,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -794,6 +807,8 @@ class BrowserSettings {
     'customIdentities': <Map<String, Object?>>[
       for (final CustomIdentity c in customIdentities) c.toJson(),
     ],
+    'swipeTabs': swipeTabs,
+    'pullToRefresh': pullToRefresh,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -879,6 +894,8 @@ class BrowserSettings {
             in (j['customIdentities'] as List<Object?>? ?? const <Object?>[]))
           ?CustomIdentity.fromJson(e),
       ],
+      swipeTabs: j['swipeTabs'] as bool? ?? true,
+      pullToRefresh: j['pullToRefresh'] as bool? ?? true,
     );
   }
 }

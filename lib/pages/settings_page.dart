@@ -356,6 +356,21 @@ class BrowserSettingsPage extends ConsumerWidget {
           value: s.backgroundPlay,
           onChanged: (bool v) => save(s.copyWith(backgroundPlay: v)),
         ),
+        _Header(l.gesturesSection),
+        SwitchListTile(
+          secondary: const Icon(Icons.swipe_outlined),
+          title: Text(l.swipeTabs),
+          subtitle: Text(l.swipeTabsSub),
+          value: s.swipeTabs,
+          onChanged: (bool v) => save(s.copyWith(swipeTabs: v)),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.swipe_down_outlined),
+          title: Text(l.pullToRefresh),
+          subtitle: Text(l.pullToRefreshSub),
+          value: s.pullToRefresh,
+          onChanged: (bool v) => save(s.copyWith(pullToRefresh: v)),
+        ),
         _Header(l.downloads),
         SwitchListTile(
           secondary: const Icon(Icons.download_outlined),

@@ -91,7 +91,10 @@ class ZtTab(
         fun mediaChanged(tab: ZtTab, playing: Boolean, title: String?)
     }
 
-    val webView: WebView = WebView(activity)
+    val webView: PageWebView = PageWebView(activity)
+
+    /** What the tab view shows: the page, with pull to reload (B28). */
+    val view: PullToRefreshLayout = PullToRefreshLayout(activity, webView) { reload() }
     private val main = Handler(Looper.getMainLooper())
     private val blocked = AtomicInteger(0)
     private var startScript: ScriptHandler? = null
@@ -695,7 +698,7 @@ class ZtTab(
         if (mediaFrame != null) host.mediaChanged(this, false, null)
         mediaPlaying = false
         mediaFrame = null
-        (webView.parent as? ViewGroup)?.removeView(webView)
+        (view.parent as? ViewGroup)?.removeView(view)
         webView.stopLoading()
         webView.destroy()
     }
@@ -1079,6 +1082,9 @@ class ZtTab(
         /** Page text size in percent, and dark pages; pushed from Dart. */
         @Volatile var textZoom = 100
         @Volatile var darkPages = true
+
+        /** B28: pull down at the top of a page to reload it. */
+        @Volatile var pullToRefresh = true
 
         fun privateProfileSupported(): Boolean =
             WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
