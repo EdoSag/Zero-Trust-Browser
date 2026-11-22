@@ -8,6 +8,7 @@ import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/apply_settings.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/safety_list.dart';
 import 'package:zerotrust_browser/browser/download_check.dart';
 import 'package:zerotrust_browser/browser/filter_lists.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
@@ -96,6 +97,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     _pushPrivacy(ref.read(browserSettingsProvider));
     _pushMedia(ref.read(browserSettingsProvider));
     _pushDownloadLabels();
+    _pushSafetyLabels();
     _pushScripts(ref.read(userScriptsProvider).value);
     // B42: the first page must already go out as the browser the user
     // picked, so the stored settings are waited for before a tab loads.
@@ -117,8 +119,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     await _openPendingLink();
     final bool voice = await _engine.voiceAvailable();
     if (mounted) setState(() => _voice = voice);
-    // Weekly, in the background: a fresh signed blocklist.
+    // Weekly, in the background: a fresh signed blocklist; daily, the
+    // phishing and malware list (B-1).
     ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
+    ref.read(safetyListUpdaterProvider).checkIfDue().ignore();
   }
 
   @override
@@ -149,6 +153,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final int? days = _settings.closeTabsAfterDays;
     if (days != null) _tabs.closeUnused(days).ignore();
     ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
+    ref.read(safetyListUpdaterProvider).checkIfDue().ignore();
   }
 
   @override
@@ -202,6 +207,22 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   }
 
   /// The download notification's texts (B34), in the app's language.
+  /// B-1: the warning page for dangerous sites, in the app's language.
+  void _pushSafetyLabels() {
+    final AppL10n l = this.l;
+    _engine.setSafetyLabels(<String, String>{
+      'dir': Directionality.of(context) == TextDirection.rtl ? 'rtl' : 'ltr',
+      'phishingTitle': l.unsafePhishingTitle,
+      'phishingBody': l.unsafePhishingBody,
+      'malwareTitle': l.unsafeMalwareTitle,
+      'malwareBody': l.unsafeMalwareBody,
+      'back': l.unsafeBack,
+      'details': l.unsafeDetails,
+      'detailsBody': l.unsafeDetailsBody,
+      'proceed': l.unsafeProceed,
+    }).ignore();
+  }
+
   void _pushDownloadLabels() {
     final AppL10n l = this.l;
     _engine.setDownloadLabels(<String, String>{
@@ -480,6 +501,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         );
       case 'permission':
         await _askPermission(e);
+      case 'unsafeLeave':
+        // "Back to safety" with nothing to go back to (B-1).
+        go(_settings.engine.home);
       case 'httpsFailed':
         await _offerInsecure(e.get<String>('url') ?? '', tab);
       case 'sslError':

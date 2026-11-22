@@ -18,6 +18,9 @@ enum DownloadWarning {
 
   /// Downloaded over plain http: anyone on the network could swap it.
   insecure,
+
+  /// From a site on the phishing and malware list (B-1).
+  dangerousSite,
 }
 
 const Set<String> _appExtensions = <String>{'apk', 'apks', 'xapk', 'apkm'};

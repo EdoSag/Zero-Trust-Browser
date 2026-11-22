@@ -98,6 +98,10 @@ class ZtTab(
     private val main = Handler(Looper.getMainLooper())
     private val blocked = AtomicInteger(0)
 
+    /** B-1: dangerous sites the user chose to open anyway in this tab. */
+    private val unsafeAllowed: MutableSet<String> =
+        java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
     /** B-7: what was blocked on this page, host to how many requests. */
     private val blockedHosts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private var startScript: ScriptHandler? = null
@@ -706,6 +710,23 @@ class ZtTab(
         webView.destroy()
     }
 
+    /** B-1: "Back to safety" or "Open the site anyway" on the warning page. */
+    private fun onSafetyAction(action: Uri) {
+        when (action.path) {
+            "/proceed" -> {
+                val url = action.getQueryParameter("u") ?: return
+                val host = Uri.parse(url).host?.lowercase() ?: return
+                unsafeAllowed.add(host)
+                webView.loadUrl(url, privacyHeaders())
+            }
+            else -> {
+                // Back past the warning; with nothing before it, Dart
+                // opens the start page.
+                if (webView.canGoBack()) webView.goBack() else events("unsafeLeave", emptyMap())
+            }
+        }
+    }
+
     /** B-7: the hosts blocked on the page now showing, with counts. */
     fun blockedHosts(): Map<String, Int> = HashMap(blockedHosts)
 
@@ -831,6 +852,20 @@ class ZtTab(
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
             val url = request.url.toString()
+            // B-1: the warning page's two links.
+            if (request.url.host == SafeBrowsing.ACTION_HOST) {
+                onSafetyAction(request.url)
+                return true
+            }
+            // A redirect to a dangerous site: load it again so that
+            // shouldInterceptRequest shows the warning instead.
+            val target = request.url.host?.lowercase()
+            if (request.isRedirect && target != null && !unsafeAllowed.contains(target) &&
+                SafeBrowsing.check(target) != null
+            ) {
+                view.loadUrl(url, privacyHeaders())
+                return true
+            }
             // B41: a link to a user script offers to install it (as
             // Tampermonkey does), instead of showing its code.
             val scheme = request.url.scheme?.lowercase()
@@ -943,7 +978,13 @@ class ZtTab(
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-            if (request.isForMainFrame) return null
+            if (request.isForMainFrame) {
+                // B-1: a phishing or malware site shows a warning instead.
+                val h = request.url.host?.lowercase() ?: return null
+                if (h == SafeBrowsing.ACTION_HOST || unsafeAllowed.contains(h)) return null
+                val kind = SafeBrowsing.check(h) ?: return null
+                return SafeBrowsing.warningPage(request.url.toString(), h, kind)
+            }
             if (Blocker.shouldBlock(request.url.host, pageHost)) {
                 blocked.incrementAndGet()
                 request.url.host?.lowercase()?.let { h ->

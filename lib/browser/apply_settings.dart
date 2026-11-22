@@ -15,6 +15,7 @@ Future<void> applySettings(BrowserEngine engine, BrowserSettings s) async {
     fingerprinting: s.fingerprinting,
     javascriptOff: s.javascriptOff,
     stripTracking: s.stripTracking,
+    safeBrowsing: s.safeBrowsing,
   );
   await engine.setDisplay(
     textZoom: s.textZoom,

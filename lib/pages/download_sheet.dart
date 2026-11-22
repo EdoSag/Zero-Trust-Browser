@@ -14,6 +14,7 @@ class DownloadRequest {
     required this.url,
     this.pageUrl,
     this.private = false,
+    this.dangerousSite = false,
   });
 
   factory DownloadRequest.fromMap(Map<Object?, Object?> m) => DownloadRequest(
@@ -24,6 +25,7 @@ class DownloadRequest {
     url: m['url'] as String? ?? '',
     pageUrl: m['pageUrl'] as String?,
     private: m['private'] as bool? ?? false,
+    dangerousSite: m['dangerousSite'] as bool? ?? false,
   );
 
   final int requestId;
@@ -41,8 +43,13 @@ class DownloadRequest {
   final String? pageUrl;
   final bool private;
 
-  Set<DownloadWarning> get warnings =>
-      downloadWarnings(name: name, mime: mime, url: url);
+  /// The file or its page is on the phishing and malware list (B-1).
+  final bool dangerousSite;
+
+  Set<DownloadWarning> get warnings => <DownloadWarning>{
+    if (dangerousSite) DownloadWarning.dangerousSite,
+    ...downloadWarnings(name: name, mime: mime, url: url),
+  };
 
   /// The site it comes from: the file's own, or the page's for a file the
   /// page made.
@@ -118,6 +125,7 @@ class _DownloadSheetState extends State<DownloadSheet> {
     DownloadWarning.program => l.downloadWarnProgram,
     DownloadWarning.disguised => l.downloadWarnDisguised,
     DownloadWarning.insecure => l.downloadWarnInsecure,
+    DownloadWarning.dangerousSite => l.downloadWarnDangerousSite,
   };
 
   @override

@@ -2111,4 +2111,57 @@ class AppL10nEn extends AppL10n {
   @override
   String get allowHostSub =>
       'Allow lets that address load on every site. Undo it in Settings, Your block rules.';
+
+  @override
+  String get safeBrowsing => 'Warn about dangerous sites';
+
+  @override
+  String get safeBrowsingSub =>
+      'Phishing and malware sites, from a list checked on your phone. Updated daily.';
+
+  @override
+  String safeBrowsingSubDated(String date) {
+    return 'Phishing and malware sites, checked on your phone. List from $date; tap to check for a newer one.';
+  }
+
+  @override
+  String get checkingSafetyList =>
+      'Checking for a newer list of dangerous sites…';
+
+  @override
+  String get safetyListUpdated => 'List of dangerous sites updated';
+
+  @override
+  String get safetyListUpToDate => 'The list of dangerous sites is up to date';
+
+  @override
+  String get unsafePhishingTitle => 'Deceptive site ahead';
+
+  @override
+  String get unsafePhishingBody =>
+      'This site is known for tricking people into giving away passwords, card numbers or codes.';
+
+  @override
+  String get unsafeMalwareTitle => 'This site may harm your phone';
+
+  @override
+  String get unsafeMalwareBody =>
+      'This site is known for spreading harmful apps and files.';
+
+  @override
+  String get unsafeBack => 'Back to safety';
+
+  @override
+  String get unsafeDetails => 'Details';
+
+  @override
+  String get unsafeDetailsBody =>
+      'ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.';
+
+  @override
+  String get unsafeProceed => 'Open the site anyway (not safe)';
+
+  @override
+  String get downloadWarnDangerousSite =>
+      'This file comes from a site known for phishing or malware.';
 }

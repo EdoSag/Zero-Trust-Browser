@@ -2097,4 +2097,56 @@ class AppL10nHe extends AppL10n {
   @override
   String get allowHostSub =>
       '\"אפשר\" מתיר לכתובת הזו להיטען בכל האתרים. אפשר לבטל בהגדרות, כללי החסימה שלך.';
+
+  @override
+  String get safeBrowsing => 'אזהרה מפני אתרים מסוכנים';
+
+  @override
+  String get safeBrowsingSub =>
+      'אתרי פישינג ונוזקות, מרשימה שנבדקת בטלפון שלכם. מתעדכנת מדי יום.';
+
+  @override
+  String safeBrowsingSubDated(String date) {
+    return 'אתרי פישינג ונוזקות, נבדקים בטלפון שלכם. רשימה מ-$date; הקישו כדי לבדוק אם יש חדשה.';
+  }
+
+  @override
+  String get checkingSafetyList => 'בודק אם יש רשימה חדשה של אתרים מסוכנים…';
+
+  @override
+  String get safetyListUpdated => 'רשימת האתרים המסוכנים עודכנה';
+
+  @override
+  String get safetyListUpToDate => 'רשימת האתרים המסוכנים מעודכנת';
+
+  @override
+  String get unsafePhishingTitle => 'לפניכם אתר מתחזה';
+
+  @override
+  String get unsafePhishingBody =>
+      'האתר הזה ידוע בכך שהוא מנסה לגרום לאנשים למסור סיסמאות, מספרי כרטיס או קודים.';
+
+  @override
+  String get unsafeMalwareTitle => 'האתר הזה עלול להזיק לטלפון שלכם';
+
+  @override
+  String get unsafeMalwareBody =>
+      'האתר הזה ידוע בהפצת אפליקציות וקבצים מזיקים.';
+
+  @override
+  String get unsafeBack => 'חזרה למקום בטוח';
+
+  @override
+  String get unsafeDetails => 'פרטים';
+
+  @override
+  String get unsafeDetailsBody =>
+      'ZT Browser בדק את הכתובת הזו בטלפון שלכם מול רשימה ציבורית של אתרים מסוכנים. שום דבר לא נשלח. רשימות יכולות לטעות.';
+
+  @override
+  String get unsafeProceed => 'לפתוח את האתר בכל זאת (לא בטוח)';
+
+  @override
+  String get downloadWarnDangerousSite =>
+      'הקובץ מגיע מאתר שידוע בפישינג או בנוזקות.';
 }
