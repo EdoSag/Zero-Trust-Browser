@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The 1x1 Fire widget (W13): one tap closes everything and clears data. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/fire_root"
+    style="@style/ZtWidget.Root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="8dp"
+    android:contentDescription="@string/fire_widget_label">
+    <ImageView
+        style="@style/ZtWidget.Action"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="center"
+        android:padding="11dp"
+        android:src="@drawable/ic_zt_widget_fire"
+        android:importantForAccessibility="no"/>
+</FrameLayout>

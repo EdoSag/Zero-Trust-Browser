@@ -19,6 +19,7 @@ import 'package:zerotrust_browser/browser/search_suggestions.dart';
 import 'package:zerotrust_browser/browser/site_permissions.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/browser/user_scripts.dart';
+import 'package:zerotrust_browser/browser/widget_links.dart';
 import 'package:zerotrust_browser/browser/zt_apps.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -298,6 +299,18 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     }
   }
 
+  String? _widgetLinks;
+
+  /// W13: hands the quick links widget its links when they changed (not
+  /// before the bookmarks have loaded, which would empty it for a moment).
+  void _pushWidgetLinks(List<Shortcut> shortcuts, List<Bookmark>? bookmarks) {
+    if (bookmarks == null) return;
+    final String json = widgetLinksJson(shortcuts, bookmarks);
+    if (json == _widgetLinks) return;
+    _widgetLinks = json;
+    _engine.setWidgetLinks(json).ignore();
+  }
+
   /// A tap on the home screen search bar widget.
   Future<void> _openWidgetAction() async {
     final String? action = await _engine.consumeWidgetAction();
@@ -319,6 +332,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       case 'downloads':
         // A tap on a download notification.
         _push(const DownloadsPage());
+      case 'fire':
+        // W13: the Fire widget. Cookies, site data and private downloads
+        // went already; now the tabs and the last hour of history.
+        await _burn(history: const Duration(hours: 1));
       default:
         _startEditing(await _tabs.open());
     }
@@ -1031,15 +1048,23 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         ) ??
         false;
     if (!go) return;
+    await _burn(history: history ? (ranges[range].$2 ?? _allHistory) : null);
+  }
+
+  /// "All time" for [_burn].
+  static const Duration _allHistory = Duration(days: 365 * 1000);
+
+  /// Closes every tab and clears browsing data; with [history], also the
+  /// history of that long ([_allHistory]: all of it) and the privacy report.
+  Future<void> _burn({Duration? history}) async {
     await _tabs.closeAllForFire();
     await _engine.clearBrowsingData();
-    if (history) {
-      final Duration? d = ranges[range].$2;
+    if (history != null) {
       final BrowserData data = ref.read(browserDataProvider);
-      if (d == null) {
+      if (history == _allHistory) {
         await data.clearHistory();
       } else {
-        await data.clearHistorySince(DateTime.now().subtract(d));
+        await data.clearHistorySince(DateTime.now().subtract(history));
       }
       // The report names the sites visited, like history does.
       await ref.read(privacyReportRecorderProvider).clear();
@@ -1437,6 +1462,13 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     // The user's scripts (B41).
     ref.listen(userScriptsProvider, (_, AsyncValue<List<UserScript>> next) {
       _pushScripts(next.value);
+    });
+    // W13: the quick links widget follows the start page's links.
+    ref.listen(browserSettingsProvider, (_, BrowserSettings next) {
+      _pushWidgetLinks(next.shortcuts, ref.read(bookmarksProvider).value);
+    });
+    ref.listen(bookmarksProvider, (_, AsyncValue<List<Bookmark>> next) {
+      _pushWidgetLinks(ref.read(browserSettingsProvider).shortcuts, next.value);
     });
     // Pages other devices sent here (B23).
     ref.listen(sentToMeProvider, (_, AsyncValue<List<SentTab>> next) {
