@@ -3570,6 +3570,96 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Allow lets that address load on every site. Undo it in Settings, Your block rules.'**
   String get allowHostSub;
+
+  /// No description provided for @safeBrowsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Warn about dangerous sites'**
+  String get safeBrowsing;
+
+  /// No description provided for @safeBrowsingSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Phishing and malware sites, from a list checked on your phone. Updated daily.'**
+  String get safeBrowsingSub;
+
+  /// No description provided for @safeBrowsingSubDated.
+  ///
+  /// In en, this message translates to:
+  /// **'Phishing and malware sites, checked on your phone. List from {date}; tap to check for a newer one.'**
+  String safeBrowsingSubDated(String date);
+
+  /// No description provided for @checkingSafetyList.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for a newer list of dangerous sites…'**
+  String get checkingSafetyList;
+
+  /// No description provided for @safetyListUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'List of dangerous sites updated'**
+  String get safetyListUpdated;
+
+  /// No description provided for @safetyListUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'The list of dangerous sites is up to date'**
+  String get safetyListUpToDate;
+
+  /// No description provided for @unsafePhishingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deceptive site ahead'**
+  String get unsafePhishingTitle;
+
+  /// No description provided for @unsafePhishingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This site is known for tricking people into giving away passwords, card numbers or codes.'**
+  String get unsafePhishingBody;
+
+  /// No description provided for @unsafeMalwareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This site may harm your phone'**
+  String get unsafeMalwareTitle;
+
+  /// No description provided for @unsafeMalwareBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This site is known for spreading harmful apps and files.'**
+  String get unsafeMalwareBody;
+
+  /// No description provided for @unsafeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to safety'**
+  String get unsafeBack;
+
+  /// No description provided for @unsafeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get unsafeDetails;
+
+  /// No description provided for @unsafeDetailsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.'**
+  String get unsafeDetailsBody;
+
+  /// No description provided for @unsafeProceed.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the site anyway (not safe)'**
+  String get unsafeProceed;
+
+  /// No description provided for @downloadWarnDangerousSite.
+  ///
+  /// In en, this message translates to:
+  /// **'This file comes from a site known for phishing or malware.'**
+  String get downloadWarnDangerousSite;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

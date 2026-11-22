@@ -475,6 +475,7 @@ class BrowserSettings {
     this.customIdentities = const <CustomIdentity>[],
     this.swipeTabs = true,
     this.pullToRefresh = true,
+    this.safeBrowsing = true,
   });
 
   static const String itemId = 'browser-settings';
@@ -592,6 +593,10 @@ class BrowserSettings {
 
   /// B28: pull down at the top of a page to reload it.
   final bool pullToRefresh;
+
+  /// B-1: warn before opening a known phishing or malware site (list checked
+  /// on the phone).
+  final bool safeBrowsing;
 
   static const List<double> readAloudRates = <double>[
     0.75,
@@ -721,6 +726,7 @@ class BrowserSettings {
     List<CustomIdentity>? customIdentities,
     bool? swipeTabs,
     bool? pullToRefresh,
+    bool? safeBrowsing,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -761,6 +767,7 @@ class BrowserSettings {
     customIdentities: customIdentities ?? this.customIdentities,
     swipeTabs: swipeTabs ?? this.swipeTabs,
     pullToRefresh: pullToRefresh ?? this.pullToRefresh,
+    safeBrowsing: safeBrowsing ?? this.safeBrowsing,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -809,6 +816,7 @@ class BrowserSettings {
     ],
     'swipeTabs': swipeTabs,
     'pullToRefresh': pullToRefresh,
+    'safeBrowsing': safeBrowsing,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -896,6 +904,7 @@ class BrowserSettings {
       ],
       swipeTabs: j['swipeTabs'] as bool? ?? true,
       pullToRefresh: j['pullToRefresh'] as bool? ?? true,
+      safeBrowsing: j['safeBrowsing'] as bool? ?? true,
     );
   }
 }

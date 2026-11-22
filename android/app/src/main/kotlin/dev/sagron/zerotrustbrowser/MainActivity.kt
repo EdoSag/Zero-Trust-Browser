@@ -115,6 +115,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             for (t in tabs.values) t.refreshScripts()
         }
         Blocker.load(this)
+        SafeBrowsing.load(this)
         UserScripts.onChanged = { for (t in tabs.values) t.refreshUserScripts() }
         // A private profile left over from a crash: nothing may survive it.
         deletePrivateProfileIfUnused()
@@ -247,6 +248,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         ZtTab.jsOffSites = sites(call.argument<List<String>>("javascriptOff"))
                         PageScripts.fingerprinting = call.argument<Boolean>("fingerprinting") ?: true
                         LinkCleaner.enabled = call.argument<Boolean>("stripTracking") ?: true
+                        SafeBrowsing.enabled = call.argument<Boolean>("safeBrowsing") ?: true
                         call.argument<List<String>>("trackingParams")?.let { LinkCleaner.params = it.toSet() }
                         call.argument<List<String>>("trackingPrefixes")?.let { LinkCleaner.prefixes = it }
                         call.argument<List<Map<String, String>>>("redirectWrappers")?.let { list ->
@@ -275,6 +277,22 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                             "file" to Blocker.updateFile(this).absolutePath,
                         ),
                     )
+                    "safetyInfo" -> result.success(
+                        mapOf(
+                            "size" to SafeBrowsing.size(),
+                            "date" to SafeBrowsing.listDate,
+                            "file" to SafeBrowsing.file(this).absolutePath,
+                        ),
+                    )
+                    "reloadSafetyList" -> {
+                        SafeBrowsing.reload(this)
+                        result.success(null)
+                    }
+                    "safetyLabels" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        SafeBrowsing.labels = (call.argument<Map<String, String>>("labels") ?: emptyMap())
+                        result.success(null)
+                    }
                     "reloadBlocklist" -> {
                         Blocker.reload(this)
                         result.success(null)
@@ -796,6 +814,10 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                 "url" to (pending.url ?: url.substringBefore(',').take(64)),
                 "pageUrl" to pageUrl,
                 "private" to tab.isPrivate,
+                "dangerousSite" to (
+                    SafeBrowsing.check(pending.url?.let { Uri.parse(it).host }) != null ||
+                        SafeBrowsing.check(pageUrl?.let { Uri.parse(it).host }) != null
+                    ),
             ),
         )
     }

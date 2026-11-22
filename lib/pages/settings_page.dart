@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/safety_list.dart';
 import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
 import 'package:zerotrust_browser/browser/identity.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
@@ -29,6 +30,10 @@ final _blocklistProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
   (ref) => ref.read(browserEngineProvider).blocklistInfo(),
 );
 
+final _safetyProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
+  (ref) => ref.read(browserEngineProvider).safetyInfo(),
+);
+
 final _autofillProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
   (ref) => ref.read(browserEngineProvider).autofillStatus(),
 );
@@ -52,6 +57,8 @@ class BrowserSettingsPage extends ConsumerWidget {
         ref.watch(_blocklistProvider).value ?? const <Object?, Object?>{};
     final int listed = (list['size'] as int?) ?? 0;
     final String listDate = (list['date'] as String?) ?? '';
+    final String safetyDate =
+        (ref.watch(_safetyProvider).value?['date'] as String?) ?? '';
     final Map<Object?, Object?> autofill =
         ref.watch(_autofillProvider).value ?? const <Object?, Object?>{};
     final String? passwordManager = autofill['service'] as String?;
@@ -145,6 +152,21 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(l.stripTrackingSub),
           value: s.stripTracking,
           onChanged: (bool v) => save(s.copyWith(stripTracking: v)),
+        ),
+        // B-1. Tap the row to check for a newer list now.
+        ListTile(
+          leading: const Icon(Icons.gpp_maybe_outlined),
+          title: Text(l.safeBrowsing),
+          subtitle: Text(
+            safetyDate.length >= 10
+                ? l.safeBrowsingSubDated(safetyDate.substring(0, 10))
+                : l.safeBrowsingSub,
+          ),
+          onTap: () => _checkSafetyList(context, ref),
+          trailing: Switch(
+            value: s.safeBrowsing,
+            onChanged: (bool v) => save(s.copyWith(safeBrowsing: v)),
+          ),
         ),
         SwitchListTile(
           secondary: const Icon(Icons.fingerprint),
@@ -707,6 +729,30 @@ class BrowserSettingsPage extends ConsumerWidget {
     if (days != null) {
       await ref.read(tabsProvider.notifier).closeUnused(days);
     }
+  }
+
+  Future<void> _checkSafetyList(BuildContext context, WidgetRef ref) async {
+    final AppL10n l = context.l10n;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(content: Text(l.checkingSafetyList)));
+    final BlocklistCheck result = await ref
+        .read(safetyListUpdaterProvider)
+        .checkIfDue(force: true);
+    // The engine reads a new list in the background.
+    await Future<void>.delayed(const Duration(seconds: 2));
+    ref.invalidate(_safetyProvider);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(switch (result) {
+            BlocklistCheck.updated => l.safetyListUpdated,
+            BlocklistCheck.upToDate ||
+            BlocklistCheck.notDue => l.safetyListUpToDate,
+            BlocklistCheck.failed => l.blocklistFailed,
+          }),
+        ),
+      );
   }
 
   Future<void> _checkBlocklist(BuildContext context, WidgetRef ref) async {

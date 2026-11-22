@@ -1208,5 +1208,27 @@
     }
   },
   "allowHost": "Allow",
-  "allowHostSub": "Allow lets that address load on every site. Undo it in Settings, Your block rules."
+  "allowHostSub": "Allow lets that address load on every site. Undo it in Settings, Your block rules.",
+  "safeBrowsing": "Warn about dangerous sites",
+  "safeBrowsingSub": "Phishing and malware sites, from a list checked on your phone. Updated daily.",
+  "safeBrowsingSubDated": "Phishing and malware sites, checked on your phone. List from {date}; tap to check for a newer one.",
+  "@safeBrowsingSubDated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "checkingSafetyList": "Checking for a newer list of dangerous sites…",
+  "safetyListUpdated": "List of dangerous sites updated",
+  "safetyListUpToDate": "The list of dangerous sites is up to date",
+  "unsafePhishingTitle": "Deceptive site ahead",
+  "unsafePhishingBody": "This site is known for tricking people into giving away passwords, card numbers or codes.",
+  "unsafeMalwareTitle": "This site may harm your phone",
+  "unsafeMalwareBody": "This site is known for spreading harmful apps and files.",
+  "unsafeBack": "Back to safety",
+  "unsafeDetails": "Details",
+  "unsafeDetailsBody": "ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.",
+  "unsafeProceed": "Open the site anyway (not safe)",
+  "downloadWarnDangerousSite": "This file comes from a site known for phishing or malware."
 }

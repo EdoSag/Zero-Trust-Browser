@@ -1,0 +1,91 @@
+# Builds the phishing and malware list (B-1) every day, signs it, and
+# publishes it on the rolling "safety-list" release. ZT Browser downloads it
+# once a day and only uses it when the signature matches the public key
+# built into the app (the same key as the blocklist, in
+# lib/browser/blocklist_updater.dart). The phone looks sites up in its own
+# copy: the addresses you visit are never sent anywhere.
+#
+# Uses the BLOCKLIST_SIGNING_KEY secret the Blocklist workflow already has.
+name: Safety list
+
+on:
+  schedule:
+    # Every day, 05:23 UTC.
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: safety-list
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Get the sources
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -fsSL --retry 3 -o phishing.txt \
+            https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt
+          curl -fsSL --retry 3 -o urlhaus.txt https://urlhaus.abuse.ch/downloads/hostfile/
+          curl -fsSL --retry 3 -o psl.dat \
+            https://raw.githubusercontent.com/publicsuffix/list/main/public_suffix_list.dat
+          # The most visited sites, never warned about as a whole: Tranco,
+          # or Cisco Umbrella's list when Tranco is down.
+          if curl -fsSL --retry 3 -o top.zip https://tranco-list.eu/top-1m.csv.zip; then
+            echo "Top sites: Tranco"
+          else
+            curl -fsSL --retry 3 -o top.zip \
+              https://s3-us-west-1.amazonaws.com/umbrella-static/top-1m.csv.zip
+            echo "Top sites: Umbrella"
+          fi
+          unzip -p top.zip > top.csv
+          wc -l phishing.txt urlhaus.txt top.csv
+
+      - name: Build the list
+        run: |
+          python3 -I tool/update_safety_list.py "$RUNNER_TEMP/phishing.txt" "$RUNNER_TEMP/urlhaus.txt" \
+            "$RUNNER_TEMP/psl.dat" "$RUNNER_TEMP/top.csv" "$RUNNER_TEMP/safety-list.bin"
+          gzip -9n -c "$RUNNER_TEMP/safety-list.bin" > safety-list.bin.gz
+          ls -l safety-list.bin.gz
+
+      - name: Sign it
+        env:
+          SIGNING_KEY: ${{ secrets.BLOCKLIST_SIGNING_KEY }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then
+            echo "::error::Add the BLOCKLIST_SIGNING_KEY secret (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+          umask 077
+          printf '%s\n' "$SIGNING_KEY" > "$RUNNER_TEMP/key.pem"
+          openssl pkeyutl -sign -inkey "$RUNNER_TEMP/key.pem" -rawin -in safety-list.bin.gz \
+            | base64 -w0 > safety-list.bin.gz.sig
+          rm -f "$RUNNER_TEMP/key.pem"
+          # Check it against the key the app trusts before publishing.
+          PUB=$(sed -nE "s/^ *'([A-Za-z0-9+\/=]{44})';$/\1/p" lib/browser/blocklist_updater.dart | head -1)
+          [ -n "$PUB" ] || { echo "::error::Public key not found in the app"; exit 1; }
+          { printf '\x30\x2a\x30\x05\x06\x03\x2b\x65\x70\x03\x21\x00'; printf '%s' "$PUB" | base64 -d; } \
+            | openssl pkey -pubin -inform DER -out "$RUNNER_TEMP/pub.pem"
+          base64 -d safety-list.bin.gz.sig > "$RUNNER_TEMP/sig.bin"
+          openssl pkeyutl -verify -pubin -inkey "$RUNNER_TEMP/pub.pem" -rawin \
+            -in safety-list.bin.gz -sigfile "$RUNNER_TEMP/sig.bin"
+
+      - name: Publish on the "safety-list" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DATE=$(head -c 200 "$RUNNER_TEMP/safety-list.bin" | sed -nE 's/^# list-date: (.*)$/\1/p' | head -1)
+          NOTES="The phishing and malware list ZT Browser downloads each day (list from $DATE UTC). Hashed site names from Phishing.Database by Mitchell Krog and Nissar Chababy (MIT, https://github.com/mitchellkrogza/Phishing.Database) and URLhaus by abuse.ch (CC0, https://urlhaus.abuse.ch). Not an app release."
+          if ! gh release view safety-list >/dev/null 2>&1; then
+            gh release create safety-list --target "$GITHUB_SHA" --latest=false \
+              --title "Safety list (updated daily)" --notes "$NOTES"
+          fi
+          gh release upload safety-list safety-list.bin.gz safety-list.bin.gz.sig --clobber
+          gh release edit safety-list --latest=false --notes "$NOTES"

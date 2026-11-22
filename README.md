@@ -12,6 +12,10 @@ it is **ZT Browser**.
 - **Shield panel** (tap the shield in the address bar): what was blocked on
   this page, address by address; allow one address, or turn blocking off
   for the site with one tap when a page doesn't work.
+- **Phishing and malware warnings**: a known dangerous site shows a full
+  warning page first. The list (hashed site names, updated daily) is
+  downloaded whole and checked on the phone, so the pages you open are never
+  sent anywhere. Files from such sites get a warning in "Save this file?".
 - **Fingerprinting protection**: canvas, audio and WebGL readouts get noise
   that differs per site and per app start; CPU and memory report common
   values; the battery API is gone.
@@ -203,6 +207,17 @@ git clone --depth 1 https://github.com/easylist/easylist.git /tmp/easylist
 python3 -I tool/update_blocklist.py /tmp/easylist
 ```
 
+### Phishing and malware list (B-1)
+
+Every day the "Safety list" workflow (`.github/workflows/safety-list.yml`)
+runs `tool/update_safety_list.py` on Phishing.Database (MIT) and URLhaus
+(CC0), drops whole popular sites that appear only because one of their
+pages was bad (Tranco top sites and the Public Suffix List decide), signs
+the result with the same key as the blocklist and uploads
+`safety-list.bin.gz` and its `.sig` to the rolling `safety-list` release.
+The app checks once a day. Run the workflow once by hand after merging so
+the first list exists.
+
 ## Builds
 
 Every push to `main` builds a signed APK and publishes it as a GitHub
@@ -215,6 +230,10 @@ keystore as the other Zero-Trust apps.
 - Blocklists: [EasyList, EasyPrivacy and the EasyList Cookie List](https://easylist.to)
   by The EasyList authors, used under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
   (see `assets/blocklist/LICENSE`).
+- Phishing and malware list: [Phishing.Database](https://github.com/mitchellkrogza/Phishing.Database)
+  by Mitchell Krog and Nissar Chababy (MIT) and [URLhaus](https://urlhaus.abuse.ch)
+  by abuse.ch (CC0), as hashes; [Tranco](https://tranco-list.eu) and the
+  [Public Suffix List](https://publicsuffix.org) are used when building it.
 - Reader view: [Mozilla Readability](https://github.com/mozilla/readability)
   0.6.0, Apache License 2.0 (see `assets/reader/LICENSE`).
 - QR scanner: [ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded)

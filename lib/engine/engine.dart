@@ -184,8 +184,10 @@ class BrowserEngine {
     bool fingerprinting = true,
     List<String> javascriptOff = const <String>[],
     bool stripTracking = true,
+    bool safeBrowsing = true,
   }) => _call<void>('setPrivacy', <String, Object?>{
     'stripTracking': stripTracking,
+    'safeBrowsing': safeBrowsing,
     // The rules for links tapped on a page: one list, kept in Dart.
     'trackingParams': trackingParams.toList(),
     'trackingPrefixes': trackingPrefixes,
@@ -215,6 +217,19 @@ class BrowserEngine {
   /// The tab now on screen: the engine keeps it, and unloads old ones.
   Future<void> select(String tabId) =>
       _call<void>('select', <String, Object?>{'tabId': tabId});
+
+  /// B-1: the phishing and malware list: its date, how many sites, and
+  /// where a downloaded list goes.
+  Future<Map<Object?, Object?>> safetyInfo() async =>
+      await _call<Map<Object?, Object?>>('safetyInfo') ??
+      const <Object?, Object?>{};
+
+  /// Reads the list again after a download.
+  Future<void> reloadSafetyList() => _call<void>('reloadSafetyList');
+
+  /// The warning page's texts, in the app's language.
+  Future<void> setSafetyLabels(Map<String, String> labels) =>
+      _call<void>('safetyLabels', <String, Object?>{'labels': labels});
 
   /// B-7: the hosts blocked on [tabId]'s page now, with how many requests
   /// each.
