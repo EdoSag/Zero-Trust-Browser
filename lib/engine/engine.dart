@@ -216,6 +216,21 @@ class BrowserEngine {
   Future<void> select(String tabId) =>
       _call<void>('select', <String, Object?>{'tabId': tabId});
 
+  /// B-7: the hosts blocked on [tabId]'s page now, with how many requests
+  /// each.
+  Future<Map<String, int>> blockedHosts(String tabId) async {
+    final Map<Object?, Object?>? m = await _call<Map<Object?, Object?>>(
+      'blockedHosts',
+      <String, Object?>{'tabId': tabId},
+    );
+    return <String, int>{
+      if (m != null)
+        for (final MapEntry<Object?, Object?> e in m.entries)
+          if (e.key is String && e.value is int)
+            e.key! as String: e.value! as int,
+    };
+  }
+
   Future<int> blocklistSize() async => await _call<int>('blocklistSize') ?? 0;
 
   /// size, date (of the list), updated (a downloaded list is in use), file

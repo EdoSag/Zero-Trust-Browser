@@ -9,6 +9,9 @@ it is **ZT Browser**.
   EasyList element hiding). Protection can be turned off per site from the
   shield in the address bar. The list updates weekly without an app update,
   signed (see below).
+- **Shield panel** (tap the shield in the address bar): what was blocked on
+  this page, address by address; allow one address, or turn blocking off
+  for the site with one tap when a page doesn't work.
 - **Fingerprinting protection**: canvas, audio and WebGL readouts get noise
   that differs per site and per app start; CPU and memory report common
   values; the battery API is gone.

@@ -404,6 +404,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                             call.argument<String>("phone"),
                         ),
                     )
+                    "blockedHosts" -> result.success(tab?.blockedHosts() ?: emptyMap<String, Int>())
                     "selection" -> {
                         if (tab == null) result.success(null) else tab.selection { result.success(it) }
                     }

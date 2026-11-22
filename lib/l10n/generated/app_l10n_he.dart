@@ -2073,4 +2073,28 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get pullToRefreshSub => 'בראש הדף, משכו למטה כדי לטעון אותו שוב';
+
+  @override
+  String get pageBrokenTurnOff => 'הדף לא עובד? כבו את החסימה באתר הזה';
+
+  @override
+  String get blockedOnPageTap => 'הקישו כדי לראות מה נחסם';
+
+  @override
+  String blockedRequests(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count בקשות',
+      one: 'בקשה אחת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get allowHost => 'אפשר';
+
+  @override
+  String get allowHostSub =>
+      '\"אפשר\" מתיר לכתובת הזו להיטען בכל האתרים. אפשר לבטל בהגדרות, כללי החסימה שלך.';
 }

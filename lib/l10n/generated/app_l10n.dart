@@ -3540,6 +3540,36 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'At the top of a page, pull down to load it again'**
   String get pullToRefreshSub;
+
+  /// No description provided for @pageBrokenTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not working? Turn off blocking here'**
+  String get pageBrokenTurnOff;
+
+  /// No description provided for @blockedOnPageTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to see what was blocked'**
+  String get blockedOnPageTap;
+
+  /// No description provided for @blockedRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 request} other{{count} requests}}'**
+  String blockedRequests(int count);
+
+  /// No description provided for @allowHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get allowHost;
+
+  /// No description provided for @allowHostSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow lets that address load on every site. Undo it in Settings, Your block rules.'**
+  String get allowHostSub;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

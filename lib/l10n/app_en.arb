@@ -1196,5 +1196,17 @@
   "swipeTabs": "Swipe to switch tabs",
   "swipeTabsSub": "Swipe the address bar or the bottom bar sideways for the next tab, or the bottom bar up to see all tabs",
   "pullToRefresh": "Pull down to reload",
-  "pullToRefreshSub": "At the top of a page, pull down to load it again"
+  "pullToRefreshSub": "At the top of a page, pull down to load it again",
+  "pageBrokenTurnOff": "Page not working? Turn off blocking here",
+  "blockedOnPageTap": "Tap to see what was blocked",
+  "blockedRequests": "{count, plural, =1{1 request} other{{count} requests}}",
+  "@blockedRequests": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowHost": "Allow",
+  "allowHostSub": "Allow lets that address load on every site. Undo it in Settings, Your block rules."
 }
