@@ -3846,6 +3846,132 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'{days, plural, =0{Never delete} =1{After 1 day} other{After {days} days}}'**
   String autoDeleteDownloadsValue(int days);
+
+  /// No description provided for @downloadVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Download vault'**
+  String get downloadVault;
+
+  /// No description provided for @vaultUnlockReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock the download vault'**
+  String get vaultUnlockReason;
+
+  /// No description provided for @vaultLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'The vault is locked. Files in it are encrypted inside ZT Browser, on this phone only.'**
+  String get vaultLocked;
+
+  /// No description provided for @vaultExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted inside ZT Browser. The Files app and other apps can\'t see these files, and they are never synced or backed up.'**
+  String get vaultExplain;
+
+  /// No description provided for @vaultNoScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a screen lock on your phone so the vault asks for it.'**
+  String get vaultNoScreenLock;
+
+  /// No description provided for @vaultEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Move a download here from its menu on the Downloads page, or add files from your phone.'**
+  String get vaultEmpty;
+
+  /// No description provided for @addFromPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from phone'**
+  String get addFromPhone;
+
+  /// No description provided for @addToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Add files to the vault'**
+  String get addToVault;
+
+  /// No description provided for @vaultMoveFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get vaultMoveFiles;
+
+  /// No description provided for @vaultMoveFilesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The files are deleted from where they are now'**
+  String get vaultMoveFilesSub;
+
+  /// No description provided for @vaultCopyFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get vaultCopyFiles;
+
+  /// No description provided for @vaultCopyFilesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The files also stay where they are now'**
+  String get vaultCopyFilesSub;
+
+  /// No description provided for @vaultAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file added to the vault} other{{count} files added to the vault}}'**
+  String vaultAdded(int count);
+
+  /// No description provided for @vaultAddedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'{added, plural, =1{1 file added} other{{added} files added}}. The phone didn\'t let ZT Browser delete {kept, plural, =1{1 original} other{{kept} originals}}: delete them in the Files app.'**
+  String vaultAddedKept(int added, int kept);
+
+  /// No description provided for @moveToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to vault'**
+  String get moveToVault;
+
+  /// No description provided for @movedToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is in the vault'**
+  String movedToVault(String name);
+
+  /// No description provided for @couldntMoveToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t move the file to the vault'**
+  String get couldntMoveToVault;
+
+  /// No description provided for @openVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Open vault'**
+  String get openVault;
+
+  /// No description provided for @moveToPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to phone\'s Downloads'**
+  String get moveToPhone;
+
+  /// No description provided for @movedToPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved {name} to Downloads'**
+  String movedToPhone(String name);
+
+  /// No description provided for @deletedFromVault.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is deleted from the vault for good.'**
+  String deletedFromVault(String name);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

@@ -66,6 +66,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     private val main = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
 
+    /** B39: whether the files being picked for the vault are moved (not copied). */
+    private var vaultImportMove = false
+
     /** A link from another app (VIEW, web search, shared text), until Dart takes it. */
     private var pendingUrl: String? = null
 
@@ -381,6 +384,72 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         io.execute { downloadEngine.deleteOld() }
                         result.success(null)
                     }
+                    // B39: the download vault.
+                    "vaultList" -> io.execute {
+                        val list = DownloadVault.get(this).list()
+                        main.post { result.success(list) }
+                    }
+                    "vaultAddDownload" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        io.execute {
+                            val ok = DownloadVault.get(this).addDownload(downloadEngine, key)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultImport" -> {
+                        vaultImportMove = call.argument<Boolean>("move") ?: false
+                        waiting.remove(REQUEST_VAULT_IMPORT)?.success(mapOf("added" to 0, "kept" to 0))
+                        try {
+                            waiting[REQUEST_VAULT_IMPORT] = result
+                            @Suppress("DEPRECATION")
+                            startActivityForResult(
+                                Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                    .addCategory(Intent.CATEGORY_OPENABLE)
+                                    .setType("*/*")
+                                    .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true),
+                                REQUEST_VAULT_IMPORT,
+                            )
+                            systemUi(true)
+                        } catch (e: ActivityNotFoundException) {
+                            waiting.remove(REQUEST_VAULT_IMPORT)
+                            result.success(mapOf("added" to 0, "kept" to 0))
+                        }
+                    }
+                    "vaultOpen", "vaultShare" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val open = call.method == "vaultOpen"
+                        io.execute {
+                            val vault = DownloadVault.get(this)
+                            val r = if (open) vault.open(id) else vault.share(id)
+                            main.post { result.success(r) }
+                        }
+                    }
+                    "vaultMoveToPhone" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        io.execute {
+                            val ok = DownloadVault.get(this).moveToPhone(downloadEngine, id)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultRename" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val name = call.argument<String>("name") ?: ""
+                        io.execute {
+                            val ok = DownloadVault.get(this).rename(id, name)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultDelete" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        io.execute {
+                            DownloadVault.get(this).delete(id)
+                            main.post { result.success(null) }
+                        }
+                    }
+                    "vaultClose" -> io.execute {
+                        DownloadVault.get(this).clearOpen()
+                        main.post { result.success(null) }
+                    }
                     "downloadFolder" -> result.success(downloadFolderName())
                     "pickDownloadFolder" -> pickDownloadFolder(result)
                     "clearDownloadFolder" -> {
@@ -661,6 +730,24 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                 fileCallback?.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data))
                 fileCallback = null
                 systemUi(false)
+            }
+            REQUEST_VAULT_IMPORT -> {
+                systemUi(false)
+                val result = waiting.remove(REQUEST_VAULT_IMPORT) ?: return
+                val uris = ArrayList<Uri>()
+                if (resultCode == RESULT_OK && data != null) {
+                    data.clipData?.let { clip -> for (i in 0 until clip.itemCount) clip.getItemAt(i).uri?.let(uris::add) }
+                    if (uris.isEmpty()) data.data?.let(uris::add)
+                }
+                if (uris.isEmpty()) {
+                    result.success(mapOf("added" to 0, "kept" to 0))
+                    return
+                }
+                val move = vaultImportMove
+                io.execute {
+                    val r = DownloadVault.get(this).addFromPhone(uris, move)
+                    main.post { result.success(r) }
+                }
             }
             REQUEST_FOLDER -> {
                 systemUi(false)
@@ -1468,6 +1555,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         private const val REQUEST_QR = 4105
         private const val REQUEST_VOICE = 4106
         private const val REQUEST_FOLDER = 4107
+        private const val REQUEST_VAULT_IMPORT = 4108
 
         /** Normal tabs kept loaded; older ones unload until shown again. */
         private const val MAX_LIVE_TABS = 5
