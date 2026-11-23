@@ -50,6 +50,12 @@ class BrowserEngine {
   /// The app left the screen (home, recent apps, another app on top).
   final StreamController<void> appHidden = StreamController<void>.broadcast();
 
+  /// The person is using a page (Windows): clicks and keys inside a page
+  /// don't pass through Flutter there, so auto-lock hears of them here.
+  final StreamController<void> _pageActivity =
+      StreamController<void>.broadcast();
+  Stream<void> get pageActivity => _pageActivity.stream;
+
   Future<Object?> _onCall(MethodCall call) async {
     switch (call.method) {
       case 'tabEvent':
@@ -68,6 +74,8 @@ class BrowserEngine {
         readAloud.value = ReadAloudState.fromMap(data);
       case 'appHidden':
         appHidden.add(null);
+      case 'pageActivity':
+        _pageActivity.add(null);
       case 'downloadEvent':
         final Map<Object?, Object?> data =
             (call.arguments as Map<Object?, Object?>?) ?? const {};

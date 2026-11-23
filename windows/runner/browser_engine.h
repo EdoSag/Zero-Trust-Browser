@@ -34,6 +34,10 @@ class BrowserEngine {
   // The app window moved: WebView2 needs to know for pop-ups and menus.
   void OnWindowMoved();
 
+  // Tells Dart the person is using a page ("pageActivity"), for auto-lock:
+  // clicks and keys inside a WebView2 window never reach Flutter.
+  void CheckPageActivity();
+
  private:
   struct Tab {
     std::string id;
@@ -98,6 +102,8 @@ class BrowserEngine {
   std::wstring ClearMarker();
 
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
+  // The last input time CheckPageActivity saw (GetLastInputInfo).
+  DWORD last_input_seen_ = 0;
   HWND window_;
   HWND flutter_view_;
   Microsoft::WRL::ComPtr<ICoreWebView2Environment> env_;

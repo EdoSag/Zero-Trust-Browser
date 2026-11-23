@@ -227,6 +227,15 @@ std::string QueryParam(const std::string& url, const std::string& key) {
   return std::string();
 }
 
+// Auto-lock activity from pages: checked this often.
+constexpr UINT_PTR kActivityTimer = 0x5A54;
+constexpr UINT kActivityEveryMs = 10000;
+BrowserEngine* g_activity_engine = nullptr;
+
+void CALLBACK OnActivityTimer(HWND, UINT, UINT_PTR, DWORD) {
+  if (g_activity_engine != nullptr) g_activity_engine->CheckPageActivity();
+}
+
 }  // namespace
 
 BrowserEngine::BrowserEngine(flutter::BinaryMessenger* messenger, HWND window,
@@ -241,6 +250,9 @@ BrowserEngine::BrowserEngine(flutter::BinaryMessenger* messenger, HWND window,
 
   LoadBlocklist();
   LoadSafetyList();
+
+  g_activity_engine = this;
+  SetTimer(window_, kActivityTimer, kActivityEveryMs, OnActivityTimer);
 
   std::wstring data = DataDir() + L"\\WebView2";
   CreateDirectoryW(DataDir().c_str(), nullptr);
@@ -270,10 +282,30 @@ BrowserEngine::BrowserEngine(flutter::BinaryMessenger* messenger, HWND window,
 }
 
 BrowserEngine::~BrowserEngine() {
+  KillTimer(window_, kActivityTimer);
+  if (g_activity_engine == this) g_activity_engine = nullptr;
   for (auto& entry : tabs_) {
     if (entry.second->controller) entry.second->controller->Close();
   }
   tabs_.clear();
+}
+
+void BrowserEngine::CheckPageActivity() {
+  // Windows' own last input time: the page runs in WebView2's process, so
+  // its clicks and keys can't be seen any other way. A page can't fake it.
+  LASTINPUTINFO info{};
+  info.cbSize = sizeof(info);
+  if (!GetLastInputInfo(&info) || info.dwTime == last_input_seen_) return;
+  last_input_seen_ = info.dwTime;
+  // Only input while this window is the one in front, with a page showing.
+  HWND front = GetForegroundWindow();
+  if (front == nullptr || GetAncestor(front, GA_ROOT) != GetAncestor(window_, GA_ROOT)) {
+    return;
+  }
+  const bool page_shown = std::any_of(tabs_.begin(), tabs_.end(), [](const auto& entry) {
+    return entry.second->shown && entry.second->controller;
+  });
+  if (page_shown) channel_->InvokeMethod("pageActivity", nullptr);
 }
 
 void BrowserEngine::OnWindowMoved() {

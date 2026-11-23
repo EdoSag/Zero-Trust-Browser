@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,6 +79,23 @@ void main() {
     await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .handlePlatformMessage('zt_browser/engine', msg, (_) {});
   }
+
+  test('page activity from the engine reaches whoever listens', () async {
+    final ProviderContainer c = container();
+    final BrowserEngine engine = c.read(browserEngineProvider);
+    int heard = 0;
+    final StreamSubscription<void> sub = engine.pageActivity.listen(
+      (_) => heard++,
+    );
+    addTearDown(sub.cancel);
+    final ByteData msg = const StandardMethodCodec().encodeMethodCall(
+      const MethodCall('pageActivity'),
+    );
+    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .handlePlatformMessage('zt_browser/engine', msg, (_) {});
+    await Future<void>.delayed(Duration.zero);
+    expect(heard, 1);
+  });
 
   test('opening a tab creates its WebView and shows it', () async {
     final ProviderContainer c = container();

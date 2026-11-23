@@ -64,6 +64,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   final TextEditingController _findText = TextEditingController();
   StreamSubscription<TabPrompt>? _prompts;
   StreamSubscription<DownloadEvent>? _downloads;
+  StreamSubscription<void>? _pageActivity;
 
   /// The page being read aloud is in a private tab.
   bool _readingPrivate = false;
@@ -92,6 +93,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     });
     _prompts = ref.read(tabsProvider.notifier).prompts.listen(_onPrompt);
     _downloads = _engine.downloadEvents.listen(_onDownloadEvent);
+    // Using a page counts as activity for auto-lock, as a touch does.
+    _pageActivity = _engine.pageActivity.listen(
+      (_) => ref.read(vaultControllerProvider.notifier).touch(),
+    );
     _engine.pendingLinks.addListener(_openPendingLink);
     _engine.systemUiOpen.addListener(_onSystemUi);
     _engine.readAloud.addListener(_onReadAloud);
@@ -168,6 +173,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     WidgetsBinding.instance.removeObserver(this);
     _prompts?.cancel();
     _downloads?.cancel();
+    _pageActivity?.cancel();
     _engine.pendingLinks.removeListener(_openPendingLink);
     _engine.systemUiOpen.removeListener(_onSystemUi);
     _engine.readAloud.removeListener(_onReadAloud);
