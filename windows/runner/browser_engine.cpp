@@ -113,21 +113,6 @@ std::string UrlDecode(const std::string& s) {
   return out;
 }
 
-std::string UrlEncode(const std::string& s) {
-  static const char* hex = "0123456789ABCDEF";
-  std::string out;
-  for (unsigned char c : s) {
-    if (std::isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
-      out += static_cast<char>(c);
-    } else {
-      out += '%';
-      out += hex[c >> 4];
-      out += hex[c & 15];
-    }
-  }
-  return out;
-}
-
 std::string HtmlEscape(const std::string& s) {
   std::string out;
   for (char c : s) {
@@ -203,6 +188,36 @@ long long Hash64(const std::string& text) {
   unsigned long long v = 0;
   for (int i = 0; i < 8; ++i) v = (v << 8) | digest[i];
   return static_cast<long long>(v);
+}
+
+// 128 random bits as hex: the secret of one safety warning.
+std::string NewToken() {
+  UCHAR bytes[16] = {0};
+  BCryptGenRandom(nullptr, bytes, sizeof(bytes), BCRYPT_USE_SYSTEM_PREFERRED_RNG);
+  static const char* hex = "0123456789abcdef";
+  std::string out;
+  for (UCHAR b : bytes) {
+    out += hex[b >> 4];
+    out += hex[b & 15];
+  }
+  return out;
+}
+
+// The value of [key] in an address's query, or "".
+std::string QueryParam(const std::string& url, const std::string& key) {
+  size_t q = url.find('?');
+  if (q == std::string::npos) return std::string();
+  std::stringstream ss(url.substr(q + 1));
+  std::string pair;
+  while (std::getline(ss, pair, '&')) {
+    size_t eq = pair.find('=');
+    if (eq != std::string::npos && pair.substr(0, eq) == key) {
+      std::string value = pair.substr(eq + 1);
+      size_t hash = value.find('#');
+      return UrlDecode(hash == std::string::npos ? value : value.substr(0, hash));
+    }
+  }
+  return std::string();
 }
 
 }  // namespace
@@ -471,7 +486,10 @@ void BrowserEngine::SetUpTab(Tab& tab) {
               if (t->unsafe_allowed.count(host) != 0) return S_OK;
               const std::string kind = SafetyCheck(host);
               if (kind.empty()) return S_OK;
-              const std::string html = WarningPage(url, host, kind);
+              const std::string token = NewToken();
+              if (t->warnings.size() > 32) t->warnings.clear();
+              t->warnings[token] = url;
+              const std::string html = WarningPage(host, kind, token);
               ComPtr<IStream> stream;
               stream.Attach(SHCreateMemStream(reinterpret_cast<const BYTE*>(html.data()),
                                               static_cast<UINT>(html.size())));
@@ -502,12 +520,16 @@ void BrowserEngine::SetUpTab(Tab& tab) {
             args->get_Uri(&raw);
             const std::string url = Take(raw);
             const std::string host = HostOf(url);
-            // The safety warning's two links (WarningPage).
+            // The safety warning's two links (WarningPage). Only a warning
+            // this tab showed can be answered: a page that loads these
+            // links itself has no token and is ignored.
             if (host == kSafetyHost) {
               args->put_Cancel(TRUE);
-              size_t at = url.find("/proceed?u=");
-              if (at != std::string::npos) {
-                const std::string target = UrlDecode(url.substr(at + 11));
+              auto warning = t->warnings.find(QueryParam(url, "t"));
+              if (warning == t->warnings.end()) return S_OK;
+              const std::string target = warning->second;
+              t->warnings.erase(warning);
+              if (url.find("/proceed?") != std::string::npos) {
                 t->unsafe_allowed.insert(HostOf(target));
                 sender->Navigate(Wide(target).c_str());
               } else {
@@ -880,8 +902,8 @@ void BrowserEngine::LoadSafetyList() {
   safety_date_ = date;
 }
 
-std::string BrowserEngine::WarningPage(const std::string& url, const std::string& host,
-                                       const std::string& kind) {
+std::string BrowserEngine::WarningPage(const std::string& host, const std::string& kind,
+                                       const std::string& token) {
   auto label = [this](const std::string& key, const std::string& fallback) {
     auto it = safety_labels_.find(key);
     return (it == safety_labels_.end() || it->second.empty()) ? fallback : it->second;
@@ -892,8 +914,8 @@ std::string BrowserEngine::WarningPage(const std::string& url, const std::string
   const std::string body =
       malware ? label("malwareBody", "It is known for spreading harmful apps and files.")
               : label("phishingBody", "It may try to trick you into giving away a password, card number or code.");
-  const std::string back = std::string("https://") + kSafetyHost + "/back";
-  const std::string proceed = std::string("https://") + kSafetyHost + "/proceed?u=" + UrlEncode(url);
+  const std::string back = std::string("https://") + kSafetyHost + "/back?t=" + token;
+  const std::string proceed = std::string("https://") + kSafetyHost + "/proceed?t=" + token;
   const std::string dir = label("dir", "ltr") == "rtl" ? "rtl" : "ltr";
   std::string html;
   html += "<!doctype html><html dir=\"" + dir + "\"><head><meta charset=\"utf-8\">";

@@ -51,6 +51,8 @@ class BrowserEngine {
     std::set<std::string> unsafe_allowed;
     // Hosts let through over plain http once (loadInsecure).
     std::set<std::string> insecure_allowed;
+    // Warnings shown in this tab: their secret token to the address.
+    std::map<std::string, std::string> warnings;
   };
 
   using Result = std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>>;
@@ -83,8 +85,8 @@ class BrowserEngine {
   std::string BlocklistDate(const std::wstring& path);
   std::wstring DataDir();
   std::wstring AssetPath(const std::wstring& relative);
-  std::string WarningPage(const std::string& url, const std::string& host,
-                          const std::string& kind);
+  std::string WarningPage(const std::string& host, const std::string& kind,
+                          const std::string& token);
 
   void ClearBrowsingData();
 
