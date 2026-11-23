@@ -2281,4 +2281,99 @@ class AppL10nHe extends AppL10n {
     );
     return '$_temp0';
   }
+
+  @override
+  String get downloadVault => 'כספת הורדות';
+
+  @override
+  String get vaultUnlockReason => 'פתיחת כספת ההורדות';
+
+  @override
+  String get vaultLocked =>
+      'הכספת נעולה. הקבצים בה מוצפנים בתוך ZT Browser, רק בטלפון הזה.';
+
+  @override
+  String get vaultExplain =>
+      'מוצפנים בתוך ZT Browser. אפליקציית הקבצים ואפליקציות אחרות לא רואות את הקבצים האלה, והם לעולם לא מסונכרנים או מגובים.';
+
+  @override
+  String get vaultNoScreenLock =>
+      'כדאי להגדיר נעילת מסך בטלפון כדי שהכספת תבקש אותה.';
+
+  @override
+  String get vaultEmpty =>
+      'אין כאן עדיין כלום. אפשר להעביר לכאן הורדה מהתפריט שלה בדף ההורדות, או להוסיף קבצים מהטלפון.';
+
+  @override
+  String get addFromPhone => 'הוספה מהטלפון';
+
+  @override
+  String get addToVault => 'הוספת קבצים לכספת';
+
+  @override
+  String get vaultMoveFiles => 'העברה';
+
+  @override
+  String get vaultMoveFilesSub => 'הקבצים יימחקו מהמקום שבו הם נמצאים עכשיו';
+
+  @override
+  String get vaultCopyFiles => 'העתקה';
+
+  @override
+  String get vaultCopyFilesSub => 'הקבצים נשארים גם במקום שבו הם נמצאים עכשיו';
+
+  @override
+  String vaultAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count קבצים נוספו לכספת',
+      one: 'קובץ אחד נוסף לכספת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String vaultAddedKept(int added, int kept) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added קבצים נוספו',
+      one: 'קובץ אחד נוסף',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      kept,
+      locale: localeName,
+      other: '$kept מקורות',
+      one: 'מקור אחד',
+    );
+    return '$_temp0. הטלפון לא איפשר ל-ZT Browser למחוק $_temp1: אפשר למחוק אותם באפליקציית הקבצים.';
+  }
+
+  @override
+  String get moveToVault => 'העברה לכספת';
+
+  @override
+  String movedToVault(String name) {
+    return '$name בכספת';
+  }
+
+  @override
+  String get couldntMoveToVault => 'לא ניתן להעביר את הקובץ לכספת';
+
+  @override
+  String get openVault => 'פתיחת הכספת';
+
+  @override
+  String get moveToPhone => 'העברה להורדות של הטלפון';
+
+  @override
+  String movedToPhone(String name) {
+    return '$name הועבר להורדות';
+  }
+
+  @override
+  String deletedFromVault(String name) {
+    return '$name יימחק מהכספת לתמיד.';
+  }
 }

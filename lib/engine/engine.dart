@@ -439,6 +439,87 @@ class BrowserEngine {
   /// B38: back to the phone's Downloads folder.
   Future<void> clearDownloadFolder() => _call<void>('clearDownloadFolder');
 
+  // ---- B39: the download vault ----------------------------------------
+
+  Future<List<Map<Object?, Object?>>> vaultList() async {
+    try {
+      return (await _call<List<Object?>>('vaultList') ?? const <Object?>[])
+          .whereType<Map<Object?, Object?>>()
+          .toList();
+    } on PlatformException {
+      return const <Map<Object?, Object?>>[];
+    }
+  }
+
+  /// Moves a finished download into the vault (and off the phone).
+  Future<bool> vaultAddDownload(String key) =>
+      _bool('vaultAddDownload', <String, Object?>{'key': key});
+
+  /// The system file picker; picked files go into the vault. With [move]
+  /// the originals are deleted where the phone allows it. Returns how many
+  /// were added and how many originals stayed.
+  Future<({int added, int kept})> vaultImport({required bool move}) async {
+    try {
+      final Map<Object?, Object?>? r = await _call<Map<Object?, Object?>>(
+        'vaultImport',
+        <String, Object?>{'move': move},
+      );
+      return (
+        added: (r?['added'] as num?)?.toInt() ?? 0,
+        kept: (r?['kept'] as num?)?.toInt() ?? 0,
+      );
+    } on PlatformException {
+      return (added: 0, kept: 0);
+    }
+  }
+
+  Future<DownloadResult> vaultOpen(String id) => _vaultAction('vaultOpen', id);
+
+  Future<DownloadResult> vaultShare(String id) =>
+      _vaultAction('vaultShare', id);
+
+  Future<DownloadResult> _vaultAction(String method, String id) async {
+    try {
+      return DownloadResult.parse(
+        await _call<Object>(method, <String, Object?>{'id': id}),
+      );
+    } on PlatformException {
+      return DownloadResult.failed;
+    }
+  }
+
+  /// Takes a file out of the vault into the phone's Downloads.
+  Future<bool> vaultMoveToPhone(String id) =>
+      _bool('vaultMoveToPhone', <String, Object?>{'id': id});
+
+  Future<bool> vaultRename(String id, String name) =>
+      _bool('vaultRename', <String, Object?>{'id': id, 'name': name});
+
+  Future<void> vaultDelete(String id) async {
+    try {
+      await _call<void>('vaultDelete', <String, Object?>{'id': id});
+    } on PlatformException {
+      // Already gone.
+    }
+  }
+
+  /// The vault was left or locked: plain copies made to open files go.
+  Future<void> vaultClose() async {
+    try {
+      await _call<void>('vaultClose');
+    } on PlatformException {
+      // Nothing to clean.
+    }
+  }
+
+  Future<bool> _bool(String method, Map<String, Object?> args) async {
+    try {
+      return await _call<bool>(method, args) ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
       _call<void>('print', <String, Object?>{'tabId': tabId, 'title': title});

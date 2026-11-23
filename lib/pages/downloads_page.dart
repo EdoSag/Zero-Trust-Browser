@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/pages/vault_page.dart';
 
 /// One file in the Downloads list.
 class DownloadItem {
@@ -163,6 +164,20 @@ List<DownloadItem> filterDownloads(
         d,
   ];
 }
+
+/// The icon for a finished file of [kind].
+IconData downloadKindIcon(DownloadKind kind, String mime) => switch (kind) {
+  DownloadKind.images => Icons.image_outlined,
+  DownloadKind.video => Icons.movie_outlined,
+  DownloadKind.audio => Icons.audiotrack_outlined,
+  DownloadKind.documents =>
+    mime == 'application/pdf'
+        ? Icons.picture_as_pdf_outlined
+        : Icons.description_outlined,
+  DownloadKind.archives => Icons.folder_zip_outlined,
+  DownloadKind.apps => Icons.android_outlined,
+  DownloadKind.other => Icons.insert_drive_file_outlined,
+};
 
 /// The day an item is listed under: midnight of its local date.
 DateTime downloadDay(DateTime t) => DateTime(t.year, t.month, t.day);
@@ -323,7 +338,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   Future<void> _rename(DownloadItem d) async {
     final String? next = await showDialog<String>(
       context: context,
-      builder: (BuildContext c) => _RenameDialog(name: d.name),
+      builder: (BuildContext c) => RenameFileDialog(name: d.name),
     );
     if (next == null || next.trim().isEmpty || next == d.name) return;
     final String failed = l.couldntRename;
@@ -332,6 +347,25 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     if (!ok) _snack(failed);
     await _refresh();
   }
+
+  /// B39: into the vault, encrypted, and off the phone.
+  Future<void> _moveToVault(DownloadItem d) async {
+    final String done = l.movedToVault(_name(d));
+    final String failed = l.couldntMoveToVault;
+    final bool ok = await _engine.vaultAddDownload(d.key);
+    if (!mounted) return;
+    _snack(
+      ok ? done : failed,
+      action: ok
+          ? SnackBarAction(label: l.openVault, onPressed: _openVault)
+          : null,
+    );
+    await _refresh();
+  }
+
+  void _openVault() => Navigator.of(
+    context,
+  ).push(MaterialPageRoute<void>(builder: (_) => const VaultPage()));
 
   Future<void> _copyLink(DownloadItem d) async {
     final String? url = d.url;
@@ -458,6 +492,12 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
             )
           : Text(l.downloads),
       actions: <Widget>[
+        if (!_searching)
+          IconButton(
+            tooltip: l.downloadVault,
+            icon: const Icon(Icons.enhanced_encryption_outlined),
+            onPressed: _openVault,
+          ),
         IconButton(
           tooltip: _searching ? l.close : l.searchDownloads,
           icon: Icon(_searching ? Icons.close : Icons.search),
@@ -713,6 +753,8 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                         await _rename(d);
                       case 'link':
                         await _copyLink(d);
+                      case 'vault':
+                        await _moveToVault(d);
                       case 'forget':
                         await _forget(<String>[d.key]);
                       case 'delete':
@@ -742,6 +784,11 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                         value: 'link',
                         child: Text(l.copyLink),
                       ),
+                    if (d.status == 'done' && !d.legacy)
+                      PopupMenuItem<String>(
+                        value: 'vault',
+                        child: Text(l.moveToVault),
+                      ),
                     if (!d.unfinished && !d.private)
                       PopupMenuItem<String>(
                         value: 'forget',
@@ -762,33 +809,22 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     if (d.status == 'failed') return Icons.error_outline;
     if (d.status == 'paused') return Icons.pause_circle_outline;
     if (d.running) return Icons.downloading;
-    return switch (d.kind) {
-      DownloadKind.images => Icons.image_outlined,
-      DownloadKind.video => Icons.movie_outlined,
-      DownloadKind.audio => Icons.audiotrack_outlined,
-      DownloadKind.documents =>
-        d.mime == 'application/pdf'
-            ? Icons.picture_as_pdf_outlined
-            : Icons.description_outlined,
-      DownloadKind.archives => Icons.folder_zip_outlined,
-      DownloadKind.apps => Icons.android_outlined,
-      DownloadKind.other => Icons.insert_drive_file_outlined,
-    };
+    return downloadKindIcon(d.kind, d.mime);
   }
 }
 
 /// The new name for a download; owns its text field's controller so it
 /// lives as long as the dialog does (closing animates).
-class _RenameDialog extends StatefulWidget {
-  const _RenameDialog({required this.name});
+class RenameFileDialog extends StatefulWidget {
+  const RenameFileDialog({super.key, required this.name});
 
   final String name;
 
   @override
-  State<_RenameDialog> createState() => _RenameDialogState();
+  State<RenameFileDialog> createState() => _RenameFileDialogState();
 }
 
-class _RenameDialogState extends State<_RenameDialog> {
+class _RenameFileDialogState extends State<RenameFileDialog> {
   late final TextEditingController _name =
       TextEditingController(text: widget.name)
         ..selection = TextSelection(

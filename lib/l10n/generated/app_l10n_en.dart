@@ -2296,4 +2296,100 @@ class AppL10nEn extends AppL10n {
     );
     return '$_temp0';
   }
+
+  @override
+  String get downloadVault => 'Download vault';
+
+  @override
+  String get vaultUnlockReason => 'Unlock the download vault';
+
+  @override
+  String get vaultLocked =>
+      'The vault is locked. Files in it are encrypted inside ZT Browser, on this phone only.';
+
+  @override
+  String get vaultExplain =>
+      'Encrypted inside ZT Browser. The Files app and other apps can\'t see these files, and they are never synced or backed up.';
+
+  @override
+  String get vaultNoScreenLock =>
+      'Set a screen lock on your phone so the vault asks for it.';
+
+  @override
+  String get vaultEmpty =>
+      'Nothing here yet. Move a download here from its menu on the Downloads page, or add files from your phone.';
+
+  @override
+  String get addFromPhone => 'Add from phone';
+
+  @override
+  String get addToVault => 'Add files to the vault';
+
+  @override
+  String get vaultMoveFiles => 'Move';
+
+  @override
+  String get vaultMoveFilesSub =>
+      'The files are deleted from where they are now';
+
+  @override
+  String get vaultCopyFiles => 'Copy';
+
+  @override
+  String get vaultCopyFilesSub => 'The files also stay where they are now';
+
+  @override
+  String vaultAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files added to the vault',
+      one: '1 file added to the vault',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String vaultAddedKept(int added, int kept) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added files added',
+      one: '1 file added',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      kept,
+      locale: localeName,
+      other: '$kept originals',
+      one: '1 original',
+    );
+    return '$_temp0. The phone didn\'t let ZT Browser delete $_temp1: delete them in the Files app.';
+  }
+
+  @override
+  String get moveToVault => 'Move to vault';
+
+  @override
+  String movedToVault(String name) {
+    return '$name is in the vault';
+  }
+
+  @override
+  String get couldntMoveToVault => 'Couldn\'t move the file to the vault';
+
+  @override
+  String get openVault => 'Open vault';
+
+  @override
+  String get moveToPhone => 'Move to phone\'s Downloads';
+
+  @override
+  String movedToPhone(String name) {
+    return 'Moved $name to Downloads';
+  }
+
+  @override
+  String deletedFromVault(String name) {
+    return '$name is deleted from the vault for good.';
+  }
 }

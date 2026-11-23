@@ -446,6 +446,49 @@ class DownloadEngine private constructor(private val app: Context) {
     }
 
     /**
+     * B39: the plain bytes of a finished download (a private one decrypted),
+     * to move it into the vault; null when it isn't there.
+     */
+    fun openInput(key: String): InputStream? {
+        val job = jobs[key] ?: return null
+        if (job.status != "done") return null
+        return try {
+            if (job.private) {
+                PrivateVault.reader(job.file(app))
+            } else {
+                job.uri?.let { app.contentResolver.openInputStream(Uri.parse(it)) }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * B39: a file taken out of the vault, saved into Downloads (or the
+     * picked folder) and listed like any finished download.
+     */
+    fun saveFromVault(name: String, mime: String, size: Long, write: (OutputStream) -> Unit): Boolean {
+        val uri = newEntry(name, mime) ?: return false
+        try {
+            app.contentResolver.openOutputStream(uri)?.use(write) ?: throw IOException("no stream")
+            publish(uri)
+        } catch (e: Exception) {
+            deleteEntry(uri)
+            return false
+        }
+        val job = Job(UUID.randomUUID().toString(), displayName(uri) ?: name, mime, System.currentTimeMillis(), false, null, null, null, false).apply {
+            status = "done"
+            bytes = size
+            total = size
+            this.uri = uri.toString()
+        }
+        jobs[job.key] = job
+        save()
+        changed()
+        return true
+    }
+
+    /**
      * A plain copy of a private download for another app to open, deleted
      * when the private session ends; null when it can't be made.
      */

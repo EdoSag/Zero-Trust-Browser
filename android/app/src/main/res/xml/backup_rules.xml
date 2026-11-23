@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 and older: the download vault (B39), the encrypted download
+     list (B37) and private downloads stay on this phone, never in a backup.
+     Their keys live in the Android Keystore, which is never backed up, so a
+     copy elsewhere could not be read anyway. -->
+<full-backup-content>
+    <exclude domain="file" path="vault/" />
+    <exclude domain="file" path="secure/" />
+    <exclude domain="file" path="private-downloads/" />
+</full-backup-content>

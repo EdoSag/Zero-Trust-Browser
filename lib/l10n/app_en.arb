@@ -1299,5 +1299,64 @@
         "type": "int"
       }
     }
+  },
+  "downloadVault": "Download vault",
+  "vaultUnlockReason": "Unlock the download vault",
+  "vaultLocked": "The vault is locked. Files in it are encrypted inside ZT Browser, on this phone only.",
+  "vaultExplain": "Encrypted inside ZT Browser. The Files app and other apps can't see these files, and they are never synced or backed up.",
+  "vaultNoScreenLock": "Set a screen lock on your phone so the vault asks for it.",
+  "vaultEmpty": "Nothing here yet. Move a download here from its menu on the Downloads page, or add files from your phone.",
+  "addFromPhone": "Add from phone",
+  "addToVault": "Add files to the vault",
+  "vaultMoveFiles": "Move",
+  "vaultMoveFilesSub": "The files are deleted from where they are now",
+  "vaultCopyFiles": "Copy",
+  "vaultCopyFilesSub": "The files also stay where they are now",
+  "vaultAdded": "{count, plural, =1{1 file added to the vault} other{{count} files added to the vault}}",
+  "@vaultAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vaultAddedKept": "{added, plural, =1{1 file added} other{{added} files added}}. The phone didn't let ZT Browser delete {kept, plural, =1{1 original} other{{kept} originals}}: delete them in the Files app.",
+  "@vaultAddedKept": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "kept": {
+        "type": "int"
+      }
+    }
+  },
+  "moveToVault": "Move to vault",
+  "movedToVault": "{name} is in the vault",
+  "@movedToVault": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntMoveToVault": "Couldn't move the file to the vault",
+  "openVault": "Open vault",
+  "moveToPhone": "Move to phone's Downloads",
+  "movedToPhone": "Moved {name} to Downloads",
+  "@movedToPhone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletedFromVault": "{name} is deleted from the vault for good.",
+  "@deletedFromVault": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   }
 }
