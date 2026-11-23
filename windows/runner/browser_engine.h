@@ -9,6 +9,7 @@
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <set>
@@ -47,6 +48,9 @@ class BrowserEngine {
     int progress = 0;
     int blocked = 0;
     std::string page_host;
+    // The address the top-level page is loading (NavigationStarting), to
+    // tell it apart from documents in frames.
+    std::string main_url;
     // Hosts the user chose to open despite a safety warning.
     std::set<std::string> unsafe_allowed;
     // Hosts let through over plain http once (loadInsecure).
@@ -88,7 +92,10 @@ class BrowserEngine {
   std::string WarningPage(const std::string& host, const std::string& kind,
                           const std::string& token);
 
-  void ClearBrowsingData();
+  // Clears cookies, storage and cache of normal tabs, then calls [done].
+  // A marker file makes sure it happens even if the app quits first.
+  void ClearBrowsingData(std::function<void()> done = nullptr);
+  std::wstring ClearMarker();
 
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
   HWND window_;
@@ -100,6 +107,8 @@ class BrowserEngine {
   std::string current_;
   // Clear browsing data once the next normal tab exists (Fire with no tabs).
   bool pending_clear_ = false;
+  // A clear is running: loads wait for it (Navigate).
+  bool clearing_ = false;
 
   // Settings from Dart (setPrivacy).
   bool block_trackers_ = true;

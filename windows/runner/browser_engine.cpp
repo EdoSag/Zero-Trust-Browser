@@ -7,6 +7,7 @@
 #include <flutter/standard_method_codec.h>
 
 #include <algorithm>
+#include <filesystem>
 #include <cctype>
 #include <fstream>
 #include <sstream>
@@ -111,6 +112,12 @@ std::string UrlDecode(const std::string& s) {
     }
   }
   return out;
+}
+
+// An address without its #fragment, as requests carry it.
+std::string NoFragment(const std::string& url) {
+  size_t hash = url.find('#');
+  return hash == std::string::npos ? url : url.substr(0, hash);
 }
 
 std::string HtmlEscape(const std::string& s) {
@@ -237,6 +244,13 @@ BrowserEngine::BrowserEngine(flutter::BinaryMessenger* messenger, HWND window,
 
   std::wstring data = DataDir() + L"\\WebView2";
   CreateDirectoryW(DataDir().c_str(), nullptr);
+  // A clear asked for last time that couldn't finish (no normal tab was
+  // open, then the app closed): nothing runs yet, so remove it all now.
+  if (GetFileAttributesW(ClearMarker().c_str()) != INVALID_FILE_ATTRIBUTES) {
+    std::error_code ignored;
+    std::filesystem::remove_all(std::filesystem::path(data), ignored);
+    DeleteFileW(ClearMarker().c_str());
+  }
   HRESULT hr = CreateCoreWebView2EnvironmentWithOptions(
       nullptr, data.c_str(), nullptr,
       Callback<ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler>(
@@ -482,7 +496,11 @@ void BrowserEngine::SetUpTab(Tab& tab) {
             const std::string host = HostOf(url);
             COREWEBVIEW2_WEB_RESOURCE_CONTEXT context;
             args->get_ResourceContext(&context);
-            if (context == COREWEBVIEW2_WEB_RESOURCE_CONTEXT_DOCUMENT) {
+            // The top-level page is never blocked as a tracker, but checked
+            // against the safety list. Documents in frames are filtered
+            // like any other request.
+            if (context == COREWEBVIEW2_WEB_RESOURCE_CONTEXT_DOCUMENT &&
+                NoFragment(url) == NoFragment(t->main_url)) {
               if (t->unsafe_allowed.count(host) != 0) return S_OK;
               const std::string kind = SafetyCheck(host);
               if (kind.empty()) return S_OK;
@@ -551,6 +569,7 @@ void BrowserEngine::SetUpTab(Tab& tab) {
               sender->Navigate(Wide("https://" + url.substr(7)).c_str());
               return S_OK;
             }
+            t->main_url = url;
             t->page_host = host;
             t->blocked = 0;
             t->loading = true;
@@ -681,6 +700,7 @@ void BrowserEngine::SetUpTab(Tab& tab) {
   }
 
   if (pending_clear_ && !tab.is_private) {
+    // Nothing loads before the asked-for clear is done.
     pending_clear_ = false;
     ClearBrowsingData();
   }
@@ -694,7 +714,7 @@ void BrowserEngine::SetUpTab(Tab& tab) {
 
 void BrowserEngine::Navigate(Tab& tab, const std::string& url) {
   if (url.empty()) return;
-  if (!tab.webview) {
+  if (!tab.webview || clearing_) {
     tab.pending_url = url;
     return;
   }
@@ -936,7 +956,16 @@ std::string BrowserEngine::WarningPage(const std::string& host, const std::strin
   return html;
 }
 
-void BrowserEngine::ClearBrowsingData() {
+std::wstring BrowserEngine::ClearMarker() {
+  return DataDir() + L"\\clear-pending";
+}
+
+void BrowserEngine::ClearBrowsingData(std::function<void()> done) {
+  // Written first, removed once the clear is done: if the app quits
+  // before that, the next start removes the data folder (constructor).
+  HANDLE marker = CreateFileW(ClearMarker().c_str(), GENERIC_WRITE, 0, nullptr,
+                              CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+  if (marker != INVALID_HANDLE_VALUE) CloseHandle(marker);
   // Any normal tab's profile: they all share the one profile.
   for (auto& entry : tabs_) {
     Tab& t = *entry.second;
@@ -946,10 +975,26 @@ void BrowserEngine::ClearBrowsingData() {
     ComPtr<ICoreWebView2Profile2> profile2;
     if (SUCCEEDED(t.webview->QueryInterface(IID_PPV_ARGS(&webview13))) &&
         SUCCEEDED(webview13->get_Profile(&profile)) && SUCCEEDED(profile.As(&profile2))) {
-      profile2->ClearBrowsingDataAll(
+      clearing_ = true;
+      HRESULT hr = profile2->ClearBrowsingDataAll(
           Callback<ICoreWebView2ClearBrowsingDataCompletedHandler>(
-              [](HRESULT) -> HRESULT { return S_OK; })
+              [this, done](HRESULT result) -> HRESULT {
+                if (SUCCEEDED(result)) DeleteFileW(ClearMarker().c_str());
+                clearing_ = false;
+                // Loads asked for meanwhile go now.
+                for (auto& waiting : tabs_) {
+                  Tab& w = *waiting.second;
+                  if (w.webview && !w.pending_url.empty()) {
+                    const std::string url = w.pending_url;
+                    w.pending_url.clear();
+                    Navigate(w, url);
+                  }
+                }
+                if (done) done();
+                return S_OK;
+              })
               .Get());
+      if (FAILED(hr)) clearing_ = false;
       return;
     }
   }
