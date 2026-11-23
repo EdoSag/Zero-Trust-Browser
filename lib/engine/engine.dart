@@ -114,6 +114,19 @@ class BrowserEngine {
   Future<void> closeTab(String tabId) =>
       _call<void>('closeTab', <String, Object?>{'tabId': tabId});
 
+  /// Windows: where tab [tabId]'s page sits in the window, in physical
+  /// pixels, and whether it shows. The page is a native window over the
+  /// app, so Dart places it (TabView) and hides it under sheets and menus.
+  Future<void> setTabBounds(String tabId, Rect rect, {required bool visible}) =>
+      _call<void>('setTabBounds', <String, Object?>{
+        'tabId': tabId,
+        'x': rect.left.round(),
+        'y': rect.top.round(),
+        'width': rect.width.round(),
+        'height': rect.height.round(),
+        'visible': visible,
+      });
+
   Future<void> load(String tabId, String url) =>
       _call<void>('load', <String, Object?>{'tabId': tabId, 'url': url});
 

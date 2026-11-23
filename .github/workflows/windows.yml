@@ -1,0 +1,66 @@
+# Builds the Windows desktop app (WebView2) on every push to main and every
+# pull request, so a change that breaks the Windows build shows up before it
+# is merged. The zipped app is attached to the run as an artifact: download
+# it from the run's Summary page, unzip, and start zerotrust_browser.exe.
+# The WebView2 Runtime comes with Windows 10 and 11.
+name: Windows
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # Same pin as the Android build (Flutter 3.50 fails analyze).
+          flutter-version: 3.47.9
+          cache: true
+
+      - name: Write .env when it is not committed
+        shell: bash
+        env:
+          ENV_FILE: ${{ secrets.ENV_FILE }}
+        run: |
+          if [ -f .env ]; then
+            echo "Using the .env committed in the repository."
+          elif [ -n "$ENV_FILE" ]; then
+            printf '%s\n' "$ENV_FILE" > .env
+          else
+            cat > .env <<'ENVEOF'
+          SUPABASE_URL=https://ohgxpnchqmisvktqjmcx.supabase.co
+          SUPABASE_ANON_KEY=sb_publishable_C1geAnwr0LZSxfQKRg21YA_G-OXHYky
+          ENVEOF
+          fi
+
+      - name: Build
+        run: flutter build windows --release
+
+      - name: Zip the app
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pubspec.yaml -Pattern '^version: (.+)$').Matches[0].Groups[1].Value
+          $name = "zero-trust-browser-windows-$($version -replace '\+','-build')"
+          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath "$name.zip"
+          "ZIP_NAME=$name" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIP_NAME }}
+          path: ${{ env.ZIP_NAME }}.zip
+          retention-days: 30
