@@ -67,6 +67,12 @@ it is **ZT Browser**.
   note, or to another of your devices: it travels as an end-to-end
   encrypted attachment (up to 20 MB) and shows up on that device's
   Downloads page under "Sent from your devices", ready to save.
+- **Home screen widgets**: a search bar (search, voice, private tab, QR),
+  a grid of your quick links (the start page's pinned sites, or the first
+  bookmarks), and a 1x1 Fire button that deletes cookies, site data and
+  private downloads at once, then closes every tab and deletes the last
+  hour of history once ZT Browser is unlocked. The quick links are kept
+  encrypted on the phone for the widget and cleared on sign-out.
 - **Import bookmarks** from Chrome, Firefox, Edge or Safari (.html export).
 - **QR code scanner** (ZXing, offline) and voice search in the address bar;
   share a page as a QR code.
@@ -118,6 +124,7 @@ Play), shown in Flutter through a platform view. The native side lives in
 | `PrivateVault.kt` | Private-tab downloads encrypted in 64 KiB AES-GCM chunks under a key held only in memory |
 | `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete, remove from the list |
 | `DownloadVault.kt` | The download vault: files encrypted in the private-download format under a vault key kept in an `EncryptedStore`; add, open, share, move to Downloads |
+| `LinksWidgetProvider.kt`, `FireWidgetProvider.kt` | The quick links grid and 1x1 Fire home screen widgets (W13) |
 | `EncryptedStore.kt` | Small phone-only files (the download list) encrypted with AES-GCM under an Android Keystore key |
 | `MainActivity.kt` | Tab registry and memory (unloading), the `zt_browser/engine` channel, file uploads, fullscreen video, downloads, permissions, print, shortcuts, QR, voice, autofill status, default-browser role |
 

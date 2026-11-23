@@ -136,6 +136,33 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/search_widget_info" />
         </receiver>
+        <!-- W13: quick links grid and the 1x1 Fire button. -->
+        <receiver
+            android:name=".LinksWidgetProvider"
+            android:label="@string/links_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/links_widget_info" />
+        </receiver>
+        <service
+            android:name=".LinksWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+        <receiver
+            android:name=".FireWidgetProvider"
+            android:label="@string/fire_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fire_widget_info" />
+        </receiver>
     </application>
     <queries>
         <!-- B40: "Send to ZT Notes" hands a download straight to ZT Notes. -->

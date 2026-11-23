@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One quick link in the links widget (W13): a letter tile and its name. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/link_item"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+    <TextView
+        android:id="@+id/link_letter"
+        android:layout_width="@dimen/zt_widget_action_size"
+        android:layout_height="@dimen/zt_widget_action_size"
+        android:background="@drawable/zt_widget_accent_circle"
+        android:gravity="center"
+        android:textColor="@color/zt_widget_on_accent"
+        android:textSize="18sp"
+        android:fontFamily="sans-serif-medium"
+        android:importantForAccessibility="no"/>
+    <TextView
+        android:id="@+id/link_title"
+        style="@style/ZtWidget.Caption"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center_horizontal"
+        android:importantForAccessibility="no"/>
+</LinearLayout>

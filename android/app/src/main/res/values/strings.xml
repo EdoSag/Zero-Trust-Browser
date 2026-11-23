@@ -3,4 +3,9 @@
     <string name="search_in_app">Search in ZT Browser</string>
     <string name="search_widget_label">Search</string>
     <string name="search_widget_description">Search the web, by voice, in a private tab or from a QR code</string>
+    <string name="links_widget_label">Quick links</string>
+    <string name="links_widget_description">Your quick links from the start page, one tap away</string>
+    <string name="links_widget_empty">Pin sites on ZT Browser\'s start page and they show up here</string>
+    <string name="fire_widget_label">Fire</string>
+    <string name="fire_widget_description">One tap closes every tab and clears cookies, site data and recent history</string>
 </resources>

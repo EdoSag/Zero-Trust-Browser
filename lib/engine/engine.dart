@@ -572,6 +572,16 @@ class BrowserEngine {
     'bytes': bytes,
   });
 
+  /// W13: the links the home screen quick links widget shows (JSON from
+  /// widgetLinksJson; "[]" clears them).
+  Future<void> setWidgetLinks(String json) async {
+    try {
+      await _call<void>('setWidgetLinks', <String, Object?>{'links': json});
+    } on PlatformException {
+      // No widget support: nothing to update.
+    }
+  }
+
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
       _call<void>('print', <String, Object?>{'tabId': tabId, 'title': title});

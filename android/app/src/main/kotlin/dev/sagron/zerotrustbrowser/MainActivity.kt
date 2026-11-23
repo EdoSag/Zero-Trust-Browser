@@ -113,6 +113,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         MediaHub.control = { command -> mediaControl(command) }
         pendingUrl = linkFrom(intent)
         pendingWidgetAction = SearchWidgetProvider.actionFrom(intent)
+        if (pendingWidgetAction == "fire") fireNow()
         Blocker.onLoaded = {
             PageScripts.invalidate()
             for (t in tabs.values) t.refreshScripts()
@@ -129,6 +130,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         val widgetAction = SearchWidgetProvider.actionFrom(intent)
         if (widgetAction != null) {
             pendingWidgetAction = widgetAction
+            if (widgetAction == "fire") fireNow()
             channel?.invokeMethod("openPending", null)
             return
         }
@@ -385,6 +387,14 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         result.success(null)
                     }
                     // B39: the download vault.
+                    // W13: the quick links widget's links, as JSON [{title, url}].
+                    "setWidgetLinks" -> {
+                        val json = call.argument<String>("links") ?: "[]"
+                        io.execute {
+                            LinksWidgetProvider.save(this, json)
+                            main.post { result.success(null) }
+                        }
+                    }
                     "vaultList" -> io.execute {
                         val list = DownloadVault.get(this).list()
                         main.post { result.success(list) }
@@ -1538,6 +1548,20 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     }
 
     /** Cookies, site storage and cache of normal tabs, and unloaded tabs' history. */
+    /**
+     * W13: the Fire widget was tapped. What needs no unlock goes now:
+     * cookies, site data, the cache and private downloads. Dart closes the
+     * tabs and deletes recent history once the app is unlocked.
+     */
+    private fun fireNow() {
+        try {
+            clearBrowsingData()
+            downloadEngine.endPrivateSession()
+        } catch (e: Exception) {
+            android.util.Log.e("ZtBrowser", "Fire widget", e)
+        }
+    }
+
     private fun clearBrowsingData() {
         CookieManager.getInstance().removeAllCookies(null)
         CookieManager.getInstance().flush()
