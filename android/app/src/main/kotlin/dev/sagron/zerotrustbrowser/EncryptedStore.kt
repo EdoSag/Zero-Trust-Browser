@@ -34,22 +34,30 @@ class EncryptedStore(context: Context, name: String) {
         }
     }
 
+    /**
+     * Saves [text]; true once it is on disk (written, synced and in place).
+     * False when it couldn't be saved, for example when storage is full:
+     * callers that delete something on success must check it.
+     */
     @Synchronized
-    fun write(text: String) {
-        try {
+    fun write(text: String): Boolean {
+        val tmp = File(file.path + ".tmp")
+        return try {
             val cipher = Cipher.getInstance(TRANSFORM)
             cipher.init(Cipher.ENCRYPT_MODE, key())
             val iv = cipher.iv
             val sealed = cipher.doFinal(text.toByteArray(Charsets.UTF_8))
             file.parentFile?.mkdirs()
-            val tmp = File(file.path + ".tmp")
-            tmp.outputStream().use { it.write(iv); it.write(sealed) }
+            tmp.outputStream().use { it.write(iv); it.write(sealed); it.fd.sync() }
             if (!tmp.renameTo(file)) {
                 file.delete()
-                tmp.renameTo(file)
+                if (!tmp.renameTo(file)) throw java.io.IOException("not renamed")
             }
+            true
         } catch (e: Exception) {
             android.util.Log.e("ZtBrowser", "Encrypted store not written", e)
+            tmp.delete()
+            false
         }
     }
 
