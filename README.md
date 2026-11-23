@@ -1,7 +1,7 @@
 # Zero-Trust Browser
 
-A private web browser for Android, part of the Zero-Trust apps. On the phone
-it is **ZT Browser**.
+A private web browser for Android and Windows, part of the Zero-Trust apps.
+On the phone it is **ZT Browser**.
 
 - **Trackers and ads blocked** on every site: about 50,000 known hosts from
   EasyList and EasyPrivacy, checked for every request the page makes.
@@ -137,6 +137,28 @@ Requires Android 10 (API 29). Private tabs need Android System WebView with
 multi-profile support (version 123 or newer); on older WebView versions they
 still keep no history and no cache, but share cookies with normal tabs.
 
+## Windows (desktop)
+
+The same Flutter app runs on Windows 10 and 11, with Microsoft Edge
+WebView2 as the page engine (it comes with Windows). The C++ side,
+`windows/runner/browser_engine.cpp`, answers the same `zt_browser/engine`
+channel as the Android code: each tab is a WebView2 window that Dart places
+over its `TabView` (`setTabBounds`) and hides while a sheet, menu or other
+screen is on top.
+
+What the Windows build has today: tabs and private (InPrivate) tabs,
+tracker blocking from the same blocklist (bundled, or a newer downloaded
+one), HTTPS-Only, the phishing and malware warning (B-1), history,
+bookmarks and sync through the shared account, pop-ups opening as tabs,
+favicons, and clearing browsing data (Fire). Not yet on Windows: reader
+view, translation, find in page, user scripts, browser identity, the
+download manager (WebView2 saves to the Downloads folder itself) and the
+download vault. These answer "not implemented" and the app treats them as
+missing.
+
+Pages and cookies of normal tabs are kept in
+`%LOCALAPPDATA%\ZT Browser\WebView2`; private tabs keep nothing.
+
 ## User scripts (B41)
 
 Scripts run in the page itself, like Violentmonkey's "page" mode: the
@@ -250,6 +272,10 @@ Release (`.github/workflows/android-apk.yml`). The repository needs the
 `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets, the same
 keystore as the other Zero-Trust apps.
 
+Every pull request and push to `main` also builds the Windows app
+(`.github/workflows/windows.yml`); the zipped app is on the run's Summary
+page. Unzip it and start `zerotrust_browser.exe`.
+
 ## Credits and licences
 
 - Blocklists: [EasyList, EasyPrivacy and the EasyList Cookie List](https://easylist.to)
@@ -264,7 +290,9 @@ keystore as the other Zero-Trust apps.
 - QR scanner: [ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded)
   and ZXing, Apache License 2.0.
 - QR codes: [qr_flutter](https://pub.dev/packages/qr_flutter), BSD-3-Clause.
-- Web engine: Android System WebView, part of the Android platform.
+- Web engine: Android System WebView, part of the Android platform; on
+  Windows, Microsoft Edge WebView2 (the SDK is BSD-3-Clause and is
+  downloaded when building).
 
 ## License
 
