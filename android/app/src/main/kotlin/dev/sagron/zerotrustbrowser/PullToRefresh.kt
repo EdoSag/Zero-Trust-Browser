@@ -46,6 +46,8 @@ class PullToRefreshLayout(
     private var atTop = false
     private var pullFrom = Float.NaN
     private var pull = 0f
+    /** The finger is pulling now; the shown [pull] can lag while it hides. */
+    private var pulling = false
     private var hiding: ValueAnimator? = null
 
     init {
@@ -69,7 +71,11 @@ class PullToRefreshLayout(
                 pullFrom = Float.NaN
                 setPull(0f)
             }
-            MotionEvent.ACTION_POINTER_DOWN -> reset() // Pinch zoom.
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                // Pinch zoom: no reload for the rest of this touch.
+                reset()
+                atTop = false
+            }
             MotionEvent.ACTION_MOVE -> {
                 if (!atTop || !page.pulledPastTop) return
                 if (pullFrom.isNaN()) pullFrom = ev.y
@@ -80,10 +86,11 @@ class PullToRefreshLayout(
                     atTop = false
                     return
                 }
+                pulling = true
                 setPull((moved * 0.6f).coerceIn(0f, maxPull))
             }
             MotionEvent.ACTION_UP -> {
-                val reload = pull >= trigger
+                val reload = pulling && pull >= trigger
                 reset()
                 if (reload) onRefresh()
             }
@@ -92,6 +99,7 @@ class PullToRefreshLayout(
     }
 
     private fun reset() {
+        pulling = false
         page.pulledPastTop = false
         pullFrom = Float.NaN
         if (pull <= 0f) {

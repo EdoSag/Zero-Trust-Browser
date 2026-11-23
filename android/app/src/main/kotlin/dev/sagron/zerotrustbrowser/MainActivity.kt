@@ -528,14 +528,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "downloadFolder" -> result.success(downloadFolderName())
                     "pickDownloadFolder" -> pickDownloadFolder(result)
                     "clearDownloadFolder" -> {
-                        downloadEngine.folder?.let { old ->
-                            try {
-                                contentResolver.releasePersistableUriPermission(
-                                    old,
-                                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-                                )
-                            } catch (e: Exception) { }
-                        }
+                        // Only new downloads go to Downloads again. The
+                        // folder's grant stays: files already saved there
+                        // are still opened, shared and resumed through it.
                         downloadEngine.setFolder(null)
                         result.success(null)
                     }

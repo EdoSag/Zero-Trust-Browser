@@ -511,6 +511,8 @@ class DownloadEngine private constructor(private val app: Context) {
     // ---- The work, on a worker thread --------------------------------------
 
     private class Stopped : Exception()
+    /** Wi-Fi only was turned on, or Wi-Fi was lost, mid-transfer (B38). */
+    private class NeedsWifi : Exception()
     private class Fatal(val reason: String) : Exception(reason)
 
     /** Which start of a job this worker thread is running. */
@@ -588,6 +590,10 @@ class DownloadEngine private constructor(private val app: Context) {
             } catch (e: Stopped) {
                 stopped(job)
                 return
+            } catch (e: NeedsWifi) {
+                // Back to the top: wait for Wi-Fi, then go on (or start
+                // over, when the server can't resume).
+                continue
             } catch (e: Fatal) {
                 job.error = e.reason
                 setStatus(job, "failed")
@@ -743,9 +749,17 @@ class DownloadEngine private constructor(private val app: Context) {
         val buf = ByteArray(BUFFER)
         var done = from
         job.bytes = done
+        var networkChecked = System.currentTimeMillis()
         input.use {
             while (true) {
                 checkStop(job)
+                // B38: a rule changed while this runs takes effect now.
+                if (job.url != null && wifiOnly &&
+                    System.currentTimeMillis() - networkChecked > 1_000
+                ) {
+                    networkChecked = System.currentTimeMillis()
+                    if (!unmetered()) throw NeedsWifi()
+                }
                 val n = it.read(buf)
                 if (n < 0) break
                 write(out, buf, n)

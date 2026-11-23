@@ -102,6 +102,9 @@ class ZtTab(
     private val unsafeAllowed: MutableSet<String> =
         java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
 
+    /** B-1: warnings shown in this tab, their secret token to the address. */
+    private val warnings = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     /** B-7: what was blocked on this page, host to how many requests. */
     private val blockedHosts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private var startScript: ScriptHandler? = null
@@ -712,9 +715,11 @@ class ZtTab(
 
     /** B-1: "Back to safety" or "Open the site anyway" on the warning page. */
     private fun onSafetyAction(action: Uri) {
+        // Only a warning this tab showed can be answered: a page that loads
+        // these links itself has no token and is ignored.
+        val url = action.getQueryParameter("t")?.let { warnings.remove(it) } ?: return
         when (action.path) {
             "/proceed" -> {
-                val url = action.getQueryParameter("u") ?: return
                 val host = Uri.parse(url).host?.lowercase() ?: return
                 unsafeAllowed.add(host)
                 webView.loadUrl(url, privacyHeaders())
@@ -983,7 +988,10 @@ class ZtTab(
                 val h = request.url.host?.lowercase() ?: return null
                 if (h == SafeBrowsing.ACTION_HOST || unsafeAllowed.contains(h)) return null
                 val kind = SafeBrowsing.check(h) ?: return null
-                return SafeBrowsing.warningPage(request.url.toString(), h, kind)
+                val token = java.util.UUID.randomUUID().toString().replace("-", "")
+                if (warnings.size > 32) warnings.clear()
+                warnings[token] = request.url.toString()
+                return SafeBrowsing.warningPage(request.url.toString(), h, kind, token)
             }
             if (Blocker.shouldBlock(request.url.host, pageHost)) {
                 blocked.incrementAndGet()
