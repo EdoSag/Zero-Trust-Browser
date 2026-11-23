@@ -33,8 +33,8 @@ class Downloads(private val context: Context, private val engine: DownloadEngine
         val old = prefs.getString("list", null)
         if (old != null) {
             // Once: the plain list moves into the encrypted one.
-            store.write(old)
-            prefs.edit().remove("list").apply()
+            // The plain copy goes only once the encrypted one is saved.
+            if (store.write(old)) prefs.edit().remove("list").apply()
         }
         val raw = store.read() ?: "[]"
         val arr = try { JSONArray(raw) } catch (e: Exception) { JSONArray() }

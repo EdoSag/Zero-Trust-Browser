@@ -63,7 +63,11 @@ class DownloadVault(context: Context) {
             }
             ByteArray(32).also {
                 random.nextBytes(it)
-                keyFile.write(Base64.encodeToString(it, Base64.NO_WRAP))
+                // Never encrypt a file under a key that isn't saved: it
+                // could not be read again after the app restarts.
+                if (!keyFile.write(Base64.encodeToString(it, Base64.NO_WRAP))) {
+                    throw IllegalStateException("vault key not saved")
+                }
             }
         }
         return SecretKeySpec(bytes, "AES").also { key = it }
@@ -80,11 +84,12 @@ class DownloadVault(context: Context) {
         }
     }
 
+    /** Saves the file list; false when it couldn't be (storage full). */
     @Synchronized
-    private fun store(list: List<JSONObject>) {
+    private fun store(list: List<JSONObject>): Boolean {
         val arr = JSONArray()
         list.forEach { arr.put(it) }
-        index.write(arr.toString())
+        return index.write(arr.toString())
     }
 
     private fun find(id: String) = entries().firstOrNull { it.optString("id") == id }
@@ -135,7 +140,12 @@ class DownloadVault(context: Context) {
                 .put("mime", mime.ifEmpty { "application/octet-stream" })
                 .put("size", size).put("time", System.currentTimeMillis()),
         )
-        store(list)
+        if (!store(list)) {
+            // Not in the list, so it couldn't be found again: report the
+            // failure so the original (download or picked file) is kept.
+            target.delete()
+            return false
+        }
         return true
     }
 
@@ -249,7 +259,7 @@ class DownloadVault(context: Context) {
         val list = entries()
         val e = list.firstOrNull { it.optString("id") == id } ?: return false
         e.put("name", clean)
-        store(list)
+        if (!store(list)) return false
         File(openDir(), id).deleteRecursively()
         return true
     }
