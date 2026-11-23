@@ -147,9 +147,10 @@ function first(l){if(a&&l.indexOf(a)>0){l.splice(l.indexOf(a),1);l.unshift(a);}r
 var one=all.filter(function(e){return /one-time-code/i.test(e.getAttribute('autocomplete')||'');});
 if(!one.length)one=all.filter(function(e){var w=words(e),m=e.maxLength;
 return (m<0||m>=4)&&RE.test(w)&&!NOT.test(w)&&!/pass.?word/i.test(w);});
-if(one.length)return {boxes:false,list:first(one)};
 var box=all.filter(function(e){return e.maxLength===1;});
-if(box.length>=4&&box.length<=8)return {boxes:true,list:box};
+var split=box.length>=4&&box.length<=8;
+if(one.length&&!(split&&one[0].maxLength===1))return {boxes:false,list:first(one)};
+if(split)return {boxes:true,list:box};
 return null;}"""
 
     /**

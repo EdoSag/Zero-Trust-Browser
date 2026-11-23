@@ -152,6 +152,11 @@ class ZtTab(
 
     /** The page has a one-time code field (Fill code from ZT Authenticator). */
     private var codeField = false
+
+    /** The page tells when a code field shows up; else it's checked once loaded. */
+    private val codeListener =
+        WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     private var readerPending = false
     private var inReader = false
 
@@ -472,11 +477,7 @@ class ZtTab(
 
     /** The top frame says when it has a code field ([PageScripts.CODE_FIELDS]). */
     private fun listenForCodeFields() {
-        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) ||
-            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
-        ) {
-            return
-        }
+        if (!codeListener) return
         WebViewCompat.addWebMessageListener(webView, "ztCode", setOf("*")) { _, message, origin, isMainFrame, _ ->
             // A message from the page that was showing before is ignored.
             if (!isMainFrame || origin.host?.lowercase() != currentHost) return@addWebMessageListener
@@ -1016,7 +1017,7 @@ class ZtTab(
             cleaned.clear()
             sendState()
             checkReaderable(view, url)
-            if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) checkCodeField(view, url)
+            if (!codeListener) checkCodeField(view, url)
             // Translating this site in this tab: the next page is too.
             val keep = keepTranslating
             val engine = translator
