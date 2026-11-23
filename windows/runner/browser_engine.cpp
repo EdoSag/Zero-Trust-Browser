@@ -439,11 +439,19 @@ void BrowserEngine::StartController(const std::string& id) {
   if (tab->is_private && SUCCEEDED(env_.As(&env10))) {
     // Private tabs: InPrivate, nothing kept after they close.
     ComPtr<ICoreWebView2ControllerOptions> options;
-    if (SUCCEEDED(env10->CreateCoreWebView2ControllerOptions(&options))) {
-      options->put_IsInPrivateModeEnabled(TRUE);
-      env10->CreateCoreWebView2ControllerWithOptions(window_, options.Get(), done.Get());
+    if (SUCCEEDED(env10->CreateCoreWebView2ControllerOptions(&options)) &&
+        SUCCEEDED(options->put_IsInPrivateModeEnabled(TRUE)) &&
+        SUCCEEDED(env10->CreateCoreWebView2ControllerWithOptions(window_, options.Get(),
+                                                                 done.Get()))) {
       return;
     }
+  }
+  if (tab->is_private) {
+    // An old WebView2 Runtime without InPrivate: never open a private tab
+    // as a normal one, which would keep its cookies. The tab shows as
+    // failed instead (Windows Update brings a newer runtime).
+    SendEvent(id, "crashed", EncodableMap());
+    return;
   }
   env_->CreateCoreWebView2Controller(window_, done.Get());
 }
