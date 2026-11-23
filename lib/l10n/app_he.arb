@@ -645,5 +645,18 @@
   "openVault": "פתיחת הכספת",
   "moveToPhone": "העברה להורדות של הטלפון",
   "movedToPhone": "{name} הועבר להורדות",
-  "deletedFromVault": "{name} יימחק מהכספת לתמיד."
+  "deletedFromVault": "{name} יימחק מהכספת לתמיד.",
+  "sendFileTo": "שליחה אל…",
+  "sendFileTitle": "שליחת {name}",
+  "sendToNotes": "פתק ב-ZT Notes",
+  "sendToNotesSub": "לפתק חדש, מוצפן על ידי ZT Notes",
+  "sendFileEncrypted": "מוצפן מקצה לקצה. רק ZT Browser שם יכול לפתוח אותו.",
+  "fileTooBigToSend": "אי אפשר לשלוח למכשירים קבצים מעל 20 MB",
+  "notesNotInstalled": "ZT Notes לא מותקנת בטלפון הזה",
+  "notesCantTakeFile": "ZT Notes עדיין לא יכולה לקבל קובץ מהסוג הזה",
+  "sendingFile": "שולח את {name}…",
+  "sentFileToDevice": "{name} נשלח אל {device}",
+  "sentFromDevices": "נשלחו מהמכשירים שלך",
+  "sentFileFrom": "מ-{device} · {size}",
+  "dismissSentFile": "סגירה (נמחק מהחשבון שלך)"
 }

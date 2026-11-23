@@ -138,6 +138,8 @@
         </receiver>
     </application>
     <queries>
+        <!-- B40: "Send to ZT Notes" hands a download straight to ZT Notes. -->
+        <package android:name="dev.sagron.zerotrustnotes"/>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>

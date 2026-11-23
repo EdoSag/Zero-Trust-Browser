@@ -3972,6 +3972,84 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'{name} is deleted from the vault for good.'**
   String deletedFromVault(String name);
+
+  /// No description provided for @sendFileTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to…'**
+  String get sendFileTo;
+
+  /// No description provided for @sendFileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send {name}'**
+  String sendFileTitle(String name);
+
+  /// No description provided for @sendToNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'A note in ZT Notes'**
+  String get sendToNotes;
+
+  /// No description provided for @sendToNotesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Into a new note, encrypted by ZT Notes'**
+  String get sendToNotesSub;
+
+  /// No description provided for @sendFileEncrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'End-to-end encrypted. Only ZT Browser there can open it.'**
+  String get sendFileEncrypted;
+
+  /// No description provided for @fileTooBigToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Files over 20 MB can\'t be sent to devices'**
+  String get fileTooBigToSend;
+
+  /// No description provided for @notesNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Notes isn\'t on this phone'**
+  String get notesNotInstalled;
+
+  /// No description provided for @notesCantTakeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Notes can\'t take this kind of file yet'**
+  String get notesCantTakeFile;
+
+  /// No description provided for @sendingFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending {name}…'**
+  String sendingFile(String name);
+
+  /// No description provided for @sentFileToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {name} to {device}'**
+  String sentFileToDevice(String name, String device);
+
+  /// No description provided for @sentFromDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent from your devices'**
+  String get sentFromDevices;
+
+  /// No description provided for @sentFileFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {device} · {size}'**
+  String sentFileFrom(String device, String size);
+
+  /// No description provided for @dismissSentFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss (deletes it from your account)'**
+  String get dismissSentFile;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

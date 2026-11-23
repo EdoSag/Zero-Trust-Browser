@@ -63,6 +63,10 @@ it is **ZT Browser**.
   download in from its menu, or add files from the phone), open them with
   the phone's lock, and move them back to Downloads. The vault is on this
   phone only: never synced and left out of Android backups.
+- **Send a download** (or a file from the vault) to ZT Notes, as a new
+  note, or to another of your devices: it travels as an end-to-end
+  encrypted attachment (up to 20 MB) and shows up on that device's
+  Downloads page under "Sent from your devices", ready to save.
 - **Import bookmarks** from Chrome, Firefox, Edge or Safari (.html export).
 - **QR code scanner** (ZXing, offline) and voice search in the address bar;
   share a page as a QR code.

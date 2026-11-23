@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
+import 'package:zerotrust_browser/data/browser_data.dart';
+import 'package:zerotrust_browser/data/models.dart';
 import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
+import 'package:zerotrust_browser/pages/send_file_sheet.dart';
 import 'package:zerotrust_browser/pages/vault_page.dart';
 
 /// One file in the Downloads list.
@@ -348,6 +351,47 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     await _refresh();
   }
 
+  /// B40: to ZT Notes or another of my devices.
+  Future<void> _send(DownloadItem d) => showSendFileSheet(
+    context,
+    ref,
+    name: _name(d),
+    mime: d.mime,
+    size: d.bytes,
+    readBytes: (int max) => _engine.downloadBytes(d.key, max),
+    toNotes: () => _engine.sendDownloadTo(d.key, BrowserEngine.notesPackage),
+  );
+
+  /// B40: a file another device sent: into Downloads, then gone from the
+  /// account.
+  Future<void> _saveSent(SentFile f) async {
+    final BrowserData data = ref.read(browserDataProvider);
+    final String saved = l.savedToDownloads(f.name);
+    final String failed = l.couldntSave(f.name);
+    bool ok = false;
+    try {
+      ok = await _engine.saveBytesToDownloads(
+        f.name,
+        f.mime,
+        await data.readSentFile(f),
+      );
+      if (ok) await data.dismissSentFile(f);
+    } on Object {
+      ok = false;
+    }
+    if (!mounted) return;
+    _snack(ok ? saved : failed);
+    await _refresh();
+  }
+
+  Future<void> _dismissSent(SentFile f) async {
+    try {
+      await ref.read(browserDataProvider).dismissSentFile(f);
+    } on Object {
+      if (mounted) _snack(l.couldntSend);
+    }
+  }
+
   /// B39: into the vault, encrypted, and off the phone.
   Future<void> _moveToVault(DownloadItem d) async {
     final String done = l.movedToVault(_name(d));
@@ -543,6 +587,8 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
   Widget build(BuildContext context) {
     final List<DownloadItem>? items = _items;
     final bool locked = ref.watch(privateLockProvider);
+    final List<SentFile> sent =
+        ref.watch(sentFilesToMeProvider).value ?? const <SentFile>[];
     final List<DownloadItem> shown = items == null
         ? const <DownloadItem>[]
         : filterDownloads(items, query: _query.text, kind: _kind);
@@ -566,7 +612,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
         appBar: _appBar(shown),
         body: items == null
             ? const Center(child: CircularProgressIndicator())
-            : items.isEmpty
+            : items.isEmpty && sent.isEmpty
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -622,6 +668,22 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                           textAlign: TextAlign.center,
                         ),
                       ),
+                    if (sent.isNotEmpty && !_selecting) ...<Widget>[
+                      Padding(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          16,
+                          16,
+                          16,
+                          4,
+                        ),
+                        child: Text(
+                          l.sentFromDevices,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      for (final SentFile f in sent) _sentTile(f),
+                      const Divider(),
+                    ],
                     if (shown.any((DownloadItem d) => d.private)) ...<Widget>[
                       ListTile(
                         leading: const Icon(Icons.lock_outline),
@@ -674,6 +736,24 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
       ),
     );
   }
+
+  Widget _sentTile(SentFile f) => ListTile(
+    key: ValueKey<String>('sent-${f.id}'),
+    leading: Icon(downloadKindIcon(downloadKind(f.mime, f.name), f.mime)),
+    title: Text(f.name, maxLines: 2, overflow: TextOverflow.ellipsis),
+    subtitle: Text(l.sentFileFrom(f.fromName, l.fileSize(f.file.size))),
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        TextButton(onPressed: () => _saveSent(f), child: Text(l.save)),
+        IconButton(
+          tooltip: l.dismissSentFile,
+          icon: const Icon(Icons.close),
+          onPressed: () => _dismissSent(f),
+        ),
+      ],
+    ),
+  );
 
   String _detail(DownloadItem d) {
     final String progress = d.total > 0
@@ -753,6 +833,8 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                         await _rename(d);
                       case 'link':
                         await _copyLink(d);
+                      case 'send':
+                        await _send(d);
                       case 'vault':
                         await _moveToVault(d);
                       case 'forget':
@@ -783,6 +865,11 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
                       PopupMenuItem<String>(
                         value: 'link',
                         child: Text(l.copyLink),
+                      ),
+                    if (d.status == 'done' && !d.legacy)
+                      PopupMenuItem<String>(
+                        value: 'send',
+                        child: Text(l.sendFileTo),
                       ),
                     if (d.status == 'done' && !d.legacy)
                       PopupMenuItem<String>(
