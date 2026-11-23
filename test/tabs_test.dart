@@ -132,8 +132,10 @@ void main() {
       'secure': true,
       'blocked': 7,
       'desktop': false,
+      'codeField': true,
     });
     final BrowserTab now = c.read(tabsProvider).current!;
+    expect(now.codeField, isTrue);
     expect(now.url, 'https://a.org/page');
     expect(now.title, 'A page');
     expect(now.blocked, 7);

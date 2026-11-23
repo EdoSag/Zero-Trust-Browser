@@ -193,5 +193,10 @@
         <package android:name="dev.sagron.zerotrusttasks"/>
         <package android:name="dev.sagron.zerotrustphone"/>
         <package android:name="dev.sagron.zerotrustcontacts"/>
+        <!-- Fill code: ZT Authenticator hands out one-time codes. -->
+        <intent>
+            <action android:name="bz.zerotrust.action.PICK_TEXT"/>
+            <category android:name="bz.zerotrust.category.ONE_TIME_CODE"/>
+        </intent>
     </queries>
 </manifest>

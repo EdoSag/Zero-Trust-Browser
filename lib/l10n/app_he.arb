@@ -658,5 +658,15 @@
   "sentFileToDevice": "{name} נשלח אל {device}",
   "sentFromDevices": "נשלחו מהמכשירים שלך",
   "sentFileFrom": "מ-{device} · {size}",
-  "dismissSentFile": "סגירה (נמחק מהחשבון שלך)"
+  "dismissSentFile": "סגירה (נמחק מהחשבון שלך)",
+  "fillCode": "מילוי קוד",
+  "fillCodeSub": "מ־ZT Authenticator",
+  "fillCodeAsked": "הדף מבקש קוד כניסה",
+  "fillCodeFilled": "הקוד מולא",
+  "fillCodeMissing": "כדי למלא קודים יש להתקין את ZT Authenticator",
+  "fillCodeExpired": "תוקף הקוד פג לפני שהגיע. אפשר לנסות שוב.",
+  "fillCodeInvalid": "לא התקבל קוד מ־ZT Authenticator",
+  "fillCodeMoved": "הדף השתנה, ולכן הקוד לא מולא",
+  "fillCodeNoField": "לא נמצא שדה לקוד. יש להקיש על שדה הקוד ולנסות שוב.",
+  "fillCodeUnavailable": "מילוי קוד לא זמין כאן"
 }

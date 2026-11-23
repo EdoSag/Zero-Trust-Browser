@@ -124,6 +124,70 @@ P.onmessage=function(e){if(!last)return;
 if(e.data==='pause')last.pause();else if(e.data==='play'){var r=last.play();if(r&&r.catch)r.catch(function(){});}};
 })();"""
 
+    // ---- Fill code (one-time codes from ZT Authenticator) ------------------
+
+    /**
+     * Finds the page's one-time code field: an input marked
+     * autocomplete="one-time-code", one whose name, label or placeholder
+     * says so, or a row of 4 to 8 one-character boxes. Returns the inputs
+     * to fill (several for boxes), the focused one first.
+     */
+    private const val FIND_CODE = """function ztFindCode(){
+var T={'':1,text:1,tel:1,number:1,password:1};
+var RE=/one.?time|otp|totp|2fa|mfa|two.?factor|2.?step|verif|security.?code|auth\w*.?code|access.?code|login.?code|sms.?code|passcode|\bcode\b|\bpin\b|קוד|אימות/i;
+var NOT=/zip|postal|post.?code|promo|coupon|voucher|gift|country|area|phone|captcha|discount|referr|invit/i;
+function ok(e){if(e.disabled||e.readOnly)return false;
+if(!T[(e.getAttribute('type')||'').toLowerCase()])return false;
+var r=e.getBoundingClientRect();return r.width>0&&r.height>0;}
+function words(e){var l='';try{if(e.labels&&e.labels.length)l=e.labels[0].textContent||'';}catch(x){}
+return [e.name,e.id,e.getAttribute('aria-label'),e.getAttribute('placeholder'),e.getAttribute('data-testid'),l].join(' ');}
+var all=[].slice.call(document.querySelectorAll('input')).filter(ok);
+var a=document.activeElement;
+function first(l){if(a&&l.indexOf(a)>0){l.splice(l.indexOf(a),1);l.unshift(a);}return l;}
+var one=all.filter(function(e){return /one-time-code/i.test(e.getAttribute('autocomplete')||'');});
+if(!one.length)one=all.filter(function(e){var w=words(e),m=e.maxLength;
+return (m<0||m>=4)&&RE.test(w)&&!NOT.test(w)&&!/pass.?word/i.test(w);});
+var box=all.filter(function(e){return e.maxLength===1;});
+var split=box.length>=4&&box.length<=8;
+if(one.length&&!(split&&one[0].maxLength===1))return {boxes:false,list:first(one)};
+if(split)return {boxes:true,list:box};
+return null;}"""
+
+    /**
+     * B-Auth: the top frame tells the app ("ztCode" listener) when it has a
+     * one-time code field, also when one appears later (single-page sign-in
+     * forms). The listener is hidden from the page.
+     */
+    const val CODE_FIELDS = """(function(){
+if(window.top!==window)return;
+var P=window.ztCode;if(!P)return;
+try{delete window.ztCode;}catch(e){}
+""" + FIND_CODE + """
+var last=null,timer=0;
+function check(){timer=0;var now=ztFindCode()?'1':'0';if(now!==last){last=now;try{P.postMessage(now);}catch(e){}}}
+function soon(){if(!timer)timer=setTimeout(check,700);}
+document.addEventListener('DOMContentLoaded',check);
+window.addEventListener('load',check);
+document.addEventListener('focusin',function(e){if(e.target&&e.target.tagName==='INPUT')check();},true);
+try{new MutationObserver(soon).observe(document,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden','disabled']});}catch(e){}
+})();"""
+
+    /** Whether the page has a one-time code field ("true"/"false"). */
+    const val HAS_CODE_FIELD = "(function(){" + FIND_CODE + "return !!ztFindCode();})()"
+
+    /**
+     * Puts [code] in the page's code field the way typing does (the page's
+     * own scripts see input and change events). Returns true when filled.
+     */
+    fun fillCode(code: String): String = "(function(C){" + FIND_CODE + """
+var f=ztFindCode();if(!f)return false;
+var set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;
+function put(e,v){try{e.focus();}catch(x){}set.call(e,v);
+e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));}
+if(f.boxes){if(f.list.length<C.length)return false;for(var i=0;i<C.length;i++)put(f.list[i],C.charAt(i));}
+else put(f.list[0],C);
+return true;})(""" + JSONObject.quote(code) + ");"
+
     private var translateSrc: String? = null
 
     /**

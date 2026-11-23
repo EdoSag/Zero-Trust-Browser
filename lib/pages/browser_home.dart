@@ -35,6 +35,7 @@ import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/scripts_page.dart';
 import 'package:zerotrust_browser/pages/send_tab_sheet.dart';
+import 'package:zerotrust_browser/pages/fill_code_bar.dart';
 import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
@@ -68,6 +69,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   bool _readingPrivate = false;
   Completer<void>? _systemUi;
   bool _editing = false;
+
+  /// The page ("tab id url") whose Fill code bar was closed.
+  String? _codeBarClosed;
   bool _finding = false;
   String _findResult = '';
   bool _pruned = false;
@@ -151,6 +155,8 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       }
     }
     if (state != AppLifecycleState.resumed) return;
+    // ZT Authenticator may have been installed or removed meanwhile.
+    ref.invalidate(authenticatorInstalledProvider);
     final int? days = _settings.closeTabsAfterDays;
     if (days != null) _tabs.closeUnused(days).ignore();
     ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
@@ -761,6 +767,16 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     }
   }
 
+  /// Whether ZT Authenticator is on the phone, checked again each time.
+  Future<bool> _authenticator() async {
+    ref.invalidate(authenticatorInstalledProvider);
+    try {
+      return await ref.read(authenticatorInstalledProvider.future);
+    } on Object {
+      return false;
+    }
+  }
+
   Future<void> _toApp(
     String package,
     String action, {
@@ -1137,6 +1153,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final Bookmark? saved = onPage ? data.bookmarkFor(tab.url!) : null;
     final bool pinned = onPage && _settings.isPinned(tab.url!);
     final Set<String> apps = onPage ? await _ztApps() : const <String>{};
+    final bool authenticator = onPage && await _authenticator();
     final List<ScriptCommand> commands = onPage
         ? await _engine.scriptCommands(tab.id)
         : const <ScriptCommand>[];
@@ -1313,6 +1330,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                           ? _engine.showOriginal(tab.id)
                           : showTranslateSheet(context, ref, tab),
                     ),
+                  ),
+                if (authenticator)
+                  ListTile(
+                    leading: const Icon(Icons.password),
+                    title: Text(l.fillCode),
+                    subtitle: Text(l.fillCodeSub),
+                    onTap: () =>
+                        run(() => fillCodeFromAuthenticator(context, ref, tab)),
                   ),
                 if (onPage && !tab.private)
                   ListTile(
@@ -1599,6 +1624,16 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 if (_finding && tab != null) _findBar(tab),
                 if (tab != null && tab.translatedTo != null && !_editing)
                   TranslateBar(tab: tab),
+                if (tab != null &&
+                    tab.codeField &&
+                    !_editing &&
+                    _codeBarClosed != '${tab.id} ${tab.url}' &&
+                    (ref.watch(authenticatorInstalledProvider).value ?? false))
+                  FillCodeBar(
+                    tab: tab,
+                    onClose: () =>
+                        setState(() => _codeBarClosed = '${tab.id} ${tab.url}'),
+                  ),
                 if (reading.active) ReadAloudBar(state: reading),
                 if (!wide)
                   TabSwipe(

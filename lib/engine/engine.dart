@@ -733,6 +733,18 @@ class BrowserEngine {
       }) ??
       false;
 
+  /// Whether ZT Authenticator (signed like the other Zero-Trust apps) is on
+  /// this phone and can hand out one-time codes. False off Android.
+  Future<bool> authenticatorInstalled() async =>
+      await _call<bool>('authenticatorInstalled') ?? false;
+
+  /// "Fill code": opens ZT Authenticator for the code of the site in
+  /// [tabId], which then goes straight into the page's code field. The
+  /// code itself never comes back here.
+  Future<FillCodeResult> fillCode(String tabId) async => FillCodeResult.parse(
+    await _call<String>('fillCode', <String, Object?>{'tabId': tabId}),
+  );
+
   /// The text selected on the page, or null.
   Future<String?> selection(String tabId) async {
     final String? raw = await _call<String>('selection', <String, Object?>{
@@ -953,7 +965,50 @@ enum SendResult {
   };
 }
 
+/// How "Fill code" went.
+enum FillCodeResult {
+  filled,
+
+  /// ZT Authenticator isn't on this phone.
+  missing,
+
+  /// Closed without picking a code.
+  canceled,
+
+  /// The code ran out before it came back.
+  expired,
+
+  /// What came back doesn't look like a code.
+  invalid,
+
+  /// The tab went to another site while the code was picked.
+  moved,
+
+  /// The page has no code field (any more).
+  noField,
+
+  /// Not possible here (no page, or not on Android).
+  unavailable;
+
+  static FillCodeResult parse(Object? v) => switch (v) {
+    'filled' => filled,
+    'missing' => missing,
+    'canceled' => canceled,
+    'expired' => expired,
+    'invalid' => invalid,
+    'moved' => moved,
+    'noField' => noField,
+    _ => unavailable,
+  };
+}
+
 final browserEngineProvider = Provider<BrowserEngine>((ref) => BrowserEngine());
+
+/// Whether ZT Authenticator is installed. Read again when the app comes
+/// back to the front (it may have been installed meanwhile).
+final authenticatorInstalledProvider = FutureProvider<bool>(
+  (ref) => ref.read(browserEngineProvider).authenticatorInstalled(),
+);
 
 /// A download that finished, for a message on the browser screen.
 class DownloadEvent {

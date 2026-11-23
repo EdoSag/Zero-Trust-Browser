@@ -4050,6 +4050,66 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Dismiss (deletes it from your account)'**
   String get dismissSentFile;
+
+  /// Button and menu item: fill the one-time sign-in code from ZT Authenticator
+  ///
+  /// In en, this message translates to:
+  /// **'Fill code'**
+  String get fillCode;
+
+  /// Subtitle of the Fill code menu item
+  ///
+  /// In en, this message translates to:
+  /// **'From ZT Authenticator'**
+  String get fillCodeSub;
+
+  /// Bar above the toolbar when the page has a one-time code field
+  ///
+  /// In en, this message translates to:
+  /// **'This page asks for a sign-in code'**
+  String get fillCodeAsked;
+
+  /// No description provided for @fillCodeFilled.
+  ///
+  /// In en, this message translates to:
+  /// **'Code filled in'**
+  String get fillCodeFilled;
+
+  /// No description provided for @fillCodeMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Install ZT Authenticator to fill codes'**
+  String get fillCodeMissing;
+
+  /// No description provided for @fillCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The code ran out before it arrived. Try again.'**
+  String get fillCodeExpired;
+
+  /// No description provided for @fillCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Authenticator didn\'t send a code'**
+  String get fillCodeInvalid;
+
+  /// No description provided for @fillCodeMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'The page changed, so the code wasn\'t filled in'**
+  String get fillCodeMoved;
+
+  /// No description provided for @fillCodeNoField.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find where the code goes. Tap the code field and try again.'**
+  String get fillCodeNoField;
+
+  /// No description provided for @fillCodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill code doesn\'t work here'**
+  String get fillCodeUnavailable;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {
