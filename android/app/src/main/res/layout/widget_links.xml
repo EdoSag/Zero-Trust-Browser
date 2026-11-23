@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Quick links widget (W13), in the shared Zero-Trust widget look
+  (Zero-Trust-Core/android-widget-kit). A grid of the start page's quick
+  links; LinksWidgetService fills it.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/ZtWidget.Root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+    <LinearLayout
+        android:id="@+id/links_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="8dp">
+        <ImageView
+            android:layout_width="@dimen/zt_widget_header_icon"
+            android:layout_height="@dimen/zt_widget_header_icon"
+            android:layout_marginEnd="8dp"
+            android:src="@mipmap/ic_launcher"
+            android:importantForAccessibility="no"/>
+        <TextView
+            style="@style/ZtWidget.AppName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/links_widget_label"/>
+    </LinearLayout>
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <GridView
+            android:id="@+id/links_grid"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:columnWidth="64dp"
+            android:numColumns="auto_fit"
+            android:stretchMode="columnWidth"
+            android:verticalSpacing="8dp"
+            android:horizontalSpacing="4dp"
+            android:gravity="center"/>
+        <TextView
+            android:id="@+id/links_empty"
+            style="@style/ZtWidget.Caption"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:maxLines="3"
+            android:text="@string/links_widget_empty"/>
+    </FrameLayout>
+</LinearLayout>

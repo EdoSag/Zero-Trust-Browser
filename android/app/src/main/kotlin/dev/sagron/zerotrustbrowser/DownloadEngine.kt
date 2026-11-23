@@ -4,9 +4,11 @@ import android.content.ContentValues
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Handler
 import android.os.Looper
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import org.json.JSONArray
 import org.json.JSONObject
@@ -90,6 +92,9 @@ class DownloadEngine private constructor(private val app: Context) {
             "error" to error,
             "canPause" to (resumable && active),
             "canResume" to (resumable && (status == "paused" || status == "failed")),
+            // B36: copy link, rename.
+            "url" to url,
+            "canRename" to (status == "done"),
         )
 
         fun toJson(): JSONObject = JSONObject()
@@ -140,8 +145,39 @@ class DownloadEngine private constructor(private val app: Context) {
     fun label(key: String, fallback: String) = labels[key]?.takeIf { it.isNotBlank() } ?: fallback
 
     private val jobs = ConcurrentHashMap<String, Job>()
-    private val workers = Executors.newFixedThreadPool(MAX_PARALLEL)
+
+    /** Jobs wait for a free slot (B38: how many at once) inside [run]. */
+    private val workers = Executors.newCachedThreadPool()
+    private val slots = Object()
+    private var runningCount = 0
     private val prefs = app.getSharedPreferences("zt_download_jobs", Context.MODE_PRIVATE)
+
+    /** B37: the list, encrypted on this phone (it used to be in [prefs]). */
+    private val store = EncryptedStore(app, "download-jobs")
+
+    // ---- B38: download rules ----
+
+    /** Only download over Wi-Fi (or any network that isn't metered). */
+    @Volatile var wifiOnly = false
+
+    /** How many downloads run at once. */
+    @Volatile var maxParallel = DEFAULT_PARALLEL
+        set(value) {
+            field = value.coerceIn(1, 6)
+            synchronized(slots) { slots.notifyAll() }
+        }
+
+    /** Finished downloads older than this many days are deleted; 0 never. */
+    @Volatile var autoDeleteDays = 0
+
+    /** A folder the person picked (a tree from the Files app), or null for Downloads. */
+    @Volatile var folder: Uri? = prefs.getString("folder", null)?.let(Uri::parse)
+        private set
+
+    fun setFolder(tree: Uri?) {
+        folder = tree
+        prefs.edit().apply { if (tree == null) remove("folder") else putString("folder", tree.toString()) }.apply()
+    }
     private val main = Handler(Looper.getMainLooper())
     private val wake = Object()
     @Volatile private var lastTick = 0L
@@ -149,7 +185,9 @@ class DownloadEngine private constructor(private val app: Context) {
     init {
         // A new process: the old private key is gone, and so are its files.
         PrivateVault.wipe(app)
-        val raw = prefs.getString("jobs", "[]") ?: "[]"
+        // B37: the encrypted list; once, the old plain one moves into it.
+        val old = prefs.getString("jobs", null)
+        val raw = store.read() ?: old ?: "[]"
         val arr = try { JSONArray(raw) } catch (e: Exception) { JSONArray() }
         for (i in 0 until arr.length()) {
             val job = try { Job.fromJson(arr.getJSONObject(i)) } catch (e: Exception) { continue }
@@ -160,10 +198,15 @@ class DownloadEngine private constructor(private val app: Context) {
             }
             jobs[job.key] = job
         }
+        if (old != null) {
+            save()
+            prefs.edit().remove("jobs").apply()
+        }
         try {
             app.getSystemService(ConnectivityManager::class.java)?.registerDefaultNetworkCallback(
                 object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) = poke()
+                    override fun onCapabilitiesChanged(network: Network, caps: NetworkCapabilities) = poke()
                 },
             )
         } catch (e: Exception) {
@@ -184,7 +227,7 @@ class DownloadEngine private constructor(private val app: Context) {
     private fun save() {
         val arr = JSONArray()
         jobs.values.filter { !it.private }.sortedBy { it.time }.takeLast(KEEP).forEach { arr.put(it.toJson()) }
-        prefs.edit().putString("jobs", arr.toString()).apply()
+        store.write(arr.toString())
     }
 
     private fun changed(force: Boolean = true) {
@@ -293,10 +336,68 @@ class DownloadEngine private constructor(private val app: Context) {
         if (job.private) {
             job.file(app).delete()
         } else {
-            job.uri?.let { u ->
-                try { app.contentResolver.delete(Uri.parse(u), null, null) } catch (e: Exception) { }
-            }
+            job.uri?.let { u -> deleteEntry(Uri.parse(u)) }
         }
+    }
+
+    /**
+     * B36: takes finished or failed downloads off the list; their files stay
+     * where they are. A private one has no other place, so it is deleted.
+     */
+    fun forget(keys: Collection<String>) {
+        for (key in keys) {
+            val job = jobs[key] ?: continue
+            if (job.active) continue
+            jobs.remove(key)
+            if (job.private) discard(job)
+        }
+        save()
+        changed()
+    }
+
+    /** B36: a finished download gets a new name; false when it can't. */
+    fun rename(key: String, newName: String): Boolean {
+        val job = jobs[key] ?: return false
+        if (job.status != "done") return false
+        val name = cleanName(newName)
+        if (name == job.name) return true
+        if (!job.private) {
+            val uri = job.uri?.let(Uri::parse) ?: return false
+            try {
+                if (DocumentsContract.isDocumentUri(app, uri)) {
+                    val renamed = DocumentsContract.renameDocument(app.contentResolver, uri, name) ?: return false
+                    job.uri = renamed.toString()
+                } else {
+                    val values = ContentValues().apply { put(MediaStore.Downloads.DISPLAY_NAME, name) }
+                    if (app.contentResolver.update(uri, values, null, null) <= 0) return false
+                }
+            } catch (e: Exception) {
+                return false
+            }
+            job.name = displayName(Uri.parse(job.uri)) ?: name
+        } else {
+            job.name = name
+            // A plain copy made for another app keeps the old name: redo it.
+            File(PrivateVault.openDir(app), job.key).deleteRecursively()
+        }
+        save()
+        changed()
+        return true
+    }
+
+    /** B38: deletes finished downloads older than [autoDeleteDays]. */
+    fun deleteOld(now: Long = System.currentTimeMillis()) {
+        val days = autoDeleteDays
+        if (days <= 0) return
+        val before = now - days * 86_400_000L
+        val old = jobs.values.filter { !it.private && it.status == "done" && it.time < before }
+        if (old.isEmpty()) return
+        for (job in old) {
+            jobs.remove(job.key)
+            discard(job)
+        }
+        save()
+        changed()
     }
 
     /** The private session ended: every private download is gone for good. */
@@ -345,6 +446,50 @@ class DownloadEngine private constructor(private val app: Context) {
     }
 
     /**
+     * B39: the plain bytes of a finished download (a private one decrypted),
+     * to move it into the vault; null when it isn't there.
+     */
+    fun openInput(key: String): InputStream? {
+        val job = jobs[key] ?: return null
+        if (job.status != "done") return null
+        return try {
+            if (job.private) {
+                PrivateVault.reader(job.file(app))
+            } else {
+                job.uri?.let { app.contentResolver.openInputStream(Uri.parse(it)) }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    /**
+     * B39: a file taken out of the vault (or B40: one another device sent),
+     * saved into Downloads (or the picked folder) and listed like any
+     * finished download.
+     */
+    fun saveFromVault(name: String, mime: String, size: Long, write: (OutputStream) -> Unit): Boolean {
+        val uri = newEntry(name, mime) ?: return false
+        try {
+            app.contentResolver.openOutputStream(uri)?.use(write) ?: throw IOException("no stream")
+            publish(uri)
+        } catch (e: Exception) {
+            deleteEntry(uri)
+            return false
+        }
+        val job = Job(UUID.randomUUID().toString(), displayName(uri) ?: name, mime, System.currentTimeMillis(), false, null, null, null, false).apply {
+            status = "done"
+            bytes = size
+            total = size
+            this.uri = uri.toString()
+        }
+        jobs[job.key] = job
+        save()
+        changed()
+        return true
+    }
+
+    /**
      * A plain copy of a private download for another app to open, deleted
      * when the private session ends; null when it can't be made.
      */
@@ -366,6 +511,8 @@ class DownloadEngine private constructor(private val app: Context) {
     // ---- The work, on a worker thread --------------------------------------
 
     private class Stopped : Exception()
+    /** Wi-Fi only was turned on, or Wi-Fi was lost, mid-transfer (B38). */
+    private class NeedsWifi : Exception()
     private class Fatal(val reason: String) : Exception(reason)
 
     /** Which start of a job this worker thread is running. */
@@ -383,7 +530,23 @@ class DownloadEngine private constructor(private val app: Context) {
         synchronized(job) {
             runningGeneration.set(generation)
             try {
-                runLocked(job)
+                // B38: wait for a free slot; a job paused meanwhile gives up.
+                synchronized(slots) {
+                    while (runningCount >= maxParallel && !stale(job)) slots.wait(1_000)
+                    if (stale(job)) {
+                        stopped(job)
+                        return
+                    }
+                    runningCount++
+                }
+                try {
+                    runLocked(job)
+                } finally {
+                    synchronized(slots) {
+                        runningCount--
+                        slots.notifyAll()
+                    }
+                }
             } finally {
                 runningGeneration.remove()
             }
@@ -402,6 +565,24 @@ class DownloadEngine private constructor(private val app: Context) {
         }
         setStatus(job, "running")
         while (true) {
+            // B38: Wi-Fi only waits for Wi-Fi (a file the page made is
+            // already on the phone).
+            if (job.url != null && wifiOnly && !unmetered()) {
+                job.error = "wifi"
+                setStatus(job, "waiting")
+                synchronized(wake) {
+                    if (!stale(job)) wake.wait(30_000)
+                }
+                if (stale(job)) {
+                    stopped(job)
+                    return
+                }
+                continue
+            }
+            if (job.error == "wifi") {
+                job.error = null
+                setStatus(job, "running")
+            }
             try {
                 if (job.url != null) transferHttp(job) else transferInline(job)
                 setStatus(job, "done")
@@ -409,6 +590,10 @@ class DownloadEngine private constructor(private val app: Context) {
             } catch (e: Stopped) {
                 stopped(job)
                 return
+            } catch (e: NeedsWifi) {
+                // Back to the top: wait for Wi-Fi, then go on (or start
+                // over, when the server can't resume).
+                continue
             } catch (e: Fatal) {
                 job.error = e.reason
                 setStatus(job, "failed")
@@ -446,6 +631,14 @@ class DownloadEngine private constructor(private val app: Context) {
                 setStatus(job, "running")
             }
         }
+    }
+
+    private fun unmetered(): Boolean = try {
+        val cm = app.getSystemService(ConnectivityManager::class.java)
+        val caps = cm?.getNetworkCapabilities(cm.activeNetwork)
+        caps != null && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    } catch (e: Exception) {
+        true
     }
 
     private fun online(): Boolean = try {
@@ -556,9 +749,17 @@ class DownloadEngine private constructor(private val app: Context) {
         val buf = ByteArray(BUFFER)
         var done = from
         job.bytes = done
+        var networkChecked = System.currentTimeMillis()
         input.use {
             while (true) {
                 checkStop(job)
+                // B38: a rule changed while this runs takes effect now.
+                if (job.url != null && wifiOnly &&
+                    System.currentTimeMillis() - networkChecked > 1_000
+                ) {
+                    networkChecked = System.currentTimeMillis()
+                    if (!unmetered()) throw NeedsWifi()
+                }
                 val n = it.read(buf)
                 if (n < 0) break
                 write(out, buf, n)
@@ -632,7 +833,7 @@ class DownloadEngine private constructor(private val app: Context) {
             try { resolver.openFileDescriptor(u, "rw") } catch (e: Exception) { null }
         } ?: run {
             // Never started, or the half-done file was cleared: start afresh.
-            uri?.let { u -> try { resolver.delete(u, null, null) } catch (e: Exception) { } }
+            uri?.let { u -> deleteEntry(u) }
             val created = newEntry(job.name, job.mime) ?: throw Fatal("space")
             uri = created
             job.uri = created.toString()
@@ -662,8 +863,19 @@ class DownloadEngine private constructor(private val app: Context) {
         )
     }
 
-    /** A hidden entry in the phone's Downloads, shown once [publish]ed. */
+    /**
+     * A new file in the folder the person picked (B38), or else a hidden
+     * entry in the phone's Downloads, shown once [publish]ed.
+     */
     private fun newEntry(name: String, mime: String): Uri? {
+        folder?.let { tree ->
+            try {
+                val parent = DocumentsContract.buildDocumentUriUsingTree(tree, DocumentsContract.getTreeDocumentId(tree))
+                DocumentsContract.createDocument(app.contentResolver, parent, mime, name)?.let { return it }
+            } catch (e: Exception) {
+                // The folder is gone or no longer allowed: use Downloads.
+            }
+        }
         val values = ContentValues().apply {
             put(MediaStore.Downloads.DISPLAY_NAME, name)
             put(MediaStore.Downloads.MIME_TYPE, mime)
@@ -677,8 +889,22 @@ class DownloadEngine private constructor(private val app: Context) {
     }
 
     private fun publish(uri: Uri) {
+        if (DocumentsContract.isDocumentUri(app, uri)) return // A picked folder: already visible.
         val values = ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }
         app.contentResolver.update(uri, values, null, null)
+    }
+
+    /** Deletes a file in Downloads or in a picked folder. */
+    private fun deleteEntry(uri: Uri) {
+        try {
+            if (DocumentsContract.isDocumentUri(app, uri)) {
+                DocumentsContract.deleteDocument(app.contentResolver, uri)
+            } else {
+                app.contentResolver.delete(uri, null, null)
+            }
+        } catch (e: Exception) {
+            // Already gone.
+        }
     }
 
     private fun displayName(uri: Uri): String? = try {
@@ -690,7 +916,7 @@ class DownloadEngine private constructor(private val app: Context) {
     }
 
     companion object {
-        private const val MAX_PARALLEL = 3
+        private const val DEFAULT_PARALLEL = 3
         private const val MAX_ATTEMPTS = 8
         private const val BUFFER = 64 * 1024
         private const val KEEP = 200

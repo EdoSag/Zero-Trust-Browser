@@ -33,6 +33,7 @@ class BrowserTab {
     this.group,
     this.lastUsed,
     this.readerable = false,
+    this.codeField = false,
     this.reader = false,
     this.javascript = true,
     this.translatedFrom,
@@ -76,6 +77,9 @@ class BrowserTab {
 
   /// The page looks like an article reader mode can show.
   final bool readerable;
+
+  /// The page asks for a one-time code (Fill code from ZT Authenticator).
+  final bool codeField;
 
   /// Showing reader mode.
   final bool reader;
@@ -122,6 +126,7 @@ class BrowserTab {
     String? Function()? group,
     DateTime? lastUsed,
     bool? readerable,
+    bool? codeField,
     bool? reader,
     bool? javascript,
     String? Function()? translatedFrom,
@@ -149,6 +154,7 @@ class BrowserTab {
     group: group != null ? group() : this.group,
     lastUsed: lastUsed ?? this.lastUsed,
     readerable: readerable ?? this.readerable,
+    codeField: codeField ?? this.codeField,
     reader: reader ?? this.reader,
     javascript: javascript ?? this.javascript,
     translatedFrom: translatedFrom != null
@@ -569,6 +575,7 @@ class TabsController extends Notifier<TabsState> {
             desktop: e.get<bool>('desktop'),
             shownIdentity: e.get<String>('identity'),
             readerable: e.get<bool>('readerable'),
+            codeField: e.get<bool>('codeField'),
             reader: e.get<bool>('reader'),
             javascript: e.get<bool>('javascript'),
             translatedFrom: () => e.get<String>('translatedFrom'),

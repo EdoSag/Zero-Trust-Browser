@@ -30,6 +30,8 @@
         android:supportsRtl="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:usesCleartextTraffic="true">
         <!-- Plain http is allowed at the platform level so a site the user
              agreed to open insecurely (or a LAN device) can load; the
@@ -134,8 +136,37 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/search_widget_info" />
         </receiver>
+        <!-- W13: quick links grid and the 1x1 Fire button. -->
+        <receiver
+            android:name=".LinksWidgetProvider"
+            android:label="@string/links_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/links_widget_info" />
+        </receiver>
+        <service
+            android:name=".LinksWidgetService"
+            android:permission="android.permission.BIND_REMOTEVIEWS"
+            android:exported="false" />
+        <receiver
+            android:name=".FireWidgetProvider"
+            android:label="@string/fire_widget_label"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/fire_widget_info" />
+        </receiver>
     </application>
     <queries>
+        <!-- B40: "Send to ZT Notes" hands a download straight to ZT Notes. -->
+        <package android:name="dev.sagron.zerotrustnotes"/>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
@@ -162,5 +193,10 @@
         <package android:name="dev.sagron.zerotrusttasks"/>
         <package android:name="dev.sagron.zerotrustphone"/>
         <package android:name="dev.sagron.zerotrustcontacts"/>
+        <!-- Fill code: ZT Authenticator hands out one-time codes. -->
+        <intent>
+            <action android:name="bz.zerotrust.action.PICK_TEXT"/>
+            <category android:name="bz.zerotrust.category.ONE_TIME_CODE"/>
+        </intent>
     </queries>
 </manifest>

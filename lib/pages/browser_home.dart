@@ -8,6 +8,7 @@ import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/apply_settings.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/safety_list.dart';
 import 'package:zerotrust_browser/browser/download_check.dart';
 import 'package:zerotrust_browser/browser/filter_lists.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
@@ -18,6 +19,7 @@ import 'package:zerotrust_browser/browser/search_suggestions.dart';
 import 'package:zerotrust_browser/browser/site_permissions.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/browser/user_scripts.dart';
+import 'package:zerotrust_browser/browser/widget_links.dart';
 import 'package:zerotrust_browser/browser/zt_apps.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -33,6 +35,7 @@ import 'package:zerotrust_browser/pages/privacy_report_page.dart';
 import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/scripts_page.dart';
 import 'package:zerotrust_browser/pages/send_tab_sheet.dart';
+import 'package:zerotrust_browser/pages/fill_code_bar.dart';
 import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
@@ -43,6 +46,7 @@ import 'package:zerotrust_browser/widgets/qr_sheet.dart';
 import 'package:zerotrust_browser/widgets/read_aloud_bar.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 import 'package:zerotrust_browser/widgets/tab_strip.dart';
+import 'package:zerotrust_browser/widgets/tab_swipe.dart';
 
 /// The browser once unlocked: address bar, the current tab, toolbar.
 class BrowserHome extends ConsumerStatefulWidget {
@@ -65,6 +69,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   bool _readingPrivate = false;
   Completer<void>? _systemUi;
   bool _editing = false;
+
+  /// The page ("tab id url") whose Fill code bar was closed.
+  String? _codeBarClosed;
   bool _finding = false;
   String _findResult = '';
   bool _pruned = false;
@@ -95,6 +102,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     _pushPrivacy(ref.read(browserSettingsProvider));
     _pushMedia(ref.read(browserSettingsProvider));
     _pushDownloadLabels();
+    _pushSafetyLabels();
     _pushScripts(ref.read(userScriptsProvider).value);
     // B42: the first page must already go out as the browser the user
     // picked, so the stored settings are waited for before a tab loads.
@@ -116,8 +124,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     await _openPendingLink();
     final bool voice = await _engine.voiceAvailable();
     if (mounted) setState(() => _voice = voice);
-    // Weekly, in the background: a fresh signed blocklist.
+    // Weekly, in the background: a fresh signed blocklist; daily, the
+    // phishing and malware list (B-1).
     ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
+    ref.read(safetyListUpdaterProvider).checkIfDue().ignore();
   }
 
   @override
@@ -145,9 +155,12 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       }
     }
     if (state != AppLifecycleState.resumed) return;
+    // ZT Authenticator may have been installed or removed meanwhile.
+    ref.invalidate(authenticatorInstalledProvider);
     final int? days = _settings.closeTabsAfterDays;
     if (days != null) _tabs.closeUnused(days).ignore();
     ref.read(blocklistUpdaterProvider).checkIfDue().ignore();
+    ref.read(safetyListUpdaterProvider).checkIfDue().ignore();
   }
 
   @override
@@ -201,6 +214,22 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
   }
 
   /// The download notification's texts (B34), in the app's language.
+  /// B-1: the warning page for dangerous sites, in the app's language.
+  void _pushSafetyLabels() {
+    final AppL10n l = this.l;
+    _engine.setSafetyLabels(<String, String>{
+      'dir': Directionality.of(context) == TextDirection.rtl ? 'rtl' : 'ltr',
+      'phishingTitle': l.unsafePhishingTitle,
+      'phishingBody': l.unsafePhishingBody,
+      'malwareTitle': l.unsafeMalwareTitle,
+      'malwareBody': l.unsafeMalwareBody,
+      'back': l.unsafeBack,
+      'details': l.unsafeDetails,
+      'detailsBody': l.unsafeDetailsBody,
+      'proceed': l.unsafeProceed,
+    }).ignore();
+  }
+
   void _pushDownloadLabels() {
     final AppL10n l = this.l;
     _engine.setDownloadLabels(<String, String>{
@@ -276,6 +305,18 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     }
   }
 
+  String? _widgetLinks;
+
+  /// W13: hands the quick links widget its links when they changed (not
+  /// before the bookmarks have loaded, which would empty it for a moment).
+  void _pushWidgetLinks(List<Shortcut> shortcuts, List<Bookmark>? bookmarks) {
+    if (bookmarks == null) return;
+    final String json = widgetLinksJson(shortcuts, bookmarks);
+    if (json == _widgetLinks) return;
+    _widgetLinks = json;
+    _engine.setWidgetLinks(json).ignore();
+  }
+
   /// A tap on the home screen search bar widget.
   Future<void> _openWidgetAction() async {
     final String? action = await _engine.consumeWidgetAction();
@@ -297,6 +338,10 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       case 'downloads':
         // A tap on a download notification.
         _push(const DownloadsPage());
+      case 'fire':
+        // W13: the Fire widget. Cookies, site data and private downloads
+        // went already; now the tabs and the last hour of history.
+        await _burn(history: const Duration(hours: 1));
       default:
         _startEditing(await _tabs.open());
     }
@@ -479,6 +524,9 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         );
       case 'permission':
         await _askPermission(e);
+      case 'unsafeLeave':
+        // "Back to safety" with nothing to go back to (B-1).
+        go(_settings.engine.home);
       case 'httpsFailed':
         await _offerInsecure(e.get<String>('url') ?? '', tab);
       case 'sslError':
@@ -716,6 +764,16 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       return await ref.read(installedZtAppsProvider.future);
     } on Object {
       return const <String>{};
+    }
+  }
+
+  /// Whether ZT Authenticator is on the phone, checked again each time.
+  Future<bool> _authenticator() async {
+    ref.invalidate(authenticatorInstalledProvider);
+    try {
+      return await ref.read(authenticatorInstalledProvider.future);
+    } on Object {
+      return false;
     }
   }
 
@@ -1006,15 +1064,23 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
         ) ??
         false;
     if (!go) return;
+    await _burn(history: history ? (ranges[range].$2 ?? _allHistory) : null);
+  }
+
+  /// "All time" for [_burn].
+  static const Duration _allHistory = Duration(days: 365 * 1000);
+
+  /// Closes every tab and clears browsing data; with [history], also the
+  /// history of that long ([_allHistory]: all of it) and the privacy report.
+  Future<void> _burn({Duration? history}) async {
     await _tabs.closeAllForFire();
     await _engine.clearBrowsingData();
-    if (history) {
-      final Duration? d = ranges[range].$2;
+    if (history != null) {
       final BrowserData data = ref.read(browserDataProvider);
-      if (d == null) {
+      if (history == _allHistory) {
         await data.clearHistory();
       } else {
-        await data.clearHistorySince(DateTime.now().subtract(d));
+        await data.clearHistorySince(DateTime.now().subtract(history));
       }
       // The report names the sites visited, like history does.
       await ref.read(privacyReportRecorderProvider).clear();
@@ -1087,6 +1153,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final Bookmark? saved = onPage ? data.bookmarkFor(tab.url!) : null;
     final bool pinned = onPage && _settings.isPinned(tab.url!);
     final Set<String> apps = onPage ? await _ztApps() : const <String>{};
+    final bool authenticator = onPage && await _authenticator();
     final List<ScriptCommand> commands = onPage
         ? await _engine.scriptCommands(tab.id)
         : const <ScriptCommand>[];
@@ -1264,6 +1331,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                           : showTranslateSheet(context, ref, tab),
                     ),
                   ),
+                if (authenticator)
+                  ListTile(
+                    leading: const Icon(Icons.password),
+                    title: Text(l.fillCode),
+                    subtitle: Text(l.fillCodeSub),
+                    onTap: () =>
+                        run(() => fillCodeFromAuthenticator(context, ref, tab)),
+                  ),
                 if (onPage && !tab.private)
                   ListTile(
                     leading: const Icon(Icons.devices_outlined),
@@ -1413,6 +1488,13 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     ref.listen(userScriptsProvider, (_, AsyncValue<List<UserScript>> next) {
       _pushScripts(next.value);
     });
+    // W13: the quick links widget follows the start page's links.
+    ref.listen(browserSettingsProvider, (_, BrowserSettings next) {
+      _pushWidgetLinks(next.shortcuts, ref.read(bookmarksProvider).value);
+    });
+    ref.listen(bookmarksProvider, (_, AsyncValue<List<Bookmark>> next) {
+      _pushWidgetLinks(ref.read(browserSettingsProvider).shortcuts, next.value);
+    });
     // Pages other devices sent here (B23).
     ref.listen(sentToMeProvider, (_, AsyncValue<List<SentTab>> next) {
       final List<SentTab>? sent = next.value;
@@ -1441,24 +1523,39 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       if (mounted) _updateWindowPrivacy(settings, tabs);
     });
 
-    final Widget addressBar = _AddressBar(
-      tab: tab,
-      editing: _editing,
-      controller: _address,
-      focus: _addressFocus,
-      onTap: () => _startEditing(tab),
-      onSubmit: go,
-      onCancel: _stopEditing,
-      onShield: tab == null || tab.isStartPage
-          ? null
-          : () => showSiteSheet(context, ref, tab),
-      onReader:
-          tab != null && !tab.isStartPage && (tab.readerable || tab.reader)
-          ? () => _toggleReader(tab)
-          : null,
-      onVoice: _voice ? _voiceSearch : null,
-      onScan: _scanQr,
-      engines: settings.engines,
+    // B28: the tabs a sideways swipe moves through (this kind only).
+    final List<String> swipeIds = <String>[
+      for (final BrowserTab t in private ? tabs.private : tabs.normal) t.id,
+    ];
+    bool canSwitch(int step) => neighborTab(swipeIds, tab?.id, step) != null;
+    void switchTab(int step) {
+      final String? id = neighborTab(swipeIds, tab?.id, step);
+      if (id != null) _tabs.select(id);
+    }
+
+    final Widget addressBar = TabSwipe(
+      enabled: settings.swipeTabs && !_editing,
+      canSwitch: canSwitch,
+      onSwitch: switchTab,
+      child: _AddressBar(
+        tab: tab,
+        editing: _editing,
+        controller: _address,
+        focus: _addressFocus,
+        onTap: () => _startEditing(tab),
+        onSubmit: go,
+        onCancel: _stopEditing,
+        onShield: tab == null || tab.isStartPage
+            ? null
+            : () => showSiteSheet(context, ref, tab),
+        onReader:
+            tab != null && !tab.isStartPage && (tab.readerable || tab.reader)
+            ? () => _toggleReader(tab)
+            : null,
+        onVoice: _voice ? _voiceSearch : null,
+        onScan: _scanQr,
+        engines: settings.engines,
+      ),
     );
 
     // Locked private tabs (B29): nothing of the page shows, and none of its
@@ -1527,20 +1624,36 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 if (_finding && tab != null) _findBar(tab),
                 if (tab != null && tab.translatedTo != null && !_editing)
                   TranslateBar(tab: tab),
+                if (tab != null &&
+                    tab.codeField &&
+                    !_editing &&
+                    _codeBarClosed != '${tab.id} ${tab.url}' &&
+                    (ref.watch(authenticatorInstalledProvider).value ?? false))
+                  FillCodeBar(
+                    tab: tab,
+                    onClose: () =>
+                        setState(() => _codeBarClosed = '${tab.id} ${tab.url}'),
+                  ),
                 if (reading.active) ReadAloudBar(state: reading),
                 if (!wide)
-                  _Toolbar(
-                    tab: tab,
-                    tabCount: private
-                        ? tabs.private.length
-                        : tabs.normal.length,
-                    onBack: tab != null && tab.canGoBack && !tab.isStartPage
-                        ? () => _engine.back(tab.id)
-                        : null,
-                    onHome: () => go(_settings.engine.home),
-                    onNewTab: () => _tabs.open(private: private),
-                    onTabs: () => _push(TabsPage(startPrivate: private)),
-                    onMenu: () => _menu(tab),
+                  TabSwipe(
+                    enabled: settings.swipeTabs && !_editing,
+                    canSwitch: canSwitch,
+                    onSwitch: switchTab,
+                    onSwipeUp: () => _push(TabsPage(startPrivate: private)),
+                    child: _Toolbar(
+                      tab: tab,
+                      tabCount: private
+                          ? tabs.private.length
+                          : tabs.normal.length,
+                      onBack: tab != null && tab.canGoBack && !tab.isStartPage
+                          ? () => _engine.back(tab.id)
+                          : null,
+                      onHome: () => go(_settings.engine.home),
+                      onNewTab: () => _tabs.open(private: private),
+                      onTabs: () => _push(TabsPage(startPrivate: private)),
+                      onMenu: () => _menu(tab),
+                    ),
                   ),
               ],
             ),

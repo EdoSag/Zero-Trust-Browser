@@ -3510,6 +3510,606 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Sites and tabs that use it go back to the default.'**
   String get identityDeleteExplain;
+
+  /// No description provided for @gesturesSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Gestures'**
+  String get gesturesSection;
+
+  /// No description provided for @swipeTabs.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe to switch tabs'**
+  String get swipeTabs;
+
+  /// No description provided for @swipeTabsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Swipe the address bar or the bottom bar sideways for the next tab, or the bottom bar up to see all tabs'**
+  String get swipeTabsSub;
+
+  /// No description provided for @pullToRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Pull down to reload'**
+  String get pullToRefresh;
+
+  /// No description provided for @pullToRefreshSub.
+  ///
+  /// In en, this message translates to:
+  /// **'At the top of a page, pull down to load it again'**
+  String get pullToRefreshSub;
+
+  /// No description provided for @pageBrokenTurnOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Page not working? Turn off blocking here'**
+  String get pageBrokenTurnOff;
+
+  /// No description provided for @blockedOnPageTap.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to see what was blocked'**
+  String get blockedOnPageTap;
+
+  /// No description provided for @blockedRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 request} other{{count} requests}}'**
+  String blockedRequests(int count);
+
+  /// No description provided for @allowHost.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get allowHost;
+
+  /// No description provided for @allowHostSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow lets that address load on every site. Undo it in Settings, Your block rules.'**
+  String get allowHostSub;
+
+  /// No description provided for @safeBrowsing.
+  ///
+  /// In en, this message translates to:
+  /// **'Warn about dangerous sites'**
+  String get safeBrowsing;
+
+  /// No description provided for @safeBrowsingSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Phishing and malware sites, from a list checked on your phone. Updated daily.'**
+  String get safeBrowsingSub;
+
+  /// No description provided for @safeBrowsingSubDated.
+  ///
+  /// In en, this message translates to:
+  /// **'Phishing and malware sites, checked on your phone. List from {date}; tap to check for a newer one.'**
+  String safeBrowsingSubDated(String date);
+
+  /// No description provided for @checkingSafetyList.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking for a newer list of dangerous sites…'**
+  String get checkingSafetyList;
+
+  /// No description provided for @safetyListUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'List of dangerous sites updated'**
+  String get safetyListUpdated;
+
+  /// No description provided for @safetyListUpToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'The list of dangerous sites is up to date'**
+  String get safetyListUpToDate;
+
+  /// No description provided for @unsafePhishingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Deceptive site ahead'**
+  String get unsafePhishingTitle;
+
+  /// No description provided for @unsafePhishingBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This site is known for tricking people into giving away passwords, card numbers or codes.'**
+  String get unsafePhishingBody;
+
+  /// No description provided for @unsafeMalwareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This site may harm your phone'**
+  String get unsafeMalwareTitle;
+
+  /// No description provided for @unsafeMalwareBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This site is known for spreading harmful apps and files.'**
+  String get unsafeMalwareBody;
+
+  /// No description provided for @unsafeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to safety'**
+  String get unsafeBack;
+
+  /// No description provided for @unsafeDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get unsafeDetails;
+
+  /// No description provided for @unsafeDetailsBody.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.'**
+  String get unsafeDetailsBody;
+
+  /// No description provided for @unsafeProceed.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the site anyway (not safe)'**
+  String get unsafeProceed;
+
+  /// No description provided for @downloadWarnDangerousSite.
+  ///
+  /// In en, this message translates to:
+  /// **'This file comes from a site known for phishing or malware.'**
+  String get downloadWarnDangerousSite;
+
+  /// No description provided for @searchDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Search downloads'**
+  String get searchDownloads;
+
+  /// No description provided for @selectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get selectAll;
+
+  /// No description provided for @removeFromList.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from list'**
+  String get removeFromList;
+
+  /// No description provided for @selectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String selectedCount(int count);
+
+  /// No description provided for @clearDownloadList.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear list (keep files)'**
+  String get clearDownloadList;
+
+  /// No description provided for @clearDownloadListSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The list of finished downloads is cleared. The files stay on your phone, in the Files app. Private downloads stay on the list.'**
+  String get clearDownloadListSub;
+
+  /// No description provided for @deleteFilesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Delete 1 file?} other{Delete {count} files?}}'**
+  String deleteFilesTitle(int count);
+
+  /// No description provided for @deleteFilesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'They are deleted from your phone. Unfinished downloads are canceled.'**
+  String get deleteFilesSub;
+
+  /// No description provided for @renameFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get renameFile;
+
+  /// No description provided for @couldntRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t rename the file'**
+  String get couldntRename;
+
+  /// No description provided for @kindImages.
+  ///
+  /// In en, this message translates to:
+  /// **'Images'**
+  String get kindImages;
+
+  /// No description provided for @kindVideo.
+  ///
+  /// In en, this message translates to:
+  /// **'Videos'**
+  String get kindVideo;
+
+  /// No description provided for @kindAudio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get kindAudio;
+
+  /// No description provided for @kindDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get kindDocuments;
+
+  /// No description provided for @kindArchives.
+  ///
+  /// In en, this message translates to:
+  /// **'Archives'**
+  String get kindArchives;
+
+  /// No description provided for @kindApps.
+  ///
+  /// In en, this message translates to:
+  /// **'Apps'**
+  String get kindApps;
+
+  /// No description provided for @kindOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get kindOther;
+
+  /// No description provided for @downloadsUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 download} other{{count} downloads}} · {size} on your phone'**
+  String downloadsUsed(int count, String size);
+
+  /// No description provided for @noMatchingDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'No downloads match'**
+  String get noMatchingDownloads;
+
+  /// No description provided for @waitingWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for Wi-Fi'**
+  String get waitingWifi;
+
+  /// No description provided for @downloadWifiOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Download on Wi-Fi only'**
+  String get downloadWifiOnly;
+
+  /// No description provided for @downloadWifiOnlySub.
+  ///
+  /// In en, this message translates to:
+  /// **'On mobile data, downloads wait and start on Wi-Fi'**
+  String get downloadWifiOnlySub;
+
+  /// No description provided for @downloadsAtOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'Downloads at the same time'**
+  String get downloadsAtOnce;
+
+  /// No description provided for @downloadsAtOnceValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{One at a time} other{Up to {count}}}'**
+  String downloadsAtOnceValue(int count);
+
+  /// No description provided for @saveDownloadsTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Save downloads to'**
+  String get saveDownloadsTo;
+
+  /// No description provided for @phoneDownloadsFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'The phone\'s Downloads folder'**
+  String get phoneDownloadsFolder;
+
+  /// No description provided for @chooseAnotherFolder.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose another folder'**
+  String get chooseAnotherFolder;
+
+  /// No description provided for @usePhoneDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Use the phone\'s Downloads folder'**
+  String get usePhoneDownloads;
+
+  /// No description provided for @autoDeleteDownloads.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete old downloads'**
+  String get autoDeleteDownloads;
+
+  /// No description provided for @autoDeleteDownloadsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Finished downloads still on the list are deleted from your phone after this time. Files you removed from the list stay.'**
+  String get autoDeleteDownloadsSub;
+
+  /// No description provided for @autoDeleteDownloadsValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =0{Never delete} =1{After 1 day} other{After {days} days}}'**
+  String autoDeleteDownloadsValue(int days);
+
+  /// No description provided for @downloadVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Download vault'**
+  String get downloadVault;
+
+  /// No description provided for @vaultUnlockReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Unlock the download vault'**
+  String get vaultUnlockReason;
+
+  /// No description provided for @vaultLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'The vault is locked. Files in it are encrypted inside ZT Browser, on this phone only.'**
+  String get vaultLocked;
+
+  /// No description provided for @vaultExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'Encrypted inside ZT Browser. The Files app and other apps can\'t see these files, and they are never synced or backed up.'**
+  String get vaultExplain;
+
+  /// No description provided for @vaultNoScreenLock.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a screen lock on your phone so the vault asks for it.'**
+  String get vaultNoScreenLock;
+
+  /// No description provided for @vaultEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet. Move a download here from its menu on the Downloads page, or add files from your phone.'**
+  String get vaultEmpty;
+
+  /// No description provided for @addFromPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Add from phone'**
+  String get addFromPhone;
+
+  /// No description provided for @addToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Add files to the vault'**
+  String get addToVault;
+
+  /// No description provided for @vaultMoveFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Move'**
+  String get vaultMoveFiles;
+
+  /// No description provided for @vaultMoveFilesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The files are deleted from where they are now'**
+  String get vaultMoveFilesSub;
+
+  /// No description provided for @vaultCopyFiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get vaultCopyFiles;
+
+  /// No description provided for @vaultCopyFilesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'The files also stay where they are now'**
+  String get vaultCopyFilesSub;
+
+  /// No description provided for @vaultAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 file added to the vault} other{{count} files added to the vault}}'**
+  String vaultAdded(int count);
+
+  /// No description provided for @vaultAddedKept.
+  ///
+  /// In en, this message translates to:
+  /// **'{added, plural, =1{1 file added} other{{added} files added}}. The phone didn\'t let ZT Browser delete {kept, plural, =1{1 original} other{{kept} originals}}: delete them in the Files app.'**
+  String vaultAddedKept(int added, int kept);
+
+  /// No description provided for @moveToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to vault'**
+  String get moveToVault;
+
+  /// No description provided for @movedToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is in the vault'**
+  String movedToVault(String name);
+
+  /// No description provided for @couldntMoveToVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t move the file to the vault'**
+  String get couldntMoveToVault;
+
+  /// No description provided for @openVault.
+  ///
+  /// In en, this message translates to:
+  /// **'Open vault'**
+  String get openVault;
+
+  /// No description provided for @moveToPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to phone\'s Downloads'**
+  String get moveToPhone;
+
+  /// No description provided for @movedToPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved {name} to Downloads'**
+  String movedToPhone(String name);
+
+  /// No description provided for @deletedFromVault.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} is deleted from the vault for good.'**
+  String deletedFromVault(String name);
+
+  /// No description provided for @sendFileTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to…'**
+  String get sendFileTo;
+
+  /// No description provided for @sendFileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send {name}'**
+  String sendFileTitle(String name);
+
+  /// No description provided for @sendToNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'A note in ZT Notes'**
+  String get sendToNotes;
+
+  /// No description provided for @sendToNotesSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Into a new note, encrypted by ZT Notes'**
+  String get sendToNotesSub;
+
+  /// No description provided for @sendFileEncrypted.
+  ///
+  /// In en, this message translates to:
+  /// **'End-to-end encrypted. Only ZT Browser there can open it.'**
+  String get sendFileEncrypted;
+
+  /// No description provided for @fileTooBigToSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Files over 20 MB can\'t be sent to devices'**
+  String get fileTooBigToSend;
+
+  /// No description provided for @notesNotInstalled.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Notes isn\'t on this phone'**
+  String get notesNotInstalled;
+
+  /// No description provided for @notesCantTakeFile.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Notes can\'t take this kind of file yet'**
+  String get notesCantTakeFile;
+
+  /// No description provided for @sendingFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending {name}…'**
+  String sendingFile(String name);
+
+  /// No description provided for @sentFileToDevice.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent {name} to {device}'**
+  String sentFileToDevice(String name, String device);
+
+  /// No description provided for @sentFromDevices.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent from your devices'**
+  String get sentFromDevices;
+
+  /// No description provided for @sentFileFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From {device} · {size}'**
+  String sentFileFrom(String device, String size);
+
+  /// No description provided for @dismissSentFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss (deletes it from your account)'**
+  String get dismissSentFile;
+
+  /// Button and menu item: fill the one-time sign-in code from ZT Authenticator
+  ///
+  /// In en, this message translates to:
+  /// **'Fill code'**
+  String get fillCode;
+
+  /// Subtitle of the Fill code menu item
+  ///
+  /// In en, this message translates to:
+  /// **'From ZT Authenticator'**
+  String get fillCodeSub;
+
+  /// Bar above the toolbar when the page has a one-time code field
+  ///
+  /// In en, this message translates to:
+  /// **'This page asks for a sign-in code'**
+  String get fillCodeAsked;
+
+  /// No description provided for @fillCodeFilled.
+  ///
+  /// In en, this message translates to:
+  /// **'Code filled in'**
+  String get fillCodeFilled;
+
+  /// No description provided for @fillCodeMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Install ZT Authenticator to fill codes'**
+  String get fillCodeMissing;
+
+  /// No description provided for @fillCodeExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The code ran out before it arrived. Try again.'**
+  String get fillCodeExpired;
+
+  /// No description provided for @fillCodeInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'ZT Authenticator didn\'t send a code'**
+  String get fillCodeInvalid;
+
+  /// No description provided for @fillCodeMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'The page changed, so the code wasn\'t filled in'**
+  String get fillCodeMoved;
+
+  /// No description provided for @fillCodeNoField.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t find where the code goes. Tap the code field and try again.'**
+  String get fillCodeNoField;
+
+  /// No description provided for @fillCodeUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Fill code doesn\'t work here'**
+  String get fillCodeUnavailable;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

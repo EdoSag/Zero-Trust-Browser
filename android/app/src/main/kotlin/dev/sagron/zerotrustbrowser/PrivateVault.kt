@@ -71,8 +71,12 @@ object PrivateVault {
      * dropped and downloaded again). [finish] seals the last chunk; [close]
      * without it keeps only whole chunks, ready to resume.
      */
-    class Writer(private val file: File, resume: Boolean) : OutputStream() {
-        private val secret = key()
+    class Writer(
+        private val file: File,
+        resume: Boolean,
+        /** The private session's key; the download vault (B39) passes its own. */
+        private val secret: SecretKey = key(),
+    ) : OutputStream() {
         private val prefix = ByteArray(8)
         private val raf: RandomAccessFile
         private val buffer = ByteArray(CHUNK)
@@ -141,7 +145,7 @@ object PrivateVault {
     }
 
     /** Reads a sealed vault file back as plain bytes. */
-    fun reader(file: File): InputStream = Reader(file, key())
+    fun reader(file: File, secret: SecretKey = key()): InputStream = Reader(file, secret)
 
     private class Reader(file: File, private val secret: SecretKey) : FilterInputStream(null) {
         private val raf = RandomAccessFile(file, "r")

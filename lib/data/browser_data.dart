@@ -66,6 +66,16 @@ final sentToMeProvider = StreamProvider<List<SentTab>>((ref) async* {
   );
 });
 
+/// B40: files other devices sent to this one, oldest first.
+final sentFilesToMeProvider = StreamProvider<List<SentFile>>((ref) async* {
+  final String me = await ref.watch(ztDeviceIdProvider.future);
+  yield* _watch(ref, BrowserCollections.sentFiles).map(
+    (List<SentFile> all) =>
+        all.where((SentFile f) => f.toDevice == me).toList()
+          ..sort((SentFile a, SentFile b) => a.sentAt.compareTo(b.sentAt)),
+  );
+});
+
 /// This phone's name for other devices ("Pixel 8"), from the engine.
 final deviceNameProvider = FutureProvider<String>(
   (ref) async => await ref.read(browserEngineProvider).deviceName(),
@@ -278,6 +288,54 @@ class BrowserData {
   Future<void> dismissSentTab(String id) async {
     final (SyncController sync, _) = await _open();
     await BrowserCollections.sentTabs.delete(sync, id);
+  }
+
+  /// B40: sends a file to another of the account's devices. It is
+  /// encrypted on this phone as an attachment (up to
+  /// [ZtAttachments.defaultMaxBytes]); only the receiving device's ZT
+  /// Browser can open it. Throws [AttachmentTooLarge] when it's too big.
+  Future<void> sendFile(
+    DeviceTabs to,
+    Uint8List bytes, {
+    required String name,
+    required String mime,
+  }) async {
+    final String me = await ref.read(ztDeviceIdProvider.future);
+    final String from = await ref.read(deviceNameProvider.future);
+    final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+    final ZtAttachmentRef file = await files.put(
+      bytes,
+      mimeType: mime,
+      name: name,
+    );
+    final (SyncController sync, LocalItemStore store) = await _open();
+    await BrowserCollections.sentFiles.save(
+      sync,
+      store,
+      SentFile(
+        id: newItemId(),
+        file: file,
+        fromDevice: me,
+        fromName: from,
+        toDevice: to.deviceId,
+        sentAt: DateTime.now(),
+      ),
+    );
+  }
+
+  /// B40: the bytes of a file sent to this device.
+  Future<Uint8List> readSentFile(SentFile f) async {
+    final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+    return files.read(f.file);
+  }
+
+  /// B40: a received file was saved or dismissed: the item and the
+  /// encrypted file are deleted everywhere.
+  Future<void> dismissSentFile(SentFile f) async {
+    final ZtAttachments files = await ref.read(ztAttachmentsProvider.future);
+    await files.delete(f.file);
+    final (SyncController sync, _) = await _open();
+    await BrowserCollections.sentFiles.delete(sync, f.id);
   }
 
   // ---- History ------------------------------------------------------------

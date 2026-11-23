@@ -2,4 +2,6 @@
 <!-- Plain copies of private downloads, made only to open or share one (B33). -->
 <paths>
     <cache-path name="private" path="private-open/" />
+    <!-- Plain copies of files in the download vault, made only to open or share one (B39). -->
+    <cache-path name="vault" path="vault-open/" />
 </paths>

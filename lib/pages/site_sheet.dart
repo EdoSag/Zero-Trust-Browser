@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:zerotrust_browser/browser/address.dart';
 import 'package:zerotrust_browser/browser/apply_settings.dart';
+import 'package:zerotrust_browser/browser/filter_lists.dart';
 import 'package:zerotrust_browser/browser/tabs.dart';
 import 'package:zerotrust_browser/data/browser_data.dart';
 import 'package:zerotrust_browser/data/models.dart';
@@ -9,8 +10,8 @@ import 'package:zerotrust_browser/engine/engine.dart';
 import 'package:zerotrust_browser/l10n/l10n.dart';
 import 'package:zerotrust_browser/pages/site_permissions_page.dart';
 
-/// The shield in the address bar: is the connection secure, how much was
-/// blocked, and protection on or off for this site.
+/// The shield in the address bar: is the connection secure, what was
+/// blocked on this page (B-7), and protection on or off for this site.
 Future<void> showSiteSheet(
   BuildContext context,
   WidgetRef ref,
@@ -33,6 +34,40 @@ Future<void> showSiteSheet(
         final bool protectedHere =
             s.blockTrackers && !s.allowedSites.contains(site);
         final TextTheme text = Theme.of(context).textTheme;
+
+        /// Blocking on or off for this whole site, then the page again.
+        Future<void> setProtection({required bool on}) async {
+          final List<String> allowed = <String>[
+            ...s.allowedSites.where((String x) => x != site),
+            if (!on) site,
+          ];
+          final BrowserSettings next = s.copyWith(allowedSites: allowed);
+          await ref.read(browserDataProvider).saveSettings(next);
+          await applySettings(engine, next);
+          await engine.reload(tab.id);
+        }
+
+        /// One blocked host allowed on every site (the B30 rules), then
+        /// the page again.
+        Future<void> allowHost(String blockedHost) async {
+          final BrowserSettings now = ref.read(browserSettingsProvider);
+          await ref
+              .read(browserDataProvider)
+              .saveSettings(
+                now.copyWith(
+                  unblockedHosts: <String>{
+                    ...now.unblockedHosts,
+                    blockedHost,
+                  }.toList(),
+                  blockedHosts: now.blockedHosts
+                      .where((String h) => h != blockedHost)
+                      .toList(),
+                ),
+              );
+          await ref.read(userBlockRulesProvider).apply();
+          await engine.reload(tab.id);
+        }
+
         return SafeArea(
           child: SingleChildScrollView(
             child: Column(
@@ -58,10 +93,20 @@ Future<void> showSiteSheet(
                         : l.connectionNotSecureSub,
                   ),
                 ),
-                ListTile(
-                  leading: const Icon(Icons.shield_outlined),
-                  title: Text(l.blockedOnPage(live.blocked)),
-                  subtitle: Text(l.blockedOnPageSub),
+                // B-7: one tap from a broken page to a working one.
+                if (protectedHere && live.blocked > 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => setProtection(on: false),
+                      icon: const Icon(Icons.build_outlined),
+                      label: Text(l.pageBrokenTurnOff),
+                    ),
+                  ),
+                BlockedOnPage(
+                  tabId: live.id,
+                  count: live.blocked,
+                  onAllow: allowHost,
                 ),
                 if (s.blockTrackers)
                   SwitchListTile(
@@ -69,18 +114,7 @@ Future<void> showSiteSheet(
                     title: Text(l.protectionOn(site)),
                     subtitle: Text(l.protectionSub),
                     value: protectedHere,
-                    onChanged: (bool on) async {
-                      final List<String> allowed = <String>[
-                        ...s.allowedSites.where((String x) => x != site),
-                        if (!on) site,
-                      ];
-                      final BrowserSettings next = s.copyWith(
-                        allowedSites: allowed,
-                      );
-                      await ref.read(browserDataProvider).saveSettings(next);
-                      await applySettings(engine, next);
-                      await engine.reload(tab.id);
-                    },
+                    onChanged: (bool on) => setProtection(on: on),
                   )
                 else
                   ListTile(
@@ -148,4 +182,100 @@ Future<void> showSiteSheet(
       },
     ),
   );
+}
+
+/// Blocked hosts, most requests first; ties by name.
+List<MapEntry<String, int>> sortBlocked(Map<String, int> hosts) =>
+    hosts.entries.toList()
+      ..sort((MapEntry<String, int> a, MapEntry<String, int> b) {
+        final int byCount = b.value.compareTo(a.value);
+        return byCount != 0 ? byCount : a.key.compareTo(b.key);
+      });
+
+/// B-7: "N blocked on this page", opening to the list of what was blocked.
+/// A host can be allowed from here when the page needs it.
+class BlockedOnPage extends ConsumerWidget {
+  const BlockedOnPage({
+    super.key,
+    required this.tabId,
+    required this.count,
+    required this.onAllow,
+  });
+
+  final String tabId;
+
+  /// Requests blocked so far; the list is read again when it changes.
+  final int count;
+  final Future<void> Function(String host) onAllow;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AppL10n l = context.l10n;
+    if (count == 0) {
+      return ListTile(
+        leading: const Icon(Icons.shield_outlined),
+        title: Text(l.blockedOnPage(0)),
+        subtitle: Text(l.blockedOnPageSub),
+      );
+    }
+    return ExpansionTile(
+      leading: const Icon(Icons.shield_outlined),
+      title: Text(l.blockedOnPage(count)),
+      subtitle: Text(l.blockedOnPageTap),
+      children: <Widget>[
+        FutureBuilder<Map<String, int>>(
+          key: ValueKey<int>(count),
+          future: ref.read(browserEngineProvider).blockedHosts(tabId),
+          builder:
+              (BuildContext context, AsyncSnapshot<Map<String, int>> snap) {
+                final Map<String, int>? hosts = snap.data;
+                if (hosts == null) {
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (hosts.isEmpty) {
+                  return ListTile(title: Text(l.blockedOnPageSub));
+                }
+                return Column(
+                  children: <Widget>[
+                    for (final MapEntry<String, int> e in sortBlocked(hosts))
+                      ListTile(
+                        dense: true,
+                        contentPadding: const EdgeInsetsDirectional.only(
+                          start: 72,
+                          end: 8,
+                        ),
+                        title: Text(
+                          e.key,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textDirection: TextDirection.ltr,
+                        ),
+                        subtitle: Text(l.blockedRequests(e.value)),
+                        trailing: TextButton(
+                          onPressed: () => onAllow(e.key),
+                          child: Text(l.allowHost),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsetsDirectional.fromSTEB(
+                        72,
+                        0,
+                        16,
+                        12,
+                      ),
+                      child: Text(
+                        l.allowHostSub,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                );
+              },
+        ),
+      ],
+    );
+  }
 }

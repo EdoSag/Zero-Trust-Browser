@@ -23,7 +23,8 @@ class SearchWidgetProvider : AppWidgetProvider() {
         private const val ACTION = "dev.sagron.zerotrustbrowser.WIDGET"
         private const val EXTRA = "widget_action"
         // "downloads": a tap on a download notification opens the Downloads page.
-        private val KNOWN = setOf("search", "voice", "private", "qr", "downloads")
+        // "fire": the Fire widget (W13, FireWidgetProvider).
+        private val KNOWN = setOf("search", "voice", "private", "qr", "downloads", "fire")
 
         /** The widget button behind [intent], or null when it isn't a widget tap. */
         fun actionFrom(intent: Intent?): String? {

@@ -114,6 +114,19 @@ class BrowserEngine {
   Future<void> closeTab(String tabId) =>
       _call<void>('closeTab', <String, Object?>{'tabId': tabId});
 
+  /// Windows: where tab [tabId]'s page sits in the window, in physical
+  /// pixels, and whether it shows. The page is a native window over the
+  /// app, so Dart places it (TabView) and hides it under sheets and menus.
+  Future<void> setTabBounds(String tabId, Rect rect, {required bool visible}) =>
+      _call<void>('setTabBounds', <String, Object?>{
+        'tabId': tabId,
+        'x': rect.left.round(),
+        'y': rect.top.round(),
+        'width': rect.width.round(),
+        'height': rect.height.round(),
+        'visible': visible,
+      });
+
   Future<void> load(String tabId, String url) =>
       _call<void>('load', <String, Object?>{'tabId': tabId, 'url': url});
 
@@ -184,8 +197,10 @@ class BrowserEngine {
     bool fingerprinting = true,
     List<String> javascriptOff = const <String>[],
     bool stripTracking = true,
+    bool safeBrowsing = true,
   }) => _call<void>('setPrivacy', <String, Object?>{
     'stripTracking': stripTracking,
+    'safeBrowsing': safeBrowsing,
     // The rules for links tapped on a page: one list, kept in Dart.
     'trackingParams': trackingParams.toList(),
     'trackingPrefixes': trackingPrefixes,
@@ -200,16 +215,49 @@ class BrowserEngine {
     'javascriptOff': javascriptOff,
   });
 
-  /// Page text size (percent) and darkening of pages in dark mode.
-  Future<void> setDisplay({required int textZoom, required bool darkPages}) =>
-      _call<void>('setDisplay', <String, Object?>{
-        'textZoom': textZoom,
-        'darkPages': darkPages,
-      });
+  /// Page text size (percent), darkening of pages in dark mode and pull
+  /// down to reload (B28).
+  Future<void> setDisplay({
+    required int textZoom,
+    required bool darkPages,
+    bool pullToRefresh = true,
+  }) => _call<void>('setDisplay', <String, Object?>{
+    'textZoom': textZoom,
+    'darkPages': darkPages,
+    'pullToRefresh': pullToRefresh,
+  });
 
   /// The tab now on screen: the engine keeps it, and unloads old ones.
   Future<void> select(String tabId) =>
       _call<void>('select', <String, Object?>{'tabId': tabId});
+
+  /// B-1: the phishing and malware list: its date, how many sites, and
+  /// where a downloaded list goes.
+  Future<Map<Object?, Object?>> safetyInfo() async =>
+      await _call<Map<Object?, Object?>>('safetyInfo') ??
+      const <Object?, Object?>{};
+
+  /// Reads the list again after a download.
+  Future<void> reloadSafetyList() => _call<void>('reloadSafetyList');
+
+  /// The warning page's texts, in the app's language.
+  Future<void> setSafetyLabels(Map<String, String> labels) =>
+      _call<void>('safetyLabels', <String, Object?>{'labels': labels});
+
+  /// B-7: the hosts blocked on [tabId]'s page now, with how many requests
+  /// each.
+  Future<Map<String, int>> blockedHosts(String tabId) async {
+    final Map<Object?, Object?>? m = await _call<Map<Object?, Object?>>(
+      'blockedHosts',
+      <String, Object?>{'tabId': tabId},
+    );
+    return <String, int>{
+      if (m != null)
+        for (final MapEntry<Object?, Object?> e in m.entries)
+          if (e.key is String && e.value is int)
+            e.key! as String: e.value! as int,
+    };
+  }
 
   Future<int> blocklistSize() async => await _call<int>('blocklistSize') ?? 0;
 
@@ -351,6 +399,202 @@ class BrowserEngine {
     }
   }
 
+  /// B36: takes downloads off the list. Files in the phone's storage stay
+  /// where they are; private ones, which live only in the app, go.
+  Future<void> forgetDownloads(List<String> keys) =>
+      _call<void>('forgetDownloads', <String, Object?>{'keys': keys});
+
+  /// B36: renames a finished download; false when it couldn't.
+  Future<bool> renameDownload(String key, String name) async {
+    try {
+      return await _call<bool>('renameDownload', <String, Object?>{
+            'key': key,
+            'name': name,
+          }) ??
+          false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  /// B38: Wi-Fi only, how many at once and auto-delete after N days (0
+  /// keeps files).
+  Future<void> setDownloadRules({
+    required bool wifiOnly,
+    required int maxParallel,
+    required int autoDeleteDays,
+  }) => _call<void>('setDownloadRules', <String, Object?>{
+    'wifiOnly': wifiOnly,
+    'maxParallel': maxParallel,
+    'autoDeleteDays': autoDeleteDays,
+  });
+
+  /// B38: the folder downloads are saved to (one the person chose, such as
+  /// on an SD card), or null for the phone's Downloads.
+  Future<String?> downloadFolder() async {
+    try {
+      return await _call<String>('downloadFolder');
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// B38: the system folder picker; the chosen folder's name, or null when
+  /// the person backed out.
+  Future<String?> pickDownloadFolder() async {
+    try {
+      return await _call<String>('pickDownloadFolder');
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// B38: back to the phone's Downloads folder.
+  Future<void> clearDownloadFolder() => _call<void>('clearDownloadFolder');
+
+  // ---- B39: the download vault ----------------------------------------
+
+  Future<List<Map<Object?, Object?>>> vaultList() async {
+    try {
+      return (await _call<List<Object?>>('vaultList') ?? const <Object?>[])
+          .whereType<Map<Object?, Object?>>()
+          .toList();
+    } on PlatformException {
+      return const <Map<Object?, Object?>>[];
+    }
+  }
+
+  /// Moves a finished download into the vault (and off the phone).
+  Future<bool> vaultAddDownload(String key) =>
+      _bool('vaultAddDownload', <String, Object?>{'key': key});
+
+  /// The system file picker; picked files go into the vault. With [move]
+  /// the originals are deleted where the phone allows it. Returns how many
+  /// were added and how many originals stayed.
+  Future<({int added, int kept})> vaultImport({required bool move}) async {
+    try {
+      final Map<Object?, Object?>? r = await _call<Map<Object?, Object?>>(
+        'vaultImport',
+        <String, Object?>{'move': move},
+      );
+      return (
+        added: (r?['added'] as num?)?.toInt() ?? 0,
+        kept: (r?['kept'] as num?)?.toInt() ?? 0,
+      );
+    } on PlatformException {
+      return (added: 0, kept: 0);
+    }
+  }
+
+  Future<DownloadResult> vaultOpen(String id) => _vaultAction('vaultOpen', id);
+
+  Future<DownloadResult> vaultShare(String id) =>
+      _vaultAction('vaultShare', id);
+
+  Future<DownloadResult> _vaultAction(String method, String id) async {
+    try {
+      return DownloadResult.parse(
+        await _call<Object>(method, <String, Object?>{'id': id}),
+      );
+    } on PlatformException {
+      return DownloadResult.failed;
+    }
+  }
+
+  /// Takes a file out of the vault into the phone's Downloads.
+  Future<bool> vaultMoveToPhone(String id) =>
+      _bool('vaultMoveToPhone', <String, Object?>{'id': id});
+
+  Future<bool> vaultRename(String id, String name) =>
+      _bool('vaultRename', <String, Object?>{'id': id, 'name': name});
+
+  Future<void> vaultDelete(String id) async {
+    try {
+      await _call<void>('vaultDelete', <String, Object?>{'id': id});
+    } on PlatformException {
+      // Already gone.
+    }
+  }
+
+  /// The vault was left or locked: plain copies made to open files go.
+  Future<void> vaultClose() async {
+    try {
+      await _call<void>('vaultClose');
+    } on PlatformException {
+      // Nothing to clean.
+    }
+  }
+
+  Future<bool> _bool(String method, Map<String, Object?> args) async {
+    try {
+      return await _call<bool>(method, args) ?? false;
+    } on PlatformException {
+      return false;
+    }
+  }
+
+  // ---- B40: send a download on --------------------------------------
+
+  /// ZT Notes' app id, for "Send to ZT Notes".
+  static const String notesPackage = 'dev.sagron.zerotrustnotes';
+
+  /// Hands a finished download straight to [package] (ZT Notes).
+  Future<SendResult> sendDownloadTo(String key, String package) => _send(
+    'sendDownloadTo',
+    <String, Object?>{'key': key, 'package': package},
+  );
+
+  /// Hands a file from the vault straight to [package] (ZT Notes).
+  Future<SendResult> vaultSendTo(String id, String package) =>
+      _send('vaultSendTo', <String, Object?>{'id': id, 'package': package});
+
+  Future<SendResult> _send(String method, Map<String, Object?> args) async {
+    try {
+      return SendResult.parse(await _call<Object>(method, args));
+    } on PlatformException {
+      return SendResult.failed;
+    }
+  }
+
+  /// The bytes of a finished download, or null when it is over [max] bytes
+  /// or can't be read.
+  Future<Uint8List?> downloadBytes(String key, int max) =>
+      _bytes('downloadBytes', <String, Object?>{'key': key, 'max': max});
+
+  /// The bytes of a file in the vault, or null when it is over [max].
+  Future<Uint8List?> vaultBytes(String id, int max) =>
+      _bytes('vaultBytes', <String, Object?>{'id': id, 'max': max});
+
+  Future<Uint8List?> _bytes(String method, Map<String, Object?> args) async {
+    try {
+      return await _call<Uint8List>(method, args);
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// Saves a received file into Downloads (or the picked folder) and lists
+  /// it with the downloads.
+  Future<bool> saveBytesToDownloads(
+    String name,
+    String mime,
+    Uint8List bytes,
+  ) => _bool('saveBytesToDownloads', <String, Object?>{
+    'name': name,
+    'mime': mime,
+    'bytes': bytes,
+  });
+
+  /// W13: the links the home screen quick links widget shows (JSON from
+  /// widgetLinksJson; "[]" clears them).
+  Future<void> setWidgetLinks(String json) async {
+    try {
+      await _call<void>('setWidgetLinks', <String, Object?>{'links': json});
+    } on PlatformException {
+      // No widget support: nothing to update.
+    }
+  }
+
   /// The system print screen, which can also save the page as a PDF.
   Future<void> printPage(String tabId, String title) =>
       _call<void>('print', <String, Object?>{'tabId': tabId, 'title': title});
@@ -488,6 +732,18 @@ class BrowserEngine {
         'phone': phone,
       }) ??
       false;
+
+  /// Whether ZT Authenticator (signed like the other Zero-Trust apps) is on
+  /// this phone and can hand out one-time codes. False off Android.
+  Future<bool> authenticatorInstalled() async =>
+      await _call<bool>('authenticatorInstalled') ?? false;
+
+  /// "Fill code": opens ZT Authenticator for the code of the site in
+  /// [tabId], which then goes straight into the page's code field. The
+  /// code itself never comes back here.
+  Future<FillCodeResult> fillCode(String tabId) async => FillCodeResult.parse(
+    await _call<String>('fillCode', <String, Object?>{'tabId': tabId}),
+  );
 
   /// The text selected on the page, or null.
   Future<String?> selection(String tabId) async {
@@ -688,7 +944,71 @@ enum DownloadResult {
   };
 }
 
+/// How handing a file straight to another app went (B40).
+enum SendResult {
+  sent,
+
+  /// The app isn't on this phone.
+  notInstalled,
+
+  /// The app doesn't take this kind of file.
+  unsupported,
+  missing,
+  failed;
+
+  static SendResult parse(Object? v) => switch (v) {
+    'opened' => sent,
+    'notInstalled' => notInstalled,
+    'unsupported' => unsupported,
+    'missing' => missing,
+    _ => failed,
+  };
+}
+
+/// How "Fill code" went.
+enum FillCodeResult {
+  filled,
+
+  /// ZT Authenticator isn't on this phone.
+  missing,
+
+  /// Closed without picking a code.
+  canceled,
+
+  /// The code ran out before it came back.
+  expired,
+
+  /// What came back doesn't look like a code.
+  invalid,
+
+  /// The tab went to another site while the code was picked.
+  moved,
+
+  /// The page has no code field (any more).
+  noField,
+
+  /// Not possible here (no page, or not on Android).
+  unavailable;
+
+  static FillCodeResult parse(Object? v) => switch (v) {
+    'filled' => filled,
+    'missing' => missing,
+    'canceled' => canceled,
+    'expired' => expired,
+    'invalid' => invalid,
+    'moved' => moved,
+    'noField' => noField,
+    _ => unavailable,
+  };
+}
+
 final browserEngineProvider = Provider<BrowserEngine>((ref) => BrowserEngine());
+
+/// Whether ZT Authenticator is installed. Read again when the app comes
+/// back to the front (it may have been installed meanwhile).
+final authenticatorInstalledProvider = FutureProvider<bool>(
+  (ref) => ref.read(browserEngineProvider).authenticatorInstalled(),
+);
 
 /// A download that finished, for a message on the browser screen.
 class DownloadEvent {

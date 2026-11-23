@@ -1191,5 +1191,245 @@
       }
     }
   },
-  "identityDeleteExplain": "Sites and tabs that use it go back to the default."
+  "identityDeleteExplain": "Sites and tabs that use it go back to the default.",
+  "gesturesSection": "Gestures",
+  "swipeTabs": "Swipe to switch tabs",
+  "swipeTabsSub": "Swipe the address bar or the bottom bar sideways for the next tab, or the bottom bar up to see all tabs",
+  "pullToRefresh": "Pull down to reload",
+  "pullToRefreshSub": "At the top of a page, pull down to load it again",
+  "pageBrokenTurnOff": "Page not working? Turn off blocking here",
+  "blockedOnPageTap": "Tap to see what was blocked",
+  "blockedRequests": "{count, plural, =1{1 request} other{{count} requests}}",
+  "@blockedRequests": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "allowHost": "Allow",
+  "allowHostSub": "Allow lets that address load on every site. Undo it in Settings, Your block rules.",
+  "safeBrowsing": "Warn about dangerous sites",
+  "safeBrowsingSub": "Phishing and malware sites, from a list checked on your phone. Updated daily.",
+  "safeBrowsingSubDated": "Phishing and malware sites, checked on your phone. List from {date}; tap to check for a newer one.",
+  "@safeBrowsingSubDated": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "checkingSafetyList": "Checking for a newer list of dangerous sites…",
+  "safetyListUpdated": "List of dangerous sites updated",
+  "safetyListUpToDate": "The list of dangerous sites is up to date",
+  "unsafePhishingTitle": "Deceptive site ahead",
+  "unsafePhishingBody": "This site is known for tricking people into giving away passwords, card numbers or codes.",
+  "unsafeMalwareTitle": "This site may harm your phone",
+  "unsafeMalwareBody": "This site is known for spreading harmful apps and files.",
+  "unsafeBack": "Back to safety",
+  "unsafeDetails": "Details",
+  "unsafeDetailsBody": "ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.",
+  "unsafeProceed": "Open the site anyway (not safe)",
+  "downloadWarnDangerousSite": "This file comes from a site known for phishing or malware.",
+  "searchDownloads": "Search downloads",
+  "selectAll": "Select all",
+  "removeFromList": "Remove from list",
+  "selectedCount": "{count} selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearDownloadList": "Clear list (keep files)",
+  "clearDownloadListSub": "The list of finished downloads is cleared. The files stay on your phone, in the Files app. Private downloads stay on the list.",
+  "deleteFilesTitle": "{count, plural, =1{Delete 1 file?} other{Delete {count} files?}}",
+  "@deleteFilesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deleteFilesSub": "They are deleted from your phone. Unfinished downloads are canceled.",
+  "renameFile": "Rename",
+  "couldntRename": "Couldn't rename the file",
+  "kindImages": "Images",
+  "kindVideo": "Videos",
+  "kindAudio": "Audio",
+  "kindDocuments": "Documents",
+  "kindArchives": "Archives",
+  "kindApps": "Apps",
+  "kindOther": "Other",
+  "downloadsUsed": "{count, plural, =1{1 download} other{{count} downloads}} · {size} on your phone",
+  "@downloadsUsed": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noMatchingDownloads": "No downloads match",
+  "waitingWifi": "Waiting for Wi-Fi",
+  "downloadWifiOnly": "Download on Wi-Fi only",
+  "downloadWifiOnlySub": "On mobile data, downloads wait and start on Wi-Fi",
+  "downloadsAtOnce": "Downloads at the same time",
+  "downloadsAtOnceValue": "{count, plural, =1{One at a time} other{Up to {count}}}",
+  "@downloadsAtOnceValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveDownloadsTo": "Save downloads to",
+  "phoneDownloadsFolder": "The phone's Downloads folder",
+  "chooseAnotherFolder": "Choose another folder",
+  "usePhoneDownloads": "Use the phone's Downloads folder",
+  "autoDeleteDownloads": "Delete old downloads",
+  "autoDeleteDownloadsSub": "Finished downloads still on the list are deleted from your phone after this time. Files you removed from the list stay.",
+  "autoDeleteDownloadsValue": "{days, plural, =0{Never delete} =1{After 1 day} other{After {days} days}}",
+  "@autoDeleteDownloadsValue": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "downloadVault": "Download vault",
+  "vaultUnlockReason": "Unlock the download vault",
+  "vaultLocked": "The vault is locked. Files in it are encrypted inside ZT Browser, on this phone only.",
+  "vaultExplain": "Encrypted inside ZT Browser. The Files app and other apps can't see these files, and they are never synced or backed up.",
+  "vaultNoScreenLock": "Set a screen lock on your phone so the vault asks for it.",
+  "vaultEmpty": "Nothing here yet. Move a download here from its menu on the Downloads page, or add files from your phone.",
+  "addFromPhone": "Add from phone",
+  "addToVault": "Add files to the vault",
+  "vaultMoveFiles": "Move",
+  "vaultMoveFilesSub": "The files are deleted from where they are now",
+  "vaultCopyFiles": "Copy",
+  "vaultCopyFilesSub": "The files also stay where they are now",
+  "vaultAdded": "{count, plural, =1{1 file added to the vault} other{{count} files added to the vault}}",
+  "@vaultAdded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "vaultAddedKept": "{added, plural, =1{1 file added} other{{added} files added}}. The phone didn't let ZT Browser delete {kept, plural, =1{1 original} other{{kept} originals}}: delete them in the Files app.",
+  "@vaultAddedKept": {
+    "placeholders": {
+      "added": {
+        "type": "int"
+      },
+      "kept": {
+        "type": "int"
+      }
+    }
+  },
+  "moveToVault": "Move to vault",
+  "movedToVault": "{name} is in the vault",
+  "@movedToVault": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "couldntMoveToVault": "Couldn't move the file to the vault",
+  "openVault": "Open vault",
+  "moveToPhone": "Move to phone's Downloads",
+  "movedToPhone": "Moved {name} to Downloads",
+  "@movedToPhone": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deletedFromVault": "{name} is deleted from the vault for good.",
+  "@deletedFromVault": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFileTo": "Send to…",
+  "sendFileTitle": "Send {name}",
+  "@sendFileTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sendToNotes": "A note in ZT Notes",
+  "sendToNotesSub": "Into a new note, encrypted by ZT Notes",
+  "sendFileEncrypted": "End-to-end encrypted. Only ZT Browser there can open it.",
+  "fileTooBigToSend": "Files over 20 MB can't be sent to devices",
+  "notesNotInstalled": "ZT Notes isn't on this phone",
+  "notesCantTakeFile": "ZT Notes can't take this kind of file yet",
+  "sendingFile": "Sending {name}…",
+  "@sendingFile": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "sentFileToDevice": "Sent {name} to {device}",
+  "@sentFileToDevice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "sentFromDevices": "Sent from your devices",
+  "sentFileFrom": "From {device} · {size}",
+  "@sentFileFrom": {
+    "placeholders": {
+      "device": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "dismissSentFile": "Dismiss (deletes it from your account)",
+  "fillCode": "Fill code",
+  "@fillCode": {
+    "description": "Button and menu item: fill the one-time sign-in code from ZT Authenticator"
+  },
+  "fillCodeSub": "From ZT Authenticator",
+  "@fillCodeSub": {
+    "description": "Subtitle of the Fill code menu item"
+  },
+  "fillCodeAsked": "This page asks for a sign-in code",
+  "@fillCodeAsked": {
+    "description": "Bar above the toolbar when the page has a one-time code field"
+  },
+  "fillCodeFilled": "Code filled in",
+  "@fillCodeFilled": {},
+  "fillCodeMissing": "Install ZT Authenticator to fill codes",
+  "@fillCodeMissing": {},
+  "fillCodeExpired": "The code ran out before it arrived. Try again.",
+  "@fillCodeExpired": {},
+  "fillCodeInvalid": "ZT Authenticator didn't send a code",
+  "@fillCodeInvalid": {},
+  "fillCodeMoved": "The page changed, so the code wasn't filled in",
+  "@fillCodeMoved": {},
+  "fillCodeNoField": "Couldn't find where the code goes. Tap the code field and try again.",
+  "@fillCodeNoField": {},
+  "fillCodeUnavailable": "Fill code doesn't work here",
+  "@fillCodeUnavailable": {}
 }

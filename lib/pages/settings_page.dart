@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:zero_trust_core/zero_trust_core.dart';
 import 'package:zerotrust_browser/browser/blocklist_updater.dart';
+import 'package:zerotrust_browser/browser/safety_list.dart';
 import 'package:zerotrust_browser/browser/cookie_auto_clear.dart';
 import 'package:zerotrust_browser/browser/identity.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
@@ -29,6 +30,15 @@ final _blocklistProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
   (ref) => ref.read(browserEngineProvider).blocklistInfo(),
 );
 
+final _safetyProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
+  (ref) => ref.read(browserEngineProvider).safetyInfo(),
+);
+
+/// B38: the folder downloads go to; null for the phone's Downloads.
+final _downloadFolderProvider = FutureProvider.autoDispose<String?>(
+  (ref) => ref.read(browserEngineProvider).downloadFolder(),
+);
+
 final _autofillProvider = FutureProvider.autoDispose<Map<Object?, Object?>>(
   (ref) => ref.read(browserEngineProvider).autofillStatus(),
 );
@@ -52,6 +62,9 @@ class BrowserSettingsPage extends ConsumerWidget {
         ref.watch(_blocklistProvider).value ?? const <Object?, Object?>{};
     final int listed = (list['size'] as int?) ?? 0;
     final String listDate = (list['date'] as String?) ?? '';
+    final String? downloadFolder = ref.watch(_downloadFolderProvider).value;
+    final String safetyDate =
+        (ref.watch(_safetyProvider).value?['date'] as String?) ?? '';
     final Map<Object?, Object?> autofill =
         ref.watch(_autofillProvider).value ?? const <Object?, Object?>{};
     final String? passwordManager = autofill['service'] as String?;
@@ -145,6 +158,21 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(l.stripTrackingSub),
           value: s.stripTracking,
           onChanged: (bool v) => save(s.copyWith(stripTracking: v)),
+        ),
+        // B-1. Tap the row to check for a newer list now.
+        ListTile(
+          leading: const Icon(Icons.gpp_maybe_outlined),
+          title: Text(l.safeBrowsing),
+          subtitle: Text(
+            safetyDate.length >= 10
+                ? l.safeBrowsingSubDated(safetyDate.substring(0, 10))
+                : l.safeBrowsingSub,
+          ),
+          onTap: () => _checkSafetyList(context, ref),
+          trailing: Switch(
+            value: s.safeBrowsing,
+            onChanged: (bool v) => save(s.copyWith(safeBrowsing: v)),
+          ),
         ),
         SwitchListTile(
           secondary: const Icon(Icons.fingerprint),
@@ -356,6 +384,21 @@ class BrowserSettingsPage extends ConsumerWidget {
           value: s.backgroundPlay,
           onChanged: (bool v) => save(s.copyWith(backgroundPlay: v)),
         ),
+        _Header(l.gesturesSection),
+        SwitchListTile(
+          secondary: const Icon(Icons.swipe_outlined),
+          title: Text(l.swipeTabs),
+          subtitle: Text(l.swipeTabsSub),
+          value: s.swipeTabs,
+          onChanged: (bool v) => save(s.copyWith(swipeTabs: v)),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.swipe_down_outlined),
+          title: Text(l.pullToRefresh),
+          subtitle: Text(l.pullToRefreshSub),
+          value: s.pullToRefresh,
+          onChanged: (bool v) => save(s.copyWith(pullToRefresh: v)),
+        ),
         _Header(l.downloads),
         SwitchListTile(
           secondary: const Icon(Icons.download_outlined),
@@ -363,6 +406,47 @@ class BrowserSettingsPage extends ConsumerWidget {
           subtitle: Text(l.askBeforeDownloadSub),
           value: s.askBeforeDownload,
           onChanged: (bool v) => save(s.copyWith(askBeforeDownload: v)),
+        ),
+        SwitchListTile(
+          secondary: const Icon(Icons.wifi),
+          title: Text(l.downloadWifiOnly),
+          subtitle: Text(l.downloadWifiOnlySub),
+          value: s.downloadWifiOnly,
+          onChanged: (bool v) => save(s.copyWith(downloadWifiOnly: v)),
+        ),
+        ListTile(
+          leading: const Icon(Icons.stacked_line_chart),
+          title: Text(l.downloadsAtOnce),
+          subtitle: Text(l.downloadsAtOnceValue(s.downloadsAtOnce)),
+          onTap: () => _pickChoice(
+            context,
+            title: l.downloadsAtOnce,
+            current: s.downloadsAtOnce,
+            choices: BrowserSettings.downloadsAtOnceChoices,
+            label: l.downloadsAtOnceValue,
+            onPicked: (int v) => save(s.copyWith(downloadsAtOnce: v)),
+          ),
+        ),
+        ListTile(
+          key: const ValueKey<String>('download-folder'),
+          leading: const Icon(Icons.folder_outlined),
+          title: Text(l.saveDownloadsTo),
+          subtitle: Text(downloadFolder ?? l.phoneDownloadsFolder),
+          onTap: () => _pickDownloadFolder(context, ref, downloadFolder),
+        ),
+        ListTile(
+          leading: const Icon(Icons.auto_delete_outlined),
+          title: Text(l.autoDeleteDownloads),
+          subtitle: Text(l.autoDeleteDownloadsValue(s.autoDeleteDownloadsDays)),
+          onTap: () => _pickChoice(
+            context,
+            title: l.autoDeleteDownloads,
+            explain: l.autoDeleteDownloadsSub,
+            current: s.autoDeleteDownloadsDays,
+            choices: BrowserSettings.autoDeleteDownloadsChoices,
+            label: l.autoDeleteDownloadsValue,
+            onPicked: (int v) => save(s.copyWith(autoDeleteDownloadsDays: v)),
+          ),
         ),
         _Header(l.tabsAndHistory),
         ListTile(
@@ -545,6 +629,80 @@ class BrowserSettingsPage extends ConsumerWidget {
     );
   }
 
+  /// One of a few numbers, as a list of radio buttons.
+  Future<void> _pickChoice(
+    BuildContext context, {
+    required String title,
+    String? explain,
+    required int current,
+    required List<int> choices,
+    required String Function(int) label,
+    required Future<void> Function(int) onPicked,
+  }) async {
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (BuildContext d) => SimpleDialog(
+        title: Text(title),
+        children: <Widget>[
+          if (explain != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+              child: Text(explain),
+            ),
+          RadioGroup<int>(
+            groupValue: current,
+            onChanged: (int? v) => Navigator.of(d).pop(v),
+            child: Column(
+              children: <Widget>[
+                for (final int c in choices)
+                  RadioListTile<int>(value: c, title: Text(label(c))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked == null || picked == current) return;
+    await onPicked(picked);
+  }
+
+  /// B38: a folder of the person's choice (an SD card too), or back to the
+  /// phone's Downloads.
+  Future<void> _pickDownloadFolder(
+    BuildContext context,
+    WidgetRef ref,
+    String? current,
+  ) async {
+    final AppL10n l = context.l10n;
+    final BrowserEngine engine = ref.read(browserEngineProvider);
+    final String? action = current == null
+        ? 'pick'
+        : await showDialog<String>(
+            context: context,
+            builder: (BuildContext d) => SimpleDialog(
+              title: Text(l.saveDownloadsTo),
+              children: <Widget>[
+                SimpleDialogOption(
+                  onPressed: () => Navigator.of(d).pop('pick'),
+                  child: Text(l.chooseAnotherFolder),
+                ),
+                SimpleDialogOption(
+                  onPressed: () => Navigator.of(d).pop('reset'),
+                  child: Text(l.usePhoneDownloads),
+                ),
+              ],
+            ),
+          );
+    if (action == 'pick') {
+      await engine.pickDownloadFolder();
+    } else if (action == 'reset') {
+      await engine.clearDownloadFolder();
+    } else {
+      return;
+    }
+    ref.invalidate(_downloadFolderProvider);
+  }
+
   Future<void> _pickHistory(
     BuildContext context,
     WidgetRef ref,
@@ -692,6 +850,30 @@ class BrowserSettingsPage extends ConsumerWidget {
     if (days != null) {
       await ref.read(tabsProvider.notifier).closeUnused(days);
     }
+  }
+
+  Future<void> _checkSafetyList(BuildContext context, WidgetRef ref) async {
+    final AppL10n l = context.l10n;
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    messenger.showSnackBar(SnackBar(content: Text(l.checkingSafetyList)));
+    final BlocklistCheck result = await ref
+        .read(safetyListUpdaterProvider)
+        .checkIfDue(force: true);
+    // The engine reads a new list in the background.
+    await Future<void>.delayed(const Duration(seconds: 2));
+    ref.invalidate(_safetyProvider);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(switch (result) {
+            BlocklistCheck.updated => l.safetyListUpdated,
+            BlocklistCheck.upToDate ||
+            BlocklistCheck.notDue => l.safetyListUpToDate,
+            BlocklistCheck.failed => l.blocklistFailed,
+          }),
+        ),
+      );
   }
 
   Future<void> _checkBlocklist(BuildContext context, WidgetRef ref) async {

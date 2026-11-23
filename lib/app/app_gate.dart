@@ -89,6 +89,8 @@ class _AppGateState extends ConsumerState<AppGate> with WidgetsBindingObserver {
         // The next account on this phone starts with a clean browser.
         ref.read(tabsProvider.notifier).closeEverything().ignore();
         ref.read(browserEngineProvider).clearBrowsingData().ignore();
+        // The quick links widget showed that account's links (W13).
+        ref.read(browserEngineProvider).setWidgetLinks('[]').ignore();
         // Scripts and what they stored belong to that account too (B41).
         ref.read(browserEngineProvider).clearUserScripts().ignore();
         // Counts not saved yet belong to the account that just left.

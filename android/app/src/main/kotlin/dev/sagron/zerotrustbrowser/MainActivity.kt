@@ -66,6 +66,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     private val main = Handler(Looper.getMainLooper())
     private val io = Executors.newSingleThreadExecutor()
 
+    /** B39: whether the files being picked for the vault are moved (not copied). */
+    private var vaultImportMove = false
+
     /** A link from another app (VIEW, web search, shared text), until Dart takes it. */
     private var pendingUrl: String? = null
 
@@ -110,11 +113,13 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         MediaHub.control = { command -> mediaControl(command) }
         pendingUrl = linkFrom(intent)
         pendingWidgetAction = SearchWidgetProvider.actionFrom(intent)
+        if (pendingWidgetAction == "fire") fireNow()
         Blocker.onLoaded = {
             PageScripts.invalidate()
             for (t in tabs.values) t.refreshScripts()
         }
         Blocker.load(this)
+        SafeBrowsing.load(this)
         UserScripts.onChanged = { for (t in tabs.values) t.refreshUserScripts() }
         // A private profile left over from a crash: nothing may survive it.
         deletePrivateProfileIfUnused()
@@ -125,6 +130,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         val widgetAction = SearchWidgetProvider.actionFrom(intent)
         if (widgetAction != null) {
             pendingWidgetAction = widgetAction
+            if (widgetAction == "fire") fireNow()
             channel?.invokeMethod("openPending", null)
             return
         }
@@ -247,6 +253,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         ZtTab.jsOffSites = sites(call.argument<List<String>>("javascriptOff"))
                         PageScripts.fingerprinting = call.argument<Boolean>("fingerprinting") ?: true
                         LinkCleaner.enabled = call.argument<Boolean>("stripTracking") ?: true
+                        SafeBrowsing.enabled = call.argument<Boolean>("safeBrowsing") ?: true
                         call.argument<List<String>>("trackingParams")?.let { LinkCleaner.params = it.toSet() }
                         call.argument<List<String>>("trackingPrefixes")?.let { LinkCleaner.prefixes = it }
                         call.argument<List<Map<String, String>>>("redirectWrappers")?.let { list ->
@@ -261,6 +268,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     "setDisplay" -> {
                         ZtTab.textZoom = call.argument<Int>("textZoom") ?: 100
                         ZtTab.darkPages = call.argument<Boolean>("darkPages") ?: true
+                        ZtTab.pullToRefresh = call.argument<Boolean>("pullToRefresh") ?: true
                         for (t in tabs.values) t.applyDisplay()
                         result.success(null)
                     }
@@ -274,6 +282,22 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                             "file" to Blocker.updateFile(this).absolutePath,
                         ),
                     )
+                    "safetyInfo" -> result.success(
+                        mapOf(
+                            "size" to SafeBrowsing.size(),
+                            "date" to SafeBrowsing.listDate,
+                            "file" to SafeBrowsing.file(this).absolutePath,
+                        ),
+                    )
+                    "reloadSafetyList" -> {
+                        SafeBrowsing.reload(this)
+                        result.success(null)
+                    }
+                    "safetyLabels" -> {
+                        @Suppress("UNCHECKED_CAST")
+                        SafeBrowsing.labels = (call.argument<Map<String, String>>("labels") ?: emptyMap())
+                        result.success(null)
+                    }
                     "reloadBlocklist" -> {
                         Blocker.reload(this)
                         result.success(null)
@@ -340,6 +364,176 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         }
                     }
                     "showDownloadsFolder" -> result.success(downloads.showFolder())
+                    "forgetDownloads" -> {
+                        val keys = call.argument<List<String>>("keys") ?: emptyList()
+                        io.execute {
+                            downloads.forget(keys)
+                            main.post { result.success(null) }
+                        }
+                    }
+                    "renameDownload" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val name = call.argument<String>("name") ?: ""
+                        io.execute {
+                            val ok = downloadEngine.rename(key, name)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "setDownloadRules" -> {
+                        downloadEngine.wifiOnly = call.argument<Boolean>("wifiOnly") ?: false
+                        downloadEngine.maxParallel = call.argument<Int>("maxParallel") ?: 3
+                        downloadEngine.autoDeleteDays = call.argument<Int>("autoDeleteDays") ?: 0
+                        io.execute { downloadEngine.deleteOld() }
+                        result.success(null)
+                    }
+                    // B39: the download vault.
+                    // W13: the quick links widget's links, as JSON [{title, url}].
+                    "setWidgetLinks" -> {
+                        val json = call.argument<String>("links") ?: "[]"
+                        io.execute {
+                            LinksWidgetProvider.save(this, json)
+                            main.post { result.success(null) }
+                        }
+                    }
+                    "vaultList" -> io.execute {
+                        val list = DownloadVault.get(this).list()
+                        main.post { result.success(list) }
+                    }
+                    "vaultAddDownload" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        io.execute {
+                            val ok = DownloadVault.get(this).addDownload(downloadEngine, key)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultImport" -> {
+                        vaultImportMove = call.argument<Boolean>("move") ?: false
+                        waiting.remove(REQUEST_VAULT_IMPORT)?.success(mapOf("added" to 0, "kept" to 0))
+                        try {
+                            waiting[REQUEST_VAULT_IMPORT] = result
+                            @Suppress("DEPRECATION")
+                            startActivityForResult(
+                                Intent(Intent.ACTION_OPEN_DOCUMENT)
+                                    .addCategory(Intent.CATEGORY_OPENABLE)
+                                    .setType("*/*")
+                                    .putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true),
+                                REQUEST_VAULT_IMPORT,
+                            )
+                            systemUi(true)
+                        } catch (e: ActivityNotFoundException) {
+                            waiting.remove(REQUEST_VAULT_IMPORT)
+                            result.success(mapOf("added" to 0, "kept" to 0))
+                        }
+                    }
+                    "vaultOpen", "vaultShare" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val open = call.method == "vaultOpen"
+                        io.execute {
+                            val vault = DownloadVault.get(this)
+                            val r = if (open) vault.open(id) else vault.share(id)
+                            main.post { result.success(r) }
+                        }
+                    }
+                    // B40: send a download to ZT Notes or to my other devices.
+                    "sendDownloadTo" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val pkg = call.argument<String>("package") ?: ""
+                        io.execute {
+                            downloadEngine.privateCopy(key)
+                            main.post { result.success(downloads.share(key, pkg)) }
+                        }
+                    }
+                    "vaultSendTo" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val pkg = call.argument<String>("package") ?: ""
+                        io.execute {
+                            val r = DownloadVault.get(this).share(id, pkg)
+                            main.post { result.success(r) }
+                        }
+                    }
+                    "downloadBytes" -> {
+                        val key = call.argument<String>("key") ?: ""
+                        val max = (call.argument<Number>("max") ?: 0).toLong()
+                        io.execute {
+                            val job = downloadEngine.job(key)
+                            val bytes = if (job == null || job.bytes > max) {
+                                null
+                            } else {
+                                try {
+                                    downloadEngine.openInput(key)?.use { input ->
+                                        val out = java.io.ByteArrayOutputStream()
+                                        val buf = ByteArray(64 * 1024)
+                                        var total = 0L
+                                        while (true) {
+                                            val n = input.read(buf)
+                                            if (n < 0) break
+                                            total += n
+                                            if (total > max) return@use null
+                                            out.write(buf, 0, n)
+                                        }
+                                        out.toByteArray()
+                                    }
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+                            main.post { result.success(bytes) }
+                        }
+                    }
+                    "vaultBytes" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val max = (call.argument<Number>("max") ?: 0).toLong()
+                        io.execute {
+                            val bytes = try { DownloadVault.get(this).bytes(id, max) } catch (e: Exception) { null }
+                            main.post { result.success(bytes) }
+                        }
+                    }
+                    "saveBytesToDownloads" -> {
+                        val name = call.argument<String>("name") ?: "file"
+                        val mime = call.argument<String>("mime") ?: "application/octet-stream"
+                        val bytes = call.argument<ByteArray>("bytes") ?: ByteArray(0)
+                        io.execute {
+                            val ok = downloadEngine.saveFromVault(DownloadEngine.cleanName(name).ifEmpty { "file" }, mime, bytes.size.toLong()) {
+                                it.write(bytes)
+                            }
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultMoveToPhone" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        io.execute {
+                            val ok = DownloadVault.get(this).moveToPhone(downloadEngine, id)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultRename" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        val name = call.argument<String>("name") ?: ""
+                        io.execute {
+                            val ok = DownloadVault.get(this).rename(id, name)
+                            main.post { result.success(ok) }
+                        }
+                    }
+                    "vaultDelete" -> {
+                        val id = call.argument<String>("id") ?: ""
+                        io.execute {
+                            DownloadVault.get(this).delete(id)
+                            main.post { result.success(null) }
+                        }
+                    }
+                    "vaultClose" -> io.execute {
+                        DownloadVault.get(this).clearOpen()
+                        main.post { result.success(null) }
+                    }
+                    "downloadFolder" -> result.success(downloadFolderName())
+                    "pickDownloadFolder" -> pickDownloadFolder(result)
+                    "clearDownloadFolder" -> {
+                        // Only new downloads go to Downloads again. The
+                        // folder's grant stays: files already saved there
+                        // are still opened, shared and resumed through it.
+                        downloadEngine.setFolder(null)
+                        result.success(null)
+                    }
                     "deleteDownload" -> {
                         downloads.delete(call.argument<String>("key") ?: "")
                         result.success(null)
@@ -403,6 +597,9 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                             call.argument<String>("phone"),
                         ),
                     )
+                    "blockedHosts" -> result.success(tab?.blockedHosts() ?: emptyMap<String, Int>())
+                    "authenticatorInstalled" -> result.success(authenticator() != null)
+                    "fillCode" -> fillCode(tab, result)
                     "selection" -> {
                         if (tab == null) result.success(null) else tab.selection { result.success(it) }
                     }
@@ -528,7 +725,7 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         override fun create(context: Context, viewId: Int, args: Any?): PlatformView {
             val tabId = (args as? Map<*, *>)?.get("tabId") as? String
             val tab = tabId?.let { tabs[it] }
-            val view: View = tab?.webView?.also { (it.parent as? ViewGroup)?.removeView(it) }
+            val view: View = tab?.view?.also { (it.parent as? ViewGroup)?.removeView(it) }
                 ?: View(context).apply { setBackgroundColor(Color.TRANSPARENT) }
             return object : PlatformView {
                 override fun getView(): View = view
@@ -606,6 +803,43 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                 fileCallback = null
                 systemUi(false)
             }
+            REQUEST_VAULT_IMPORT -> {
+                systemUi(false)
+                val result = waiting.remove(REQUEST_VAULT_IMPORT) ?: return
+                val uris = ArrayList<Uri>()
+                if (resultCode == RESULT_OK && data != null) {
+                    data.clipData?.let { clip -> for (i in 0 until clip.itemCount) clip.getItemAt(i).uri?.let(uris::add) }
+                    if (uris.isEmpty()) data.data?.let(uris::add)
+                }
+                if (uris.isEmpty()) {
+                    result.success(mapOf("added" to 0, "kept" to 0))
+                    return
+                }
+                val move = vaultImportMove
+                io.execute {
+                    val r = DownloadVault.get(this).addFromPhone(uris, move)
+                    main.post { result.success(r) }
+                }
+            }
+            REQUEST_FOLDER -> {
+                systemUi(false)
+                val result = waiting.remove(REQUEST_FOLDER) ?: return
+                val tree = data?.data
+                if (resultCode != RESULT_OK || tree == null) {
+                    result.success(null)
+                    return
+                }
+                try {
+                    contentResolver.takePersistableUriPermission(
+                        tree,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
+                    )
+                    downloadEngine.setFolder(tree)
+                    result.success(downloadFolderName())
+                } catch (e: Exception) {
+                    result.success(null)
+                }
+            }
             REQUEST_PICK -> {
                 systemUi(false)
                 val result = waiting.remove(REQUEST_PICK) ?: return
@@ -634,6 +868,13 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     }
                     main.post { result.success(bytes) }
                 }
+            }
+            REQUEST_CODE -> {
+                systemUi(false)
+                val result = waiting.remove(REQUEST_CODE) ?: return
+                val asked = codeRequest
+                codeRequest = null
+                codeAnswer(asked, resultCode, data) { result.success(it) }
             }
             REQUEST_QR -> {
                 systemUi(false)
@@ -794,6 +1035,10 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                 "url" to (pending.url ?: url.substringBefore(',').take(64)),
                 "pageUrl" to pageUrl,
                 "private" to tab.isPrivate,
+                "dangerousSite" to (
+                    SafeBrowsing.check(pending.url?.let { Uri.parse(it).host }) != null ||
+                        SafeBrowsing.check(pageUrl?.let { Uri.parse(it).host }) != null
+                    ),
             ),
         )
     }
@@ -993,6 +1238,35 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         return bmp
     }
 
+    /** B38: the person picks a folder (SD card too) for new downloads. */
+    private fun pickDownloadFolder(result: MethodChannel.Result) {
+        waiting.remove(REQUEST_FOLDER)?.success(null)
+        try {
+            waiting[REQUEST_FOLDER] = result
+            @Suppress("DEPRECATION")
+            startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT_TREE), REQUEST_FOLDER)
+            systemUi(true)
+        } catch (e: ActivityNotFoundException) {
+            waiting.remove(REQUEST_FOLDER)
+            result.success(null)
+        }
+    }
+
+    /** The picked folder's name, or null for the phone's Downloads. */
+    private fun downloadFolderName(): String? {
+        val tree = downloadEngine.folder ?: return null
+        return try {
+            val doc = android.provider.DocumentsContract.buildDocumentUriUsingTree(
+                tree, android.provider.DocumentsContract.getTreeDocumentId(tree),
+            )
+            contentResolver.query(doc, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
+                if (c.moveToFirst()) c.getString(0) else null
+            } ?: tree.lastPathSegment
+        } catch (e: Exception) {
+            tree.lastPathSegment
+        }
+    }
+
     private fun pickFile(mimeTypes: List<String>, result: MethodChannel.Result) {
         waiting.remove(REQUEST_PICK)?.success(null)
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
@@ -1021,6 +1295,89 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             .setOrientationLocked(false)
             .setRequestCode(REQUEST_QR)
             .initiateScan()
+    }
+
+    // ---- Fill code (one-time codes from ZT Authenticator) ------------------
+
+    /** The tab and site a code was asked for, while ZT Authenticator is open. */
+    private var codeRequest: Pair<String, String>? = null
+
+    private fun codeIntent(): Intent = Intent(CODE_ACTION).addCategory(CODE_CATEGORY)
+
+    /**
+     * The app that hands out codes, only when it is a Zero-Trust app (signed
+     * with this app's key, as ZT Authenticator checks the other way round).
+     * Anything else that claims the action never sees which site is open.
+     */
+    private fun authenticator(): String? {
+        @Suppress("DEPRECATION")
+        val found = packageManager.queryIntentActivities(codeIntent(), 0)
+        return found.map { it.activityInfo.packageName }.distinct().firstOrNull { pkg ->
+            pkg != packageName && try {
+                packageManager.checkSignatures(packageName, pkg) == PackageManager.SIGNATURE_MATCH
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+
+    /**
+     * Opens ZT Authenticator for the code of the site in [tab]. It must be
+     * opened for an answer: that is how it knows which app is asking. The
+     * code goes straight into the page and never to the Dart side.
+     */
+    private fun fillCode(tab: ZtTab?, result: MethodChannel.Result) {
+        val host = tab?.currentHost
+        if (tab == null || host.isNullOrEmpty()) {
+            result.success("unavailable")
+            return
+        }
+        val app = authenticator()
+        if (app == null) {
+            result.success("missing")
+            return
+        }
+        waiting.remove(REQUEST_CODE)?.success("canceled")
+        val intent = codeIntent()
+            .setPackage(app)
+            .putExtra(EXTRA_FOR_PACKAGE, packageName)
+            .putExtra(EXTRA_FOR_DOMAIN, host)
+        try {
+            waiting[REQUEST_CODE] = result
+            codeRequest = tab.id to host
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQUEST_CODE)
+            systemUi(true)
+        } catch (e: ActivityNotFoundException) {
+            waiting.remove(REQUEST_CODE)
+            codeRequest = null
+            result.success("missing")
+        }
+    }
+
+    /** What came back from ZT Authenticator, filled into the page if it can be. */
+    private fun codeAnswer(asked: Pair<String, String>?, resultCode: Int, data: Intent?, done: (String) -> Unit) {
+        val raw = if (resultCode == RESULT_OK) data?.getStringExtra(EXTRA_TEXT) else null
+        if (asked == null || raw == null) {
+            done("canceled")
+            return
+        }
+        val code = raw.filterNot { it.isWhitespace() }
+        if (!CODE_PATTERN.matches(code)) {
+            done("invalid")
+            return
+        }
+        val until = data?.getLongExtra(EXTRA_VALID_UNTIL, 0L) ?: 0L
+        if (until > 0L && until <= System.currentTimeMillis()) {
+            done("expired")
+            return
+        }
+        val tab = tabs[asked.first]
+        if (tab == null || tab.currentHost != asked.second) {
+            done("moved")
+            return
+        }
+        tab.fillCode(code, asked.second) { filled -> done(if (filled) "filled" else "noField") }
     }
 
     private fun voiceIntent(prompt: String?): Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
@@ -1278,6 +1635,20 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
     }
 
     /** Cookies, site storage and cache of normal tabs, and unloaded tabs' history. */
+    /**
+     * W13: the Fire widget was tapped. What needs no unlock goes now:
+     * cookies, site data, the cache and private downloads. Dart closes the
+     * tabs and deletes recent history once the app is unlocked.
+     */
+    private fun fireNow() {
+        try {
+            clearBrowsingData()
+            downloadEngine.endPrivateSession()
+        } catch (e: Exception) {
+            android.util.Log.e("ZtBrowser", "Fire widget", e)
+        }
+    }
+
     private fun clearBrowsingData() {
         CookieManager.getInstance().removeAllCookies(null)
         CookieManager.getInstance().flush()
@@ -1359,6 +1730,20 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         private const val REQUEST_PICK = 4104
         private const val REQUEST_QR = 4105
         private const val REQUEST_VOICE = 4106
+        private const val REQUEST_FOLDER = 4107
+        private const val REQUEST_VAULT_IMPORT = 4108
+        private const val REQUEST_CODE = 4109
+
+        /** ZT Authenticator's code picker (its CodePick.kt). */
+        private const val CODE_ACTION = "bz.zerotrust.action.PICK_TEXT"
+        private const val CODE_CATEGORY = "bz.zerotrust.category.ONE_TIME_CODE"
+        private const val EXTRA_FOR_PACKAGE = "bz.zerotrust.extra.FOR_PACKAGE"
+        private const val EXTRA_FOR_DOMAIN = "bz.zerotrust.extra.FOR_DOMAIN"
+        private const val EXTRA_TEXT = "bz.zerotrust.extra.TEXT"
+        private const val EXTRA_VALID_UNTIL = "bz.zerotrust.extra.VALID_UNTIL"
+
+        /** A one-time code: 4 to 12 letters or digits, nothing a page could run. */
+        private val CODE_PATTERN = Regex("^[A-Za-z0-9]{4,12}$")
 
         /** Normal tabs kept loaded; older ones unload until shown again. */
         private const val MAX_LIVE_TABS = 5

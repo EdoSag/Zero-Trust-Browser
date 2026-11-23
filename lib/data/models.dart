@@ -232,6 +232,50 @@ class SentTab {
       );
 }
 
+/// B40: a file sent from another of the account's devices. The file itself
+/// is an end-to-end encrypted attachment; its key is only in [file], inside
+/// this (also encrypted) item.
+class SentFile {
+  const SentFile({
+    required this.id,
+    required this.file,
+    required this.fromDevice,
+    required this.fromName,
+    required this.toDevice,
+    required this.sentAt,
+  });
+
+  final String id;
+  final ZtAttachmentRef file;
+  final String fromDevice;
+  final String fromName;
+  final String toDevice;
+  final DateTime sentAt;
+
+  String get name => file.name ?? 'file';
+  String get mime => file.mimeType ?? 'application/octet-stream';
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'file': file.toJson(),
+    'fromDevice': fromDevice,
+    'fromName': fromName,
+    'toDevice': toDevice,
+    'sentAt': sentAt.millisecondsSinceEpoch,
+  };
+
+  static SentFile fromJson(String id, Map<String, Object?> j, DateTime at) =>
+      SentFile(
+        id: id,
+        file: ZtAttachmentRef.fromJson(
+          (j['file'] as Map<Object?, Object?>).cast<String, Object?>(),
+        ),
+        fromDevice: j['fromDevice'] as String? ?? '',
+        fromName: j['fromName'] as String? ?? 'Another device',
+        toDevice: j['toDevice'] as String? ?? '',
+        sentAt: _ms(j['sentAt'], at),
+      );
+}
+
 /// A search engine the address bar can use.
 class SearchEngine {
   const SearchEngine(
@@ -473,6 +517,12 @@ class BrowserSettings {
     this.identity = 'default',
     this.identityRules = const <String, String>{},
     this.customIdentities = const <CustomIdentity>[],
+    this.swipeTabs = true,
+    this.pullToRefresh = true,
+    this.safeBrowsing = true,
+    this.downloadWifiOnly = false,
+    this.downloadsAtOnce = 3,
+    this.autoDeleteDownloadsDays = 0,
   });
 
   static const String itemId = 'browser-settings';
@@ -583,6 +633,33 @@ class BrowserSettings {
 
   /// The user's own identities.
   final List<CustomIdentity> customIdentities;
+
+  /// B28: swipe the address bar or the bottom bar sideways to switch tabs,
+  /// and up on the bottom bar to see all tabs.
+  final bool swipeTabs;
+
+  /// B28: pull down at the top of a page to reload it.
+  final bool pullToRefresh;
+
+  /// B-1: warn before opening a known phishing or malware site (list checked
+  /// on the phone).
+  final bool safeBrowsing;
+
+  /// B38: downloads wait for Wi-Fi (or another unmetered network).
+  final bool downloadWifiOnly;
+
+  /// B38: how many downloads run at the same time (1 to 5).
+  final int downloadsAtOnce;
+
+  /// B38: finished downloads are deleted after this many days; 0 keeps
+  /// them.
+  final int autoDeleteDownloadsDays;
+
+  /// B38: the choices for [downloadsAtOnce].
+  static const List<int> downloadsAtOnceChoices = <int>[1, 2, 3, 4, 5];
+
+  /// B38: the choices for [autoDeleteDownloadsDays] (0 keeps files).
+  static const List<int> autoDeleteDownloadsChoices = <int>[0, 7, 30, 90];
 
   static const List<double> readAloudRates = <double>[
     0.75,
@@ -710,6 +787,12 @@ class BrowserSettings {
     String? identity,
     Map<String, String>? identityRules,
     List<CustomIdentity>? customIdentities,
+    bool? swipeTabs,
+    bool? pullToRefresh,
+    bool? safeBrowsing,
+    bool? downloadWifiOnly,
+    int? downloadsAtOnce,
+    int? autoDeleteDownloadsDays,
   }) => BrowserSettings(
     searchEngine: searchEngine ?? this.searchEngine,
     blockTrackers: blockTrackers ?? this.blockTrackers,
@@ -748,6 +831,13 @@ class BrowserSettings {
     identity: identity ?? this.identity,
     identityRules: identityRules ?? this.identityRules,
     customIdentities: customIdentities ?? this.customIdentities,
+    swipeTabs: swipeTabs ?? this.swipeTabs,
+    pullToRefresh: pullToRefresh ?? this.pullToRefresh,
+    safeBrowsing: safeBrowsing ?? this.safeBrowsing,
+    downloadWifiOnly: downloadWifiOnly ?? this.downloadWifiOnly,
+    downloadsAtOnce: downloadsAtOnce ?? this.downloadsAtOnce,
+    autoDeleteDownloadsDays:
+        autoDeleteDownloadsDays ?? this.autoDeleteDownloadsDays,
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -794,6 +884,12 @@ class BrowserSettings {
     'customIdentities': <Map<String, Object?>>[
       for (final CustomIdentity c in customIdentities) c.toJson(),
     ],
+    'swipeTabs': swipeTabs,
+    'pullToRefresh': pullToRefresh,
+    'safeBrowsing': safeBrowsing,
+    'downloadWifiOnly': downloadWifiOnly,
+    'downloadsAtOnce': downloadsAtOnce,
+    'autoDeleteDownloadsDays': autoDeleteDownloadsDays,
   };
 
   static List<String> _strings(Object? v) => <String>[
@@ -879,6 +975,16 @@ class BrowserSettings {
             in (j['customIdentities'] as List<Object?>? ?? const <Object?>[]))
           ?CustomIdentity.fromJson(e),
       ],
+      swipeTabs: j['swipeTabs'] as bool? ?? true,
+      pullToRefresh: j['pullToRefresh'] as bool? ?? true,
+      safeBrowsing: j['safeBrowsing'] as bool? ?? true,
+      downloadWifiOnly: j['downloadWifiOnly'] as bool? ?? false,
+      downloadsAtOnce: ((j['downloadsAtOnce'] as num?)?.toInt() ?? 3).clamp(
+        1,
+        5,
+      ),
+      autoDeleteDownloadsDays:
+          (j['autoDeleteDownloadsDays'] as num?)?.toInt() ?? 0,
     );
   }
 }
@@ -1150,6 +1256,14 @@ abstract final class BrowserCollections {
     fromJson: SentTab.fromJson,
     toJson: (SentTab t) => t.toJson(),
     idOf: (SentTab t) => t.id,
+  );
+
+  /// B40: files sent to another device.
+  static final ZtCollection<SentFile> sentFiles = ZtCollection<SentFile>(
+    kind: 'sent-file',
+    fromJson: SentFile.fromJson,
+    toJson: (SentFile f) => f.toJson(),
+    idOf: (SentFile f) => f.id,
   );
 
   static final ZtCollection<BrowserSettings> settings =

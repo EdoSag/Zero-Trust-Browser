@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="search_in_app">חיפוש ב‑ZT Browser</string>
+    <string name="links_widget_label">קישורים מהירים</string>
+    <string name="links_widget_description">הקישורים המהירים מדף הפתיחה, במרחק הקשה אחת</string>
+    <string name="links_widget_empty">אפשר להצמיד אתרים בדף הפתיחה של ZT Browser והם יופיעו כאן</string>
+    <string name="fire_widget_label">אש</string>
+    <string name="fire_widget_description">הקשה אחת סוגרת את כל הכרטיסיות ומוחקת קובצי Cookie, נתוני אתרים והיסטוריה אחרונה</string>
 </resources>

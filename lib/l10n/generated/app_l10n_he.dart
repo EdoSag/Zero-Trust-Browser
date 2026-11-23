@@ -2057,4 +2057,402 @@ class AppL10nHe extends AppL10n {
   @override
   String get identityDeleteExplain =>
       'אתרים וכרטיסיות שמשתמשים בה יחזרו לברירת המחדל.';
+
+  @override
+  String get gesturesSection => 'מחוות';
+
+  @override
+  String get swipeTabs => 'החלקה למעבר בין כרטיסיות';
+
+  @override
+  String get swipeTabsSub =>
+      'החליקו את שורת הכתובת או את הסרגל התחתון הצידה לכרטיסייה הבאה, או את הסרגל התחתון למעלה כדי לראות את כל הכרטיסיות';
+
+  @override
+  String get pullToRefresh => 'משיכה למטה לטעינה מחדש';
+
+  @override
+  String get pullToRefreshSub => 'בראש הדף, משכו למטה כדי לטעון אותו שוב';
+
+  @override
+  String get pageBrokenTurnOff => 'הדף לא עובד? כבו את החסימה באתר הזה';
+
+  @override
+  String get blockedOnPageTap => 'הקישו כדי לראות מה נחסם';
+
+  @override
+  String blockedRequests(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count בקשות',
+      one: 'בקשה אחת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get allowHost => 'אפשר';
+
+  @override
+  String get allowHostSub =>
+      '\"אפשר\" מתיר לכתובת הזו להיטען בכל האתרים. אפשר לבטל בהגדרות, כללי החסימה שלך.';
+
+  @override
+  String get safeBrowsing => 'אזהרה מפני אתרים מסוכנים';
+
+  @override
+  String get safeBrowsingSub =>
+      'אתרי פישינג ונוזקות, מרשימה שנבדקת בטלפון שלכם. מתעדכנת מדי יום.';
+
+  @override
+  String safeBrowsingSubDated(String date) {
+    return 'אתרי פישינג ונוזקות, נבדקים בטלפון שלכם. רשימה מ-$date; הקישו כדי לבדוק אם יש חדשה.';
+  }
+
+  @override
+  String get checkingSafetyList => 'בודק אם יש רשימה חדשה של אתרים מסוכנים…';
+
+  @override
+  String get safetyListUpdated => 'רשימת האתרים המסוכנים עודכנה';
+
+  @override
+  String get safetyListUpToDate => 'רשימת האתרים המסוכנים מעודכנת';
+
+  @override
+  String get unsafePhishingTitle => 'לפניכם אתר מתחזה';
+
+  @override
+  String get unsafePhishingBody =>
+      'האתר הזה ידוע בכך שהוא מנסה לגרום לאנשים למסור סיסמאות, מספרי כרטיס או קודים.';
+
+  @override
+  String get unsafeMalwareTitle => 'האתר הזה עלול להזיק לטלפון שלכם';
+
+  @override
+  String get unsafeMalwareBody =>
+      'האתר הזה ידוע בהפצת אפליקציות וקבצים מזיקים.';
+
+  @override
+  String get unsafeBack => 'חזרה למקום בטוח';
+
+  @override
+  String get unsafeDetails => 'פרטים';
+
+  @override
+  String get unsafeDetailsBody =>
+      'ZT Browser בדק את הכתובת הזו בטלפון שלכם מול רשימה ציבורית של אתרים מסוכנים. שום דבר לא נשלח. רשימות יכולות לטעות.';
+
+  @override
+  String get unsafeProceed => 'לפתוח את האתר בכל זאת (לא בטוח)';
+
+  @override
+  String get downloadWarnDangerousSite =>
+      'הקובץ מגיע מאתר שידוע בפישינג או בנוזקות.';
+
+  @override
+  String get searchDownloads => 'חיפוש בהורדות';
+
+  @override
+  String get selectAll => 'בחירת הכול';
+
+  @override
+  String get removeFromList => 'הסרה מהרשימה';
+
+  @override
+  String selectedCount(int count) {
+    return '$count נבחרו';
+  }
+
+  @override
+  String get clearDownloadList => 'ניקוי הרשימה (הקבצים נשארים)';
+
+  @override
+  String get clearDownloadListSub =>
+      'רשימת ההורדות שהסתיימו תתנקה. הקבצים נשארים בטלפון, באפליקציית הקבצים. הורדות פרטיות נשארות ברשימה.';
+
+  @override
+  String deleteFilesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'למחוק $count קבצים?',
+      one: 'למחוק קובץ אחד?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteFilesSub => 'הם יימחקו מהטלפון. הורדות שלא הסתיימו יבוטלו.';
+
+  @override
+  String get renameFile => 'שינוי שם';
+
+  @override
+  String get couldntRename => 'לא ניתן לשנות את שם הקובץ';
+
+  @override
+  String get kindImages => 'תמונות';
+
+  @override
+  String get kindVideo => 'סרטונים';
+
+  @override
+  String get kindAudio => 'שמע';
+
+  @override
+  String get kindDocuments => 'מסמכים';
+
+  @override
+  String get kindArchives => 'ארכיונים';
+
+  @override
+  String get kindApps => 'אפליקציות';
+
+  @override
+  String get kindOther => 'אחר';
+
+  @override
+  String downloadsUsed(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count הורדות',
+      one: 'הורדה אחת',
+    );
+    return '$_temp0 · $size בטלפון';
+  }
+
+  @override
+  String get noMatchingDownloads => 'אין הורדות תואמות';
+
+  @override
+  String get waitingWifi => 'ממתין ל-Wi-Fi';
+
+  @override
+  String get downloadWifiOnly => 'הורדה רק ב-Wi-Fi';
+
+  @override
+  String get downloadWifiOnlySub =>
+      'בחבילת גלישה ההורדות ממתינות ומתחילות ב-Wi-Fi';
+
+  @override
+  String get downloadsAtOnce => 'הורדות בו-זמנית';
+
+  @override
+  String downloadsAtOnceValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'עד $count הורדות',
+      one: 'הורדה אחת בכל פעם',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveDownloadsTo => 'שמירת הורדות ב';
+
+  @override
+  String get phoneDownloadsFolder => 'תיקיית ההורדות של הטלפון';
+
+  @override
+  String get chooseAnotherFolder => 'בחירת תיקייה אחרת';
+
+  @override
+  String get usePhoneDownloads => 'שימוש בתיקיית ההורדות של הטלפון';
+
+  @override
+  String get autoDeleteDownloads => 'מחיקת הורדות ישנות';
+
+  @override
+  String get autoDeleteDownloadsSub =>
+      'הורדות שהסתיימו ועדיין ברשימה יימחקו מהטלפון אחרי הזמן הזה. קבצים שהסרת מהרשימה נשארים.';
+
+  @override
+  String autoDeleteDownloadsValue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'אחרי $days ימים',
+      two: 'אחרי יומיים',
+      one: 'אחרי יום',
+      zero: 'אף פעם',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get downloadVault => 'כספת הורדות';
+
+  @override
+  String get vaultUnlockReason => 'פתיחת כספת ההורדות';
+
+  @override
+  String get vaultLocked =>
+      'הכספת נעולה. הקבצים בה מוצפנים בתוך ZT Browser, רק בטלפון הזה.';
+
+  @override
+  String get vaultExplain =>
+      'מוצפנים בתוך ZT Browser. אפליקציית הקבצים ואפליקציות אחרות לא רואות את הקבצים האלה, והם לעולם לא מסונכרנים או מגובים.';
+
+  @override
+  String get vaultNoScreenLock =>
+      'כדאי להגדיר נעילת מסך בטלפון כדי שהכספת תבקש אותה.';
+
+  @override
+  String get vaultEmpty =>
+      'אין כאן עדיין כלום. אפשר להעביר לכאן הורדה מהתפריט שלה בדף ההורדות, או להוסיף קבצים מהטלפון.';
+
+  @override
+  String get addFromPhone => 'הוספה מהטלפון';
+
+  @override
+  String get addToVault => 'הוספת קבצים לכספת';
+
+  @override
+  String get vaultMoveFiles => 'העברה';
+
+  @override
+  String get vaultMoveFilesSub => 'הקבצים יימחקו מהמקום שבו הם נמצאים עכשיו';
+
+  @override
+  String get vaultCopyFiles => 'העתקה';
+
+  @override
+  String get vaultCopyFilesSub => 'הקבצים נשארים גם במקום שבו הם נמצאים עכשיו';
+
+  @override
+  String vaultAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count קבצים נוספו לכספת',
+      one: 'קובץ אחד נוסף לכספת',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String vaultAddedKept(int added, int kept) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added קבצים נוספו',
+      one: 'קובץ אחד נוסף',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      kept,
+      locale: localeName,
+      other: '$kept מקורות',
+      one: 'מקור אחד',
+    );
+    return '$_temp0. הטלפון לא איפשר ל-ZT Browser למחוק $_temp1: אפשר למחוק אותם באפליקציית הקבצים.';
+  }
+
+  @override
+  String get moveToVault => 'העברה לכספת';
+
+  @override
+  String movedToVault(String name) {
+    return '$name בכספת';
+  }
+
+  @override
+  String get couldntMoveToVault => 'לא ניתן להעביר את הקובץ לכספת';
+
+  @override
+  String get openVault => 'פתיחת הכספת';
+
+  @override
+  String get moveToPhone => 'העברה להורדות של הטלפון';
+
+  @override
+  String movedToPhone(String name) {
+    return '$name הועבר להורדות';
+  }
+
+  @override
+  String deletedFromVault(String name) {
+    return '$name יימחק מהכספת לתמיד.';
+  }
+
+  @override
+  String get sendFileTo => 'שליחה אל…';
+
+  @override
+  String sendFileTitle(String name) {
+    return 'שליחת $name';
+  }
+
+  @override
+  String get sendToNotes => 'פתק ב-ZT Notes';
+
+  @override
+  String get sendToNotesSub => 'לפתק חדש, מוצפן על ידי ZT Notes';
+
+  @override
+  String get sendFileEncrypted =>
+      'מוצפן מקצה לקצה. רק ZT Browser שם יכול לפתוח אותו.';
+
+  @override
+  String get fileTooBigToSend => 'אי אפשר לשלוח למכשירים קבצים מעל 20 MB';
+
+  @override
+  String get notesNotInstalled => 'ZT Notes לא מותקנת בטלפון הזה';
+
+  @override
+  String get notesCantTakeFile => 'ZT Notes עדיין לא יכולה לקבל קובץ מהסוג הזה';
+
+  @override
+  String sendingFile(String name) {
+    return 'שולח את $name…';
+  }
+
+  @override
+  String sentFileToDevice(String name, String device) {
+    return '$name נשלח אל $device';
+  }
+
+  @override
+  String get sentFromDevices => 'נשלחו מהמכשירים שלך';
+
+  @override
+  String sentFileFrom(String device, String size) {
+    return 'מ-$device · $size';
+  }
+
+  @override
+  String get dismissSentFile => 'סגירה (נמחק מהחשבון שלך)';
+
+  @override
+  String get fillCode => 'מילוי קוד';
+
+  @override
+  String get fillCodeSub => 'מ־ZT Authenticator';
+
+  @override
+  String get fillCodeAsked => 'הדף מבקש קוד כניסה';
+
+  @override
+  String get fillCodeFilled => 'הקוד מולא';
+
+  @override
+  String get fillCodeMissing => 'כדי למלא קודים יש להתקין את ZT Authenticator';
+
+  @override
+  String get fillCodeExpired => 'תוקף הקוד פג לפני שהגיע. אפשר לנסות שוב.';
+
+  @override
+  String get fillCodeInvalid => 'לא התקבל קוד מ־ZT Authenticator';
+
+  @override
+  String get fillCodeMoved => 'הדף השתנה, ולכן הקוד לא מולא';
+
+  @override
+  String get fillCodeNoField =>
+      'לא נמצא שדה לקוד. יש להקיש על שדה הקוד ולנסות שוב.';
+
+  @override
+  String get fillCodeUnavailable => 'מילוי קוד לא זמין כאן';
 }

@@ -390,6 +390,33 @@ void main() {
       await leave(tester);
     });
 
+    testWidgets('select all leaves out locked private downloads', (
+      WidgetTester tester,
+    ) async {
+      await pumpPage(tester);
+      ProviderScope.containerOf(
+        tester.element(find.byType(DownloadsPage)),
+      ).read(privateLockProvider.notifier).lock();
+      await tester.pump();
+      await tester.longPress(find.text('movie.mp4'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Select all'));
+      await tester.pump();
+      await tester.tap(find.byTooltip('Remove from list'));
+      await tester.pump();
+      final List<Object?> keys =
+          (calls
+                      .lastWhere(
+                        (MethodCall c) => c.method == 'forgetDownloads',
+                      )
+                      .arguments
+                  as Map<Object?, Object?>)['keys']!
+              as List<Object?>;
+      expect(keys, isNotEmpty);
+      expect(keys, isNot(contains('k-private')));
+      await leave(tester);
+    });
+
     testWidgets('pause a running download, retry a failed one', (
       WidgetTester tester,
     ) async {

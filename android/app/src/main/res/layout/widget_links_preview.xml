@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the Widgets menu shows (Android 12+): the quick links widget. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    style="@style/ZtWidget.Root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+    <TextView
+        style="@style/ZtWidget.AppName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:paddingBottom="8dp"
+        android:text="@string/links_widget_label"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <TextView style="@style/ZtWidget.Action" android:layout_marginEnd="16dp" android:gravity="center" android:textColor="@color/zt_widget_on_accent" android:text="W"/>
+        <TextView style="@style/ZtWidget.Action" android:layout_marginEnd="16dp" android:gravity="center" android:textColor="@color/zt_widget_on_accent" android:text="N"/>
+        <TextView style="@style/ZtWidget.Action" android:layout_marginEnd="16dp" android:gravity="center" android:textColor="@color/zt_widget_on_accent" android:text="M"/>
+        <TextView style="@style/ZtWidget.Action" android:gravity="center" android:textColor="@color/zt_widget_on_accent" android:text="G"/>
+    </LinearLayout>
+</LinearLayout>

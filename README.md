@@ -1,7 +1,7 @@
 # Zero-Trust Browser
 
-A private web browser for Android, part of the Zero-Trust apps. On the phone
-it is **ZT Browser**.
+A private web browser for Android and Windows, part of the Zero-Trust apps.
+On the phone it is **ZT Browser**.
 
 - **Trackers and ads blocked** on every site: about 50,000 known hosts from
   EasyList and EasyPrivacy, checked for every request the page makes.
@@ -9,6 +9,13 @@ it is **ZT Browser**.
   EasyList element hiding). Protection can be turned off per site from the
   shield in the address bar. The list updates weekly without an app update,
   signed (see below).
+- **Shield panel** (tap the shield in the address bar): what was blocked on
+  this page, address by address; allow one address, or turn blocking off
+  for the site with one tap when a page doesn't work.
+- **Phishing and malware warnings**: a known dangerous site shows a full
+  warning page first. The list (hashed site names, updated daily) is
+  downloaded whole and checked on the phone, so the pages you open are never
+  sent anywhere. Files from such sites get a warning in "Save this file?".
 - **Fingerprinting protection**: canvas, audio and WebGL readouts get noise
   that differs per site and per app start; CPU and memory report common
   values; the battery API is gone.
@@ -30,10 +37,18 @@ it is **ZT Browser**.
 - **Bookmarks, history, settings and open tabs** are end-to-end encrypted in
   the shared Zero-Trust account and synced between devices through
   Zero-Trust-Core. The server only sees sealed rows with random ids.
+- **Fill code** from ZT Authenticator: when a page asks for a one-time
+  sign-in code, a bar offers "Fill code" (also in the page menu). ZT
+  Authenticator opens for that site, and the code goes straight into the
+  page. Only shows when ZT Authenticator is on the phone. See
+  [Fill code](#fill-code-zt-authenticator).
 - **Reader view** (Mozilla Readability) and a **reading list** whose pages
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
   unload when memory runs low and come back with their history.
+- **Swipe gestures**: swipe the address bar or the bottom bar sideways to
+  switch tabs, up to see all tabs, and pull down at the top of a page to
+  reload it (each can be turned off in Settings, Gestures).
 - **Download manager**: its own downloader with pause, resume where it
   stopped and automatic retry when the connection drops, progress and
   Pause/Cancel in a notification, and no size limit for files pages make
@@ -41,6 +56,28 @@ it is **ZT Browser**.
   with warnings for apps, programs, disguised names and plain http.
   Downloads from private tabs stay encrypted in the app (key only in
   memory) and are deleted with the private tabs, unless saved to the phone.
+- **Downloads page**: search, filter by kind (images, videos, documents...),
+  grouped by day, the space downloads take, select several to delete or
+  take off the list, rename, try again, copy the link, and clear the list
+  while keeping the files. The list itself is stored encrypted on the phone
+  (Android Keystore) and never synced.
+- **Download rules**: Wi-Fi only, how many downloads run at once, a folder
+  of your choice (an SD card too) instead of Downloads, and deleting
+  finished downloads after 7, 30 or 90 days.
+- **Download vault**: keep files encrypted inside ZT Browser (move a
+  download in from its menu, or add files from the phone), open them with
+  the phone's lock, and move them back to Downloads. The vault is on this
+  phone only: never synced and left out of Android backups.
+- **Send a download** (or a file from the vault) to ZT Notes, as a new
+  note, or to another of your devices: it travels as an end-to-end
+  encrypted attachment (up to 20 MB) and shows up on that device's
+  Downloads page under "Sent from your devices", ready to save.
+- **Home screen widgets**: a search bar (search, voice, private tab, QR),
+  a grid of your quick links (the start page's pinned sites, or the first
+  bookmarks), and a 1x1 Fire button that deletes cookies, site data and
+  private downloads at once, then closes every tab and deletes the last
+  hour of history once ZT Browser is unlocked. The quick links are kept
+  encrypted on the phone for the widget and cleared on sign-out.
 - **Import bookmarks** from Chrome, Firefox, Edge or Safari (.html export).
 - **QR code scanner** (ZXing, offline) and voice search in the address bar;
   share a page as a QR code.
@@ -90,7 +127,10 @@ Play), shown in Flutter through a platform view. The native side lives in
 | `DownloadEngine.kt` | The downloader: queue, pause/resume (HTTP Range), retry, writes into a hidden Downloads entry until done, private downloads into `PrivateVault` |
 | `DownloadService.kt` | Foreground service and notifications for running and finished downloads |
 | `PrivateVault.kt` | Private-tab downloads encrypted in 64 KiB AES-GCM chunks under a key held only in memory |
-| `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete |
+| `Downloads.kt` | The Downloads page's list (engine downloads and older ones), open, share, delete, remove from the list |
+| `DownloadVault.kt` | The download vault: files encrypted in the private-download format under a vault key kept in an `EncryptedStore`; add, open, share, move to Downloads |
+| `LinksWidgetProvider.kt`, `FireWidgetProvider.kt` | The quick links grid and 1x1 Fire home screen widgets (W13) |
+| `EncryptedStore.kt` | Small phone-only files (the download list) encrypted with AES-GCM under an Android Keystore key |
 | `MainActivity.kt` | Tab registry and memory (unloading), the `zt_browser/engine` channel, file uploads, fullscreen video, downloads, permissions, print, shortcuts, QR, voice, autofill status, default-browser role |
 
 Tabs outlive the Flutter widget showing them, so switching tabs or locking
@@ -101,6 +141,28 @@ settings and look as every Zero-Trust app.
 Requires Android 10 (API 29). Private tabs need Android System WebView with
 multi-profile support (version 123 or newer); on older WebView versions they
 still keep no history and no cache, but share cookies with normal tabs.
+
+## Windows (desktop)
+
+The same Flutter app runs on Windows 10 and 11, with Microsoft Edge
+WebView2 as the page engine (it comes with Windows). The C++ side,
+`windows/runner/browser_engine.cpp`, answers the same `zt_browser/engine`
+channel as the Android code: each tab is a WebView2 window that Dart places
+over its `TabView` (`setTabBounds`) and hides while a sheet, menu or other
+screen is on top.
+
+What the Windows build has today: tabs and private (InPrivate) tabs,
+tracker blocking from the same blocklist (bundled, or a newer downloaded
+one), HTTPS-Only, the phishing and malware warning (B-1), history,
+bookmarks and sync through the shared account, pop-ups opening as tabs,
+favicons, and clearing browsing data (Fire). Not yet on Windows: reader
+view, translation, find in page, user scripts, browser identity, the
+download manager (WebView2 saves to the Downloads folder itself) and the
+download vault. These answer "not implemented" and the app treats them as
+missing.
+
+Pages and cookies of normal tabs are kept in
+`%LOCALAPPDATA%\ZT Browser\WebView2`; private tabs keep nothing.
 
 ## User scripts (B41)
 
@@ -169,6 +231,28 @@ Limits, because the engine is Android System WebView:
 - A site that looks closely (TLS, fonts, drawing) can still tell the
   engine is Chromium on Android.
 
+## Fill code (ZT Authenticator)
+
+- `PageScripts.CODE_FIELDS` runs in the top frame of each page and tells the
+  app (the `ztCode` listener, hidden from the page) whether there is a
+  one-time code field: `autocomplete="one-time-code"`, a field whose name,
+  label or placeholder says so (not promo, postal or phone fields), or a
+  row of 4 to 8 one-character boxes. It checks again when the page changes,
+  so sign-in forms that show the field later count too.
+- "Fill code" opens ZT Authenticator with `startActivityForResult` (it only
+  answers a caller signed with the suite key): action
+  `bz.zerotrust.action.PICK_TEXT`, category
+  `bz.zerotrust.category.ONE_TIME_CODE`, extras
+  `bz.zerotrust.extra.FOR_PACKAGE` (this app) and
+  `bz.zerotrust.extra.FOR_DOMAIN` (the tab's host, as the browser sees it,
+  never what the page says).
+- The browser only opens an app that is signed with its own key, so another
+  app claiming the same action never learns which site is open.
+- The answer (`bz.zerotrust.extra.TEXT`, 4 to 12 letters or digits) is typed
+  into the page only if the tab is still on the same site, and not when
+  `bz.zerotrust.extra.VALID_UNTIL` has passed. The code never reaches the
+  Dart side, the clipboard or any log.
+
 ## Texts and languages
 
 Every text the app shows is in `tool/l10n_strings.py`, in English and
@@ -197,6 +281,17 @@ git clone --depth 1 https://github.com/easylist/easylist.git /tmp/easylist
 python3 -I tool/update_blocklist.py /tmp/easylist
 ```
 
+### Phishing and malware list (B-1)
+
+Every day the "Safety list" workflow (`.github/workflows/safety-list.yml`)
+runs `tool/update_safety_list.py` on Phishing.Database (MIT) and URLhaus
+(CC0), drops whole popular sites that appear only because one of their
+pages was bad (Tranco top sites and the Public Suffix List decide), signs
+the result with the same key as the blocklist and uploads
+`safety-list.bin.gz` and its `.sig` to the rolling `safety-list` release.
+The app checks once a day. Run the workflow once by hand after merging so
+the first list exists.
+
 ## Builds
 
 Every push to `main` builds a signed APK and publishes it as a GitHub
@@ -204,17 +299,27 @@ Release (`.github/workflows/android-apk.yml`). The repository needs the
 `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets, the same
 keystore as the other Zero-Trust apps.
 
+Every pull request and push to `main` also builds the Windows app
+(`.github/workflows/windows.yml`); the zipped app is on the run's Summary
+page. Unzip it and start `zerotrust_browser.exe`.
+
 ## Credits and licences
 
 - Blocklists: [EasyList, EasyPrivacy and the EasyList Cookie List](https://easylist.to)
   by The EasyList authors, used under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
   (see `assets/blocklist/LICENSE`).
+- Phishing and malware list: [Phishing.Database](https://github.com/mitchellkrogza/Phishing.Database)
+  by Mitchell Krog and Nissar Chababy (MIT) and [URLhaus](https://urlhaus.abuse.ch)
+  by abuse.ch (CC0), as hashes; [Tranco](https://tranco-list.eu) and the
+  [Public Suffix List](https://publicsuffix.org) are used when building it.
 - Reader view: [Mozilla Readability](https://github.com/mozilla/readability)
   0.6.0, Apache License 2.0 (see `assets/reader/LICENSE`).
 - QR scanner: [ZXing Android Embedded](https://github.com/journeyapps/zxing-android-embedded)
   and ZXing, Apache License 2.0.
 - QR codes: [qr_flutter](https://pub.dev/packages/qr_flutter), BSD-3-Clause.
-- Web engine: Android System WebView, part of the Android platform.
+- Web engine: Android System WebView, part of the Android platform; on
+  Windows, Microsoft Edge WebView2 (the SDK is BSD-3-Clause and is
+  downloaded when building).
 
 ## License
 

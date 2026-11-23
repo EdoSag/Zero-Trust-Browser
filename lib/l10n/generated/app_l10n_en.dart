@@ -2070,4 +2070,406 @@ class AppL10nEn extends AppL10n {
   @override
   String get identityDeleteExplain =>
       'Sites and tabs that use it go back to the default.';
+
+  @override
+  String get gesturesSection => 'Gestures';
+
+  @override
+  String get swipeTabs => 'Swipe to switch tabs';
+
+  @override
+  String get swipeTabsSub =>
+      'Swipe the address bar or the bottom bar sideways for the next tab, or the bottom bar up to see all tabs';
+
+  @override
+  String get pullToRefresh => 'Pull down to reload';
+
+  @override
+  String get pullToRefreshSub =>
+      'At the top of a page, pull down to load it again';
+
+  @override
+  String get pageBrokenTurnOff => 'Page not working? Turn off blocking here';
+
+  @override
+  String get blockedOnPageTap => 'Tap to see what was blocked';
+
+  @override
+  String blockedRequests(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count requests',
+      one: '1 request',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get allowHost => 'Allow';
+
+  @override
+  String get allowHostSub =>
+      'Allow lets that address load on every site. Undo it in Settings, Your block rules.';
+
+  @override
+  String get safeBrowsing => 'Warn about dangerous sites';
+
+  @override
+  String get safeBrowsingSub =>
+      'Phishing and malware sites, from a list checked on your phone. Updated daily.';
+
+  @override
+  String safeBrowsingSubDated(String date) {
+    return 'Phishing and malware sites, checked on your phone. List from $date; tap to check for a newer one.';
+  }
+
+  @override
+  String get checkingSafetyList =>
+      'Checking for a newer list of dangerous sites…';
+
+  @override
+  String get safetyListUpdated => 'List of dangerous sites updated';
+
+  @override
+  String get safetyListUpToDate => 'The list of dangerous sites is up to date';
+
+  @override
+  String get unsafePhishingTitle => 'Deceptive site ahead';
+
+  @override
+  String get unsafePhishingBody =>
+      'This site is known for tricking people into giving away passwords, card numbers or codes.';
+
+  @override
+  String get unsafeMalwareTitle => 'This site may harm your phone';
+
+  @override
+  String get unsafeMalwareBody =>
+      'This site is known for spreading harmful apps and files.';
+
+  @override
+  String get unsafeBack => 'Back to safety';
+
+  @override
+  String get unsafeDetails => 'Details';
+
+  @override
+  String get unsafeDetailsBody =>
+      'ZT Browser checked this address on your phone against a public list of dangerous sites. Nothing was sent anywhere. Lists can be wrong.';
+
+  @override
+  String get unsafeProceed => 'Open the site anyway (not safe)';
+
+  @override
+  String get downloadWarnDangerousSite =>
+      'This file comes from a site known for phishing or malware.';
+
+  @override
+  String get searchDownloads => 'Search downloads';
+
+  @override
+  String get selectAll => 'Select all';
+
+  @override
+  String get removeFromList => 'Remove from list';
+
+  @override
+  String selectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get clearDownloadList => 'Clear list (keep files)';
+
+  @override
+  String get clearDownloadListSub =>
+      'The list of finished downloads is cleared. The files stay on your phone, in the Files app. Private downloads stay on the list.';
+
+  @override
+  String deleteFilesTitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Delete $count files?',
+      one: 'Delete 1 file?',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get deleteFilesSub =>
+      'They are deleted from your phone. Unfinished downloads are canceled.';
+
+  @override
+  String get renameFile => 'Rename';
+
+  @override
+  String get couldntRename => 'Couldn\'t rename the file';
+
+  @override
+  String get kindImages => 'Images';
+
+  @override
+  String get kindVideo => 'Videos';
+
+  @override
+  String get kindAudio => 'Audio';
+
+  @override
+  String get kindDocuments => 'Documents';
+
+  @override
+  String get kindArchives => 'Archives';
+
+  @override
+  String get kindApps => 'Apps';
+
+  @override
+  String get kindOther => 'Other';
+
+  @override
+  String downloadsUsed(int count, String size) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downloads',
+      one: '1 download',
+    );
+    return '$_temp0 · $size on your phone';
+  }
+
+  @override
+  String get noMatchingDownloads => 'No downloads match';
+
+  @override
+  String get waitingWifi => 'Waiting for Wi-Fi';
+
+  @override
+  String get downloadWifiOnly => 'Download on Wi-Fi only';
+
+  @override
+  String get downloadWifiOnlySub =>
+      'On mobile data, downloads wait and start on Wi-Fi';
+
+  @override
+  String get downloadsAtOnce => 'Downloads at the same time';
+
+  @override
+  String downloadsAtOnceValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Up to $count',
+      one: 'One at a time',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveDownloadsTo => 'Save downloads to';
+
+  @override
+  String get phoneDownloadsFolder => 'The phone\'s Downloads folder';
+
+  @override
+  String get chooseAnotherFolder => 'Choose another folder';
+
+  @override
+  String get usePhoneDownloads => 'Use the phone\'s Downloads folder';
+
+  @override
+  String get autoDeleteDownloads => 'Delete old downloads';
+
+  @override
+  String get autoDeleteDownloadsSub =>
+      'Finished downloads still on the list are deleted from your phone after this time. Files you removed from the list stay.';
+
+  @override
+  String autoDeleteDownloadsValue(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'After $days days',
+      one: 'After 1 day',
+      zero: 'Never delete',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get downloadVault => 'Download vault';
+
+  @override
+  String get vaultUnlockReason => 'Unlock the download vault';
+
+  @override
+  String get vaultLocked =>
+      'The vault is locked. Files in it are encrypted inside ZT Browser, on this phone only.';
+
+  @override
+  String get vaultExplain =>
+      'Encrypted inside ZT Browser. The Files app and other apps can\'t see these files, and they are never synced or backed up.';
+
+  @override
+  String get vaultNoScreenLock =>
+      'Set a screen lock on your phone so the vault asks for it.';
+
+  @override
+  String get vaultEmpty =>
+      'Nothing here yet. Move a download here from its menu on the Downloads page, or add files from your phone.';
+
+  @override
+  String get addFromPhone => 'Add from phone';
+
+  @override
+  String get addToVault => 'Add files to the vault';
+
+  @override
+  String get vaultMoveFiles => 'Move';
+
+  @override
+  String get vaultMoveFilesSub =>
+      'The files are deleted from where they are now';
+
+  @override
+  String get vaultCopyFiles => 'Copy';
+
+  @override
+  String get vaultCopyFilesSub => 'The files also stay where they are now';
+
+  @override
+  String vaultAdded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count files added to the vault',
+      one: '1 file added to the vault',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String vaultAddedKept(int added, int kept) {
+    String _temp0 = intl.Intl.pluralLogic(
+      added,
+      locale: localeName,
+      other: '$added files added',
+      one: '1 file added',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      kept,
+      locale: localeName,
+      other: '$kept originals',
+      one: '1 original',
+    );
+    return '$_temp0. The phone didn\'t let ZT Browser delete $_temp1: delete them in the Files app.';
+  }
+
+  @override
+  String get moveToVault => 'Move to vault';
+
+  @override
+  String movedToVault(String name) {
+    return '$name is in the vault';
+  }
+
+  @override
+  String get couldntMoveToVault => 'Couldn\'t move the file to the vault';
+
+  @override
+  String get openVault => 'Open vault';
+
+  @override
+  String get moveToPhone => 'Move to phone\'s Downloads';
+
+  @override
+  String movedToPhone(String name) {
+    return 'Moved $name to Downloads';
+  }
+
+  @override
+  String deletedFromVault(String name) {
+    return '$name is deleted from the vault for good.';
+  }
+
+  @override
+  String get sendFileTo => 'Send to…';
+
+  @override
+  String sendFileTitle(String name) {
+    return 'Send $name';
+  }
+
+  @override
+  String get sendToNotes => 'A note in ZT Notes';
+
+  @override
+  String get sendToNotesSub => 'Into a new note, encrypted by ZT Notes';
+
+  @override
+  String get sendFileEncrypted =>
+      'End-to-end encrypted. Only ZT Browser there can open it.';
+
+  @override
+  String get fileTooBigToSend => 'Files over 20 MB can\'t be sent to devices';
+
+  @override
+  String get notesNotInstalled => 'ZT Notes isn\'t on this phone';
+
+  @override
+  String get notesCantTakeFile => 'ZT Notes can\'t take this kind of file yet';
+
+  @override
+  String sendingFile(String name) {
+    return 'Sending $name…';
+  }
+
+  @override
+  String sentFileToDevice(String name, String device) {
+    return 'Sent $name to $device';
+  }
+
+  @override
+  String get sentFromDevices => 'Sent from your devices';
+
+  @override
+  String sentFileFrom(String device, String size) {
+    return 'From $device · $size';
+  }
+
+  @override
+  String get dismissSentFile => 'Dismiss (deletes it from your account)';
+
+  @override
+  String get fillCode => 'Fill code';
+
+  @override
+  String get fillCodeSub => 'From ZT Authenticator';
+
+  @override
+  String get fillCodeAsked => 'This page asks for a sign-in code';
+
+  @override
+  String get fillCodeFilled => 'Code filled in';
+
+  @override
+  String get fillCodeMissing => 'Install ZT Authenticator to fill codes';
+
+  @override
+  String get fillCodeExpired =>
+      'The code ran out before it arrived. Try again.';
+
+  @override
+  String get fillCodeInvalid => 'ZT Authenticator didn\'t send a code';
+
+  @override
+  String get fillCodeMoved => 'The page changed, so the code wasn\'t filled in';
+
+  @override
+  String get fillCodeNoField =>
+      'Couldn\'t find where the code goes. Tap the code field and try again.';
+
+  @override
+  String get fillCodeUnavailable => 'Fill code doesn\'t work here';
 }

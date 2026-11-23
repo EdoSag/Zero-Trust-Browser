@@ -91,9 +91,22 @@ class ZtTab(
         fun mediaChanged(tab: ZtTab, playing: Boolean, title: String?)
     }
 
-    val webView: WebView = WebView(activity)
+    val webView: PageWebView = PageWebView(activity)
+
+    /** What the tab view shows: the page, with pull to reload (B28). */
+    val view: PullToRefreshLayout = PullToRefreshLayout(activity, webView) { reload() }
     private val main = Handler(Looper.getMainLooper())
     private val blocked = AtomicInteger(0)
+
+    /** B-1: dangerous sites the user chose to open anyway in this tab. */
+    private val unsafeAllowed: MutableSet<String> =
+        java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
+    /** B-1: warnings shown in this tab, their secret token to the address. */
+    private val warnings = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** B-7: what was blocked on this page, host to how many requests. */
+    private val blockedHosts = java.util.concurrent.ConcurrentHashMap<String, Int>()
     private var startScript: ScriptHandler? = null
 
     /** B42: this tab's own identity (null follows the settings and site rules). */
@@ -136,6 +149,14 @@ class ZtTab(
     private var sslError = false
     private var desktopMode = desktop
     private var readerable = false
+
+    /** The page has a one-time code field (Fill code from ZT Authenticator). */
+    private var codeField = false
+
+    /** The page tells when a code field shows up; else it's checked once loaded. */
+    private val codeListener =
+        WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) &&
+            WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
     private var readerPending = false
     private var inReader = false
 
@@ -177,6 +198,7 @@ class ZtTab(
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         listenForMedia()
+        listenForCodeFields()
         listenForUserScripts()
         refreshScripts()
         webView.webViewClient = Client()
@@ -448,6 +470,51 @@ class ZtTab(
         }
     }
 
+    // ---- Fill code (one-time codes from ZT Authenticator) ------------------
+
+    /** The host of the page now showing, the domain a code is asked for. */
+    val currentHost: String? get() = pageHost?.lowercase()
+
+    /** The top frame says when it has a code field ([PageScripts.CODE_FIELDS]). */
+    private fun listenForCodeFields() {
+        if (!codeListener) return
+        WebViewCompat.addWebMessageListener(webView, "ztCode", setOf("*")) { _, message, origin, isMainFrame, _ ->
+            // A message from the page that was showing before is ignored.
+            if (!isMainFrame || origin.host?.lowercase() != currentHost) return@addWebMessageListener
+            val now = message.data == "1"
+            if (now != codeField) {
+                codeField = now
+                queueState()
+            }
+        }
+        WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.CODE_FIELDS, setOf("*"))
+    }
+
+    /** Without the listener: looks for a code field once the page loaded. */
+    private fun checkCodeField(view: WebView, url: String) {
+        if (inReader || !view.settings.javaScriptEnabled || !url.startsWith("http")) return
+        view.evaluateJavascript(PageScripts.HAS_CODE_FIELD) { result ->
+            val now = result == "true"
+            if (now != codeField && view.url == url) {
+                codeField = now
+                queueState()
+            }
+        }
+    }
+
+    /**
+     * Types [code] into the page's code field. Only into the top frame of
+     * the page on [forHost], the domain the code was given for; false when
+     * the tab moved on or there is no field.
+     */
+    fun fillCode(code: String, forHost: String, done: (Boolean) -> Unit) {
+        if (inReader || !webView.settings.javaScriptEnabled || currentHost != forHost) {
+            done(false)
+            return
+        }
+        webView.evaluateJavascript(PageScripts.fillCode(code)) { done(it == "true") }
+    }
+
     /** Pauses or plays again the media that played last ("pause", "play"). */
     fun mediaControl(command: String) {
         try {
@@ -695,10 +762,32 @@ class ZtTab(
         if (mediaFrame != null) host.mediaChanged(this, false, null)
         mediaPlaying = false
         mediaFrame = null
-        (webView.parent as? ViewGroup)?.removeView(webView)
+        (view.parent as? ViewGroup)?.removeView(view)
         webView.stopLoading()
         webView.destroy()
     }
+
+    /** B-1: "Back to safety" or "Open the site anyway" on the warning page. */
+    private fun onSafetyAction(action: Uri) {
+        // Only a warning this tab showed can be answered: a page that loads
+        // these links itself has no token and is ignored.
+        val url = action.getQueryParameter("t")?.let { warnings.remove(it) } ?: return
+        when (action.path) {
+            "/proceed" -> {
+                val host = Uri.parse(url).host?.lowercase() ?: return
+                unsafeAllowed.add(host)
+                webView.loadUrl(url, privacyHeaders())
+            }
+            else -> {
+                // Back past the warning; with nothing before it, Dart
+                // opens the start page.
+                if (webView.canGoBack()) webView.goBack() else events("unsafeLeave", emptyMap())
+            }
+        }
+    }
+
+    /** B-7: the hosts blocked on the page now showing, with counts. */
+    fun blockedHosts(): Map<String, Int> = HashMap(blockedHosts)
 
     fun queueState() {
         if (stateQueued) return
@@ -725,6 +814,7 @@ class ZtTab(
                 "desktop" to desktopMode,
                 "identity" to (applied?.id ?: Identity.DEFAULT),
                 "readerable" to readerable,
+                "codeField" to (codeField && !inReader),
                 "reader" to inReader,
                 "javascript" to webView.settings.javaScriptEnabled,
                 "translatedFrom" to translatedFrom,
@@ -822,6 +912,20 @@ class ZtTab(
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
             if (!request.isForMainFrame) return false
             val url = request.url.toString()
+            // B-1: the warning page's two links.
+            if (request.url.host == SafeBrowsing.ACTION_HOST) {
+                onSafetyAction(request.url)
+                return true
+            }
+            // A redirect to a dangerous site: load it again so that
+            // shouldInterceptRequest shows the warning instead.
+            val target = request.url.host?.lowercase()
+            if (request.isRedirect && target != null && !unsafeAllowed.contains(target) &&
+                SafeBrowsing.check(target) != null
+            ) {
+                view.loadUrl(url, privacyHeaders())
+                return true
+            }
             // B41: a link to a user script offers to install it (as
             // Tampermonkey does), instead of showing its code.
             val scheme = request.url.scheme?.lowercase()
@@ -884,9 +988,11 @@ class ZtTab(
                 host.mediaChanged(this@ZtTab, false, null)
             }
             blocked.set(0)
+            blockedHosts.clear()
             sslError = false
             loading = true
             readerable = false
+            codeField = false
             inReader = readerPending
             readerPending = false
             // Back, forward and reload skip shouldOverrideUrlLoading: catch
@@ -911,6 +1017,7 @@ class ZtTab(
             cleaned.clear()
             sendState()
             checkReaderable(view, url)
+            if (!codeListener) checkCodeField(view, url)
             // Translating this site in this tab: the next page is too.
             val keep = keepTranslating
             val engine = translator
@@ -933,9 +1040,23 @@ class ZtTab(
         }
 
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-            if (request.isForMainFrame) return null
+            if (request.isForMainFrame) {
+                // B-1: a phishing or malware site shows a warning instead.
+                val h = request.url.host?.lowercase() ?: return null
+                if (h == SafeBrowsing.ACTION_HOST || unsafeAllowed.contains(h)) return null
+                val kind = SafeBrowsing.check(h) ?: return null
+                val token = java.util.UUID.randomUUID().toString().replace("-", "")
+                if (warnings.size > 32) warnings.clear()
+                warnings[token] = request.url.toString()
+                return SafeBrowsing.warningPage(request.url.toString(), h, kind, token)
+            }
             if (Blocker.shouldBlock(request.url.host, pageHost)) {
                 blocked.incrementAndGet()
+                request.url.host?.lowercase()?.let { h ->
+                    if (blockedHosts.size < MAX_BLOCKED_HOSTS || blockedHosts.containsKey(h)) {
+                        blockedHosts.merge(h, 1, Int::plus)
+                    }
+                }
                 main.post { queueState() }
                 return WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
             }
@@ -1079,6 +1200,12 @@ class ZtTab(
         /** Page text size in percent, and dark pages; pushed from Dart. */
         @Volatile var textZoom = 100
         @Volatile var darkPages = true
+
+        /** Hosts remembered per page for the shield panel (B-7). */
+        const val MAX_BLOCKED_HOSTS = 300
+
+        /** B28: pull down at the top of a page to reload it. */
+        @Volatile var pullToRefresh = true
 
         fun privateProfileSupported(): Boolean =
             WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
