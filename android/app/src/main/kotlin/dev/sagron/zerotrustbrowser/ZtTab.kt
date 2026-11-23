@@ -149,6 +149,9 @@ class ZtTab(
     private var sslError = false
     private var desktopMode = desktop
     private var readerable = false
+
+    /** The page has a one-time code field (Fill code from ZT Authenticator). */
+    private var codeField = false
     private var readerPending = false
     private var inReader = false
 
@@ -190,6 +193,7 @@ class ZtTab(
         applyDisplay()
         CookieManager.getInstance().setAcceptThirdPartyCookies(webView, false)
         listenForMedia()
+        listenForCodeFields()
         listenForUserScripts()
         refreshScripts()
         webView.webViewClient = Client()
@@ -459,6 +463,55 @@ class ZtTab(
                 }
             }
         }
+    }
+
+    // ---- Fill code (one-time codes from ZT Authenticator) ------------------
+
+    /** The host of the page now showing, the domain a code is asked for. */
+    val currentHost: String? get() = pageHost?.lowercase()
+
+    /** The top frame says when it has a code field ([PageScripts.CODE_FIELDS]). */
+    private fun listenForCodeFields() {
+        if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER) ||
+            !WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
+        ) {
+            return
+        }
+        WebViewCompat.addWebMessageListener(webView, "ztCode", setOf("*")) { _, message, origin, isMainFrame, _ ->
+            // A message from the page that was showing before is ignored.
+            if (!isMainFrame || origin.host?.lowercase() != currentHost) return@addWebMessageListener
+            val now = message.data == "1"
+            if (now != codeField) {
+                codeField = now
+                queueState()
+            }
+        }
+        WebViewCompat.addDocumentStartJavaScript(webView, PageScripts.CODE_FIELDS, setOf("*"))
+    }
+
+    /** Without the listener: looks for a code field once the page loaded. */
+    private fun checkCodeField(view: WebView, url: String) {
+        if (inReader || !view.settings.javaScriptEnabled || !url.startsWith("http")) return
+        view.evaluateJavascript(PageScripts.HAS_CODE_FIELD) { result ->
+            val now = result == "true"
+            if (now != codeField && view.url == url) {
+                codeField = now
+                queueState()
+            }
+        }
+    }
+
+    /**
+     * Types [code] into the page's code field. Only into the top frame of
+     * the page on [forHost], the domain the code was given for; false when
+     * the tab moved on or there is no field.
+     */
+    fun fillCode(code: String, forHost: String, done: (Boolean) -> Unit) {
+        if (inReader || !webView.settings.javaScriptEnabled || currentHost != forHost) {
+            done(false)
+            return
+        }
+        webView.evaluateJavascript(PageScripts.fillCode(code)) { done(it == "true") }
     }
 
     /** Pauses or plays again the media that played last ("pause", "play"). */
@@ -760,6 +813,7 @@ class ZtTab(
                 "desktop" to desktopMode,
                 "identity" to (applied?.id ?: Identity.DEFAULT),
                 "readerable" to readerable,
+                "codeField" to (codeField && !inReader),
                 "reader" to inReader,
                 "javascript" to webView.settings.javaScriptEnabled,
                 "translatedFrom" to translatedFrom,
@@ -937,6 +991,7 @@ class ZtTab(
             sslError = false
             loading = true
             readerable = false
+            codeField = false
             inReader = readerPending
             readerPending = false
             // Back, forward and reload skip shouldOverrideUrlLoading: catch
@@ -961,6 +1016,7 @@ class ZtTab(
             cleaned.clear()
             sendState()
             checkReaderable(view, url)
+            if (!WebViewFeature.isFeatureSupported(WebViewFeature.WEB_MESSAGE_LISTENER)) checkCodeField(view, url)
             // Translating this site in this tab: the next page is too.
             val keep = keepTranslating
             val engine = translator

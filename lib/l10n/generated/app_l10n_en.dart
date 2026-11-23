@@ -2440,4 +2440,36 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get dismissSentFile => 'Dismiss (deletes it from your account)';
+
+  @override
+  String get fillCode => 'Fill code';
+
+  @override
+  String get fillCodeSub => 'From ZT Authenticator';
+
+  @override
+  String get fillCodeAsked => 'This page asks for a sign-in code';
+
+  @override
+  String get fillCodeFilled => 'Code filled in';
+
+  @override
+  String get fillCodeMissing => 'Install ZT Authenticator to fill codes';
+
+  @override
+  String get fillCodeExpired =>
+      'The code ran out before it arrived. Try again.';
+
+  @override
+  String get fillCodeInvalid => 'ZT Authenticator didn\'t send a code';
+
+  @override
+  String get fillCodeMoved => 'The page changed, so the code wasn\'t filled in';
+
+  @override
+  String get fillCodeNoField =>
+      'Couldn\'t find where the code goes. Tap the code field and try again.';
+
+  @override
+  String get fillCodeUnavailable => 'Fill code doesn\'t work here';
 }

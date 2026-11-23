@@ -1405,5 +1405,31 @@
       }
     }
   },
-  "dismissSentFile": "Dismiss (deletes it from your account)"
+  "dismissSentFile": "Dismiss (deletes it from your account)",
+  "fillCode": "Fill code",
+  "@fillCode": {
+    "description": "Button and menu item: fill the one-time sign-in code from ZT Authenticator"
+  },
+  "fillCodeSub": "From ZT Authenticator",
+  "@fillCodeSub": {
+    "description": "Subtitle of the Fill code menu item"
+  },
+  "fillCodeAsked": "This page asks for a sign-in code",
+  "@fillCodeAsked": {
+    "description": "Bar above the toolbar when the page has a one-time code field"
+  },
+  "fillCodeFilled": "Code filled in",
+  "@fillCodeFilled": {},
+  "fillCodeMissing": "Install ZT Authenticator to fill codes",
+  "@fillCodeMissing": {},
+  "fillCodeExpired": "The code ran out before it arrived. Try again.",
+  "@fillCodeExpired": {},
+  "fillCodeInvalid": "ZT Authenticator didn't send a code",
+  "@fillCodeInvalid": {},
+  "fillCodeMoved": "The page changed, so the code wasn't filled in",
+  "@fillCodeMoved": {},
+  "fillCodeNoField": "Couldn't find where the code goes. Tap the code field and try again.",
+  "@fillCodeNoField": {},
+  "fillCodeUnavailable": "Fill code doesn't work here",
+  "@fillCodeUnavailable": {}
 }

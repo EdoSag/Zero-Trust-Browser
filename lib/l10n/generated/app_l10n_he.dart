@@ -2424,4 +2424,35 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get dismissSentFile => 'סגירה (נמחק מהחשבון שלך)';
+
+  @override
+  String get fillCode => 'מילוי קוד';
+
+  @override
+  String get fillCodeSub => 'מ־ZT Authenticator';
+
+  @override
+  String get fillCodeAsked => 'הדף מבקש קוד כניסה';
+
+  @override
+  String get fillCodeFilled => 'הקוד מולא';
+
+  @override
+  String get fillCodeMissing => 'כדי למלא קודים יש להתקין את ZT Authenticator';
+
+  @override
+  String get fillCodeExpired => 'תוקף הקוד פג לפני שהגיע. אפשר לנסות שוב.';
+
+  @override
+  String get fillCodeInvalid => 'לא התקבל קוד מ־ZT Authenticator';
+
+  @override
+  String get fillCodeMoved => 'הדף השתנה, ולכן הקוד לא מולא';
+
+  @override
+  String get fillCodeNoField =>
+      'לא נמצא שדה לקוד. יש להקיש על שדה הקוד ולנסות שוב.';
+
+  @override
+  String get fillCodeUnavailable => 'מילוי קוד לא זמין כאן';
 }

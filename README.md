@@ -37,6 +37,11 @@ On the phone it is **ZT Browser**.
 - **Bookmarks, history, settings and open tabs** are end-to-end encrypted in
   the shared Zero-Trust account and synced between devices through
   Zero-Trust-Core. The server only sees sealed rows with random ids.
+- **Fill code** from ZT Authenticator: when a page asks for a one-time
+  sign-in code, a bar offers "Fill code" (also in the page menu). ZT
+  Authenticator opens for that site, and the code goes straight into the
+  page. Only shows when ZT Authenticator is on the phone. See
+  [Fill code](#fill-code-zt-authenticator).
 - **Reader view** (Mozilla Readability) and a **reading list** whose pages
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
@@ -225,6 +230,28 @@ Limits, because the engine is Android System WebView:
   started again with it, so that request carries no `Referer`.
 - A site that looks closely (TLS, fonts, drawing) can still tell the
   engine is Chromium on Android.
+
+## Fill code (ZT Authenticator)
+
+- `PageScripts.CODE_FIELDS` runs in the top frame of each page and tells the
+  app (the `ztCode` listener, hidden from the page) whether there is a
+  one-time code field: `autocomplete="one-time-code"`, a field whose name,
+  label or placeholder says so (not promo, postal or phone fields), or a
+  row of 4 to 8 one-character boxes. It checks again when the page changes,
+  so sign-in forms that show the field later count too.
+- "Fill code" opens ZT Authenticator with `startActivityForResult` (it only
+  answers a caller signed with the suite key): action
+  `bz.zerotrust.action.PICK_TEXT`, category
+  `bz.zerotrust.category.ONE_TIME_CODE`, extras
+  `bz.zerotrust.extra.FOR_PACKAGE` (this app) and
+  `bz.zerotrust.extra.FOR_DOMAIN` (the tab's host, as the browser sees it,
+  never what the page says).
+- The browser only opens an app that is signed with its own key, so another
+  app claiming the same action never learns which site is open.
+- The answer (`bz.zerotrust.extra.TEXT`, 4 to 12 letters or digits) is typed
+  into the page only if the tab is still on the same site, and not when
+  `bz.zerotrust.extra.VALID_UNTIL` has passed. The code never reaches the
+  Dart side, the clipboard or any log.
 
 ## Texts and languages
 

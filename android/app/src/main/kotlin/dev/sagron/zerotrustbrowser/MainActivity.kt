@@ -598,6 +598,8 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                         ),
                     )
                     "blockedHosts" -> result.success(tab?.blockedHosts() ?: emptyMap<String, Int>())
+                    "authenticatorInstalled" -> result.success(authenticator() != null)
+                    "fillCode" -> fillCode(tab, result)
                     "selection" -> {
                         if (tab == null) result.success(null) else tab.selection { result.success(it) }
                     }
@@ -866,6 +868,13 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
                     }
                     main.post { result.success(bytes) }
                 }
+            }
+            REQUEST_CODE -> {
+                systemUi(false)
+                val result = waiting.remove(REQUEST_CODE) ?: return
+                val asked = codeRequest
+                codeRequest = null
+                codeAnswer(asked, resultCode, data) { result.success(it) }
             }
             REQUEST_QR -> {
                 systemUi(false)
@@ -1288,6 +1297,89 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
             .initiateScan()
     }
 
+    // ---- Fill code (one-time codes from ZT Authenticator) ------------------
+
+    /** The tab and site a code was asked for, while ZT Authenticator is open. */
+    private var codeRequest: Pair<String, String>? = null
+
+    private fun codeIntent(): Intent = Intent(CODE_ACTION).addCategory(CODE_CATEGORY)
+
+    /**
+     * The app that hands out codes, only when it is a Zero-Trust app (signed
+     * with this app's key, as ZT Authenticator checks the other way round).
+     * Anything else that claims the action never sees which site is open.
+     */
+    private fun authenticator(): String? {
+        @Suppress("DEPRECATION")
+        val found = packageManager.queryIntentActivities(codeIntent(), 0)
+        return found.map { it.activityInfo.packageName }.distinct().firstOrNull { pkg ->
+            pkg != packageName && try {
+                packageManager.checkSignatures(packageName, pkg) == PackageManager.SIGNATURE_MATCH
+            } catch (e: Exception) {
+                false
+            }
+        }
+    }
+
+    /**
+     * Opens ZT Authenticator for the code of the site in [tab]. It must be
+     * opened for an answer: that is how it knows which app is asking. The
+     * code goes straight into the page and never to the Dart side.
+     */
+    private fun fillCode(tab: ZtTab?, result: MethodChannel.Result) {
+        val host = tab?.currentHost
+        if (tab == null || host.isNullOrEmpty()) {
+            result.success("unavailable")
+            return
+        }
+        val app = authenticator()
+        if (app == null) {
+            result.success("missing")
+            return
+        }
+        waiting.remove(REQUEST_CODE)?.success("canceled")
+        val intent = codeIntent()
+            .setPackage(app)
+            .putExtra(EXTRA_FOR_PACKAGE, packageName)
+            .putExtra(EXTRA_FOR_DOMAIN, host)
+        try {
+            waiting[REQUEST_CODE] = result
+            codeRequest = tab.id to host
+            @Suppress("DEPRECATION")
+            startActivityForResult(intent, REQUEST_CODE)
+            systemUi(true)
+        } catch (e: ActivityNotFoundException) {
+            waiting.remove(REQUEST_CODE)
+            codeRequest = null
+            result.success("missing")
+        }
+    }
+
+    /** What came back from ZT Authenticator, filled into the page if it can be. */
+    private fun codeAnswer(asked: Pair<String, String>?, resultCode: Int, data: Intent?, done: (String) -> Unit) {
+        val raw = if (resultCode == RESULT_OK) data?.getStringExtra(EXTRA_TEXT) else null
+        if (asked == null || raw == null) {
+            done("canceled")
+            return
+        }
+        val code = raw.filterNot { it.isWhitespace() }
+        if (!CODE_PATTERN.matches(code)) {
+            done("invalid")
+            return
+        }
+        val until = data?.getLongExtra(EXTRA_VALID_UNTIL, 0L) ?: 0L
+        if (until > 0L && until <= System.currentTimeMillis()) {
+            done("expired")
+            return
+        }
+        val tab = tabs[asked.first]
+        if (tab == null || tab.currentHost != asked.second) {
+            done("moved")
+            return
+        }
+        tab.fillCode(code, asked.second) { filled -> done(if (filled) "filled" else "noField") }
+    }
+
     private fun voiceIntent(prompt: String?): Intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
         .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
@@ -1640,6 +1732,18 @@ class MainActivity : FlutterFragmentActivity(), ZtTab.TabHost {
         private const val REQUEST_VOICE = 4106
         private const val REQUEST_FOLDER = 4107
         private const val REQUEST_VAULT_IMPORT = 4108
+        private const val REQUEST_CODE = 4109
+
+        /** ZT Authenticator's code picker (its CodePick.kt). */
+        private const val CODE_ACTION = "bz.zerotrust.action.PICK_TEXT"
+        private const val CODE_CATEGORY = "bz.zerotrust.category.ONE_TIME_CODE"
+        private const val EXTRA_FOR_PACKAGE = "bz.zerotrust.extra.FOR_PACKAGE"
+        private const val EXTRA_FOR_DOMAIN = "bz.zerotrust.extra.FOR_DOMAIN"
+        private const val EXTRA_TEXT = "bz.zerotrust.extra.TEXT"
+        private const val EXTRA_VALID_UNTIL = "bz.zerotrust.extra.VALID_UNTIL"
+
+        /** A one-time code: 4 to 12 letters or digits, nothing a page could run. */
+        private val CODE_PATTERN = Regex("^[A-Za-z0-9]{4,12}$")
 
         /** Normal tabs kept loaded; older ones unload until shown again. */
         private const val MAX_LIVE_TABS = 5
