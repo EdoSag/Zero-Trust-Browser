@@ -133,8 +133,10 @@ object SafeBrowsing {
     /**
      * The page shown instead of a dangerous site. It needs no JavaScript:
      * its two links go to [ACTION_HOST], which the tab answers itself.
+     * Both carry [token], a secret only this warning knows, so another page
+     * can't fake "Open the site anyway" by loading the link itself.
      */
-    fun warningPage(url: String, host: String, kind: String): WebResourceResponse {
+    fun warningPage(url: String, host: String, kind: String, token: String): WebResourceResponse {
         val esc = { s: String -> TextUtils.htmlEncode(s) }
         val title = if (kind == "malware") {
             label("malwareTitle", "This site may harm your phone")
@@ -146,8 +148,8 @@ object SafeBrowsing {
         } else {
             label("phishingBody", "It may try to trick you into giving away a password, card number or code.")
         }
-        val back = "https://$ACTION_HOST/back"
-        val proceed = "https://$ACTION_HOST/proceed?u=" + android.net.Uri.encode(url)
+        val back = "https://$ACTION_HOST/back?t=$token"
+        val proceed = "https://$ACTION_HOST/proceed?t=$token"
         val dir = if (label("dir", "ltr") == "rtl") "rtl" else "ltr"
         val html = """<!doctype html><html dir="$dir"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light">

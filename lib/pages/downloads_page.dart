@@ -592,6 +592,20 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
     final List<DownloadItem> shown = items == null
         ? const <DownloadItem>[]
         : filterDownloads(items, query: _query.text, kind: _kind);
+    // Locked private files (B29) can't be picked, not even by Select all.
+    final List<DownloadItem> selectable = locked
+        ? <DownloadItem>[
+            for (final DownloadItem d in shown)
+              if (!d.private) d,
+          ]
+        : shown;
+    if (locked) {
+      _selected.removeWhere(
+        (String key) => (items ?? const <DownloadItem>[]).any(
+          (DownloadItem d) => d.key == key && d.private,
+        ),
+      );
+    }
     final Set<DownloadKind> kinds = <DownloadKind>{
       for (final DownloadItem d in items ?? const <DownloadItem>[]) d.kind,
     };
@@ -609,7 +623,7 @@ class _DownloadsPageState extends ConsumerState<DownloadsPage> {
         if (!didPop) setState(_selected.clear);
       },
       child: Scaffold(
-        appBar: _appBar(shown),
+        appBar: _appBar(selectable),
         body: items == null
             ? const Center(child: CircularProgressIndicator())
             : items.isEmpty && sent.isEmpty

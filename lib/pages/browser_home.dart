@@ -1602,7 +1602,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                 if (reading.active) ReadAloudBar(state: reading),
                 if (!wide)
                   TabSwipe(
-                    enabled: settings.swipeTabs,
+                    enabled: settings.swipeTabs && !_editing,
                     canSwitch: canSwitch,
                     onSwitch: switchTab,
                     onSwipeUp: () => _push(TabsPage(startPrivate: private)),
