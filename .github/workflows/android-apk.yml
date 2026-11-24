@@ -3,6 +3,11 @@
 # Play. Pull requests get the same build as a downloadable artifact (no
 # release), which shows a change still builds before it is merged.
 #
+# A release also gets the Windows desktop app: this workflow calls
+# windows.yml and adds its zip to the release once the APK is published.
+# The APK never waits for Windows; when the Windows build fails, the release
+# is simply published without the zip.
+#
 # One-time setup (Settings > Secrets and variables > Actions > New secret):
 #   ANDROID_KEYSTORE_BASE64   the release keystore, base64 encoded
 #   ANDROID_KEYSTORE_PASSWORD its password (store and key use the same one)
@@ -31,6 +36,9 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    outputs:
+      # Empty when no release was published (pull requests).
+      tag: ${{ steps.release.outputs.tag }}
     # A throwaway database for the release checks below.
     services:
       postgres:
@@ -187,6 +195,7 @@ jobs:
           retention-days: 14
 
       - name: Publish the GitHub Release
+        id: release
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -202,3 +211,40 @@ jobs:
 
           The .aab file is for uploading to the Google Play Console; phones install the .apk." \
             --latest
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  # The Windows desktop app of the same release, built beside the APK. Pull
+  # requests build it through windows.yml's own pull_request trigger.
+  windows:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    uses: ./.github/workflows/windows.yml
+    with:
+      release: true
+    secrets:
+      # Optional, as in the apk job; nothing else is passed on.
+      ENV_FILE: ${{ secrets.ENV_FILE }}
+
+  windows-release:
+    name: Add the Windows app to the release
+    needs: [apk, windows]
+    if: needs.apk.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ needs.windows.outputs.zip }}
+
+      - name: Upload the zip and say how to use it
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ needs.apk.outputs.tag }}
+          ZIP: ${{ needs.windows.outputs.zip }}.zip
+        run: |
+          set -e
+          gh release upload "$TAG" "$ZIP" --clobber
+          BODY=$(gh release view "$TAG" --json body --jq .body)
+          gh release edit "$TAG" --notes "$BODY
+
+          **Windows 10 and 11:** download **$ZIP**, unzip it into its own folder and start zerotrust_browser.exe. Windows may warn about an unknown publisher the first time: choose More info, then Run anyway."

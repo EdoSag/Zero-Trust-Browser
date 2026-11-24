@@ -299,9 +299,16 @@ Release (`.github/workflows/android-apk.yml`). The repository needs the
 `ANDROID_KEYSTORE_BASE64` and `ANDROID_KEYSTORE_PASSWORD` secrets, the same
 keystore as the other Zero-Trust apps.
 
-Every pull request and push to `main` also builds the Windows app
-(`.github/workflows/windows.yml`); the zipped app is on the run's Summary
-page. Unzip it and start `zerotrust_browser.exe`.
+Every push to `main` also builds the Windows app
+(`.github/workflows/windows.yml`, called by the release workflow) and adds
+it to the same GitHub Release as
+`zero-trust-browser-windows-<version>-build<number>.zip`. Unzip it into its
+own folder and start `zerotrust_browser.exe`. The app is not code-signed
+yet, so Windows may warn about an unknown publisher the first time.
+
+Pull requests build the Windows app too, start it once to see that it
+opens, and keep the zipped app and a screenshot of its first screen on the
+run's Summary page.
 
 ## Credits and licences
 
