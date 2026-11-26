@@ -2455,4 +2455,67 @@ class AppL10nHe extends AppL10n {
 
   @override
   String get fillCodeUnavailable => 'מילוי קוד לא זמין כאן';
+
+  @override
+  String get assistAsk => 'שאלה ל-ZT Assist';
+
+  @override
+  String get assistAskSub => 'סיכום הדף או שאלה עליו, בטלפון שלך';
+
+  @override
+  String get assistPagePrivacy =>
+      'ZT Assist פועל בטלפון עצמו. הדף לא נשלח לשום מקום.';
+
+  @override
+  String get assistSummarizePage => 'סיכום הדף';
+
+  @override
+  String get assistAskAboutPage => 'שאלה על הדף';
+
+  @override
+  String get assistSend => 'שליחת השאלה';
+
+  @override
+  String get assistStarting =>
+      'מכינים את ZT Assist. התשובה הראשונה לוקחת כמה שניות יותר.';
+
+  @override
+  String get assistStoppedByUser => 'נעצר לפני הסוף.';
+
+  @override
+  String get assistReadBeginning => 'הדף ארוך, ולכן נקראה רק ההתחלה שלו.';
+
+  @override
+  String get assistCheckAnswer =>
+      'נכתב על ידי מודל בינה מלאכותית בטלפון שלך. הוא עלול לטעות: כדאי לבדוק מול הדף את מה שחשוב.';
+
+  @override
+  String get assistCopyAnswer => 'העתקת התשובה';
+
+  @override
+  String get assistAskSomethingElse => 'שאלה אחרת';
+
+  @override
+  String get assistCant => 'בדף הזה אין מאמר ש-ZT Assist יכול לקרוא.';
+
+  @override
+  String get assistNotInstalled => 'ZT Assist לא מותקן בטלפון הזה.';
+
+  @override
+  String get assistNoModel =>
+      'ל-ZT Assist עדיין אין מודל. יש לפתוח את ZT Assist ולהוריד אחד.';
+
+  @override
+  String get assistLoadFailed =>
+      'ZT Assist לא הצליח לטעון את המודל. ייתכן שחסר זיכרון פנוי בטלפון: כדאי לסגור אפליקציות אחרות ולנסות שוב.';
+
+  @override
+  String get assistNeedsUpdate =>
+      'צריך לעדכן את ZT Assist כדי שיוכל לעשות את זה.';
+
+  @override
+  String get assistStopped => 'ZT Assist נעצר באמצע. אפשר לנסות שוב.';
+
+  @override
+  String get assistFailed => 'ZT Assist לא הצליח לענות. אפשר לנסות שוב.';
 }

@@ -52,6 +52,12 @@ Zero-Trust apps, built on
 - **Translate pages** on the phone, with Firefox's translation engine: the
   page's text never leaves the phone. A language is downloaded the first
   time you pick it, from a signed list.
+- **Ask ZT Assist** about a page: a summary, or an answer to your question
+  from what the page says. The AI model runs in
+  [ZT Assist](https://github.com/EdoSag/Zero-Trust-Assist) on the same
+  phone; the page's text goes from one app to the other and nowhere else.
+  In the page menu, only when ZT Assist is on the phone
+  (`lib/pages/page_assist_sheet.dart`, Android only).
 - **Reader view** (Mozilla Readability) and a **reading list** whose pages
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
@@ -141,6 +147,9 @@ forget the password. How the keys work:
 - The download list, the download vault and what user scripts store stay on
   the phone, encrypted.
 - Pages are translated on the phone; the page's text never leaves it.
+- "Ask ZT Assist" hands the page's article to ZT Assist on the same phone,
+  and only when you tap it. Nothing is sent to a server and neither app
+  keeps the text or the answer.
 - ZT Browser never stores passwords.
 
 ## One account, one core

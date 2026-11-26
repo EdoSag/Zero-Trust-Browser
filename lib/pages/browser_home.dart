@@ -14,6 +14,7 @@ import 'package:zerotrust_browser/browser/filter_lists.dart';
 import 'package:zerotrust_browser/browser/privacy_report.dart';
 import 'package:zerotrust_browser/browser/private_lock.dart';
 import 'package:zerotrust_browser/browser/read_aloud.dart';
+import 'package:zerotrust_browser/browser/page_assist.dart';
 import 'package:zerotrust_browser/browser/reader.dart';
 import 'package:zerotrust_browser/browser/search_suggestions.dart';
 import 'package:zerotrust_browser/browser/site_permissions.dart';
@@ -36,6 +37,7 @@ import 'package:zerotrust_browser/pages/reading_list_page.dart';
 import 'package:zerotrust_browser/pages/scripts_page.dart';
 import 'package:zerotrust_browser/pages/send_tab_sheet.dart';
 import 'package:zerotrust_browser/pages/fill_code_bar.dart';
+import 'package:zerotrust_browser/pages/page_assist_sheet.dart';
 import 'package:zerotrust_browser/pages/translate_sheet.dart';
 import 'package:zerotrust_browser/pages/settings_page.dart';
 import 'package:zerotrust_browser/pages/site_sheet.dart';
@@ -47,6 +49,7 @@ import 'package:zerotrust_browser/widgets/read_aloud_bar.dart';
 import 'package:zerotrust_browser/widgets/site_icon.dart';
 import 'package:zerotrust_browser/widgets/tab_strip.dart';
 import 'package:zerotrust_browser/widgets/tab_swipe.dart';
+import 'package:zt_assist/zt_assist.dart';
 
 /// The browser once unlocked: address bar, the current tab, toolbar.
 class BrowserHome extends ConsumerStatefulWidget {
@@ -948,6 +951,35 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     });
   }
 
+  // ---- Ask ZT Assist about the page ----------------------------------------
+
+  /// Whether ZT Assist is on the phone, checked again each time.
+  Future<bool> _assistHere() async {
+    try {
+      return await ZtAssist.instance.isInstalled();
+    } on Object {
+      return false;
+    }
+  }
+
+  /// Hands the page's article to ZT Assist, on this phone, for a summary
+  /// or an answer to a question.
+  Future<void> _askAssist(BrowserTab tab) async {
+    final Article? a = Article.fromJson(await _engine.article(tab.id));
+    if (!mounted) return;
+    final String text = a == null ? '' : pageTextForAssist(a);
+    if (text.trim().isEmpty) {
+      _snack(tab.javascript ? l.assistCant : l.readerNeedsJs);
+      return;
+    }
+    await showPageAssistSheet(
+      context,
+      title: a!.title.isNotEmpty ? a.title : tab.label,
+      text: text,
+      onActivity: ref.read(vaultControllerProvider.notifier).touch,
+    );
+  }
+
   // ---- Reader, reading list, page tools ------------------------------------
 
   Future<void> _toggleReader(BrowserTab tab) async {
@@ -1160,6 +1192,7 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
     final bool pinned = onPage && _settings.isPinned(tab.url!);
     final Set<String> apps = onPage ? await _ztApps() : const <String>{};
     final bool authenticator = onPage && await _authenticator();
+    final bool assist = onPage && await _assistHere();
     final List<ScriptCommand> commands = onPage
         ? await _engine.scriptCommands(tab.id)
         : const <ScriptCommand>[];
@@ -1336,6 +1369,14 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
                           ? _engine.showOriginal(tab.id)
                           : showTranslateSheet(context, ref, tab),
                     ),
+                  ),
+                if (assist)
+                  ListTile(
+                    key: const Key('menu_ask_assist'),
+                    leading: const Icon(Icons.auto_awesome_outlined),
+                    title: Text(l.assistAsk),
+                    subtitle: Text(l.assistAskSub),
+                    onTap: () => run(() => _askAssist(tab)),
                   ),
                 if (authenticator)
                   ListTile(
