@@ -1,7 +1,14 @@
 # Zero-Trust Browser
 
-A private web browser for Android and Windows, part of the Zero-Trust apps.
-On the phone it is **ZT Browser**.
+A private web browser for Android and Windows that blocks trackers and ads,
+with bookmarks, history and open tabs synced end-to-end encrypted. On the
+phone it is called **ZT Browser**; in stores and on release pages,
+**Zero-Trust Browser**. Same account, settings and look as the other
+Zero-Trust apps, built on
+[Zero-Trust-Core](https://github.com/EdoSag/Zero-Trust-Core). Part of the
+[Zero-Trust suite](https://zerotrust.bz).
+
+## What it does
 
 - **Trackers and ads blocked** on every site: about 50,000 known hosts from
   EasyList and EasyPrivacy, checked for every request the page makes.
@@ -42,6 +49,9 @@ On the phone it is **ZT Browser**.
   Authenticator opens for that site, and the code goes straight into the
   page. Only shows when ZT Authenticator is on the phone. See
   [Fill code](#fill-code-zt-authenticator).
+- **Translate pages** on the phone, with Firefox's translation engine: the
+  page's text never leaves the phone. A language is downloaded the first
+  time you pick it, from a signed list.
 - **Reader view** (Mozilla Readability) and a **reading list** whose pages
   are saved to read offline as end-to-end encrypted attachments.
 - **Tabs**: groups, search, close tabs unused for N days; background tabs
@@ -108,10 +118,62 @@ On the phone it is **ZT Browser**.
   `User-Agent` header, the Client Hints headers and what scripts read from
   `navigator` change together. With the default nothing runs at all. See
   "Browser identity" below.
-- **English and Hebrew**, with a right-to-left layout. The sign-in and
-  unlock screens come from Zero-Trust-Core and are English for now.
 - Can be the default browser; "Share to" and "Search in ZT Browser" for
   selected text.
+
+## Privacy
+
+Like every Zero-Trust app, it is zero-knowledge: your data is encrypted on
+your device, with keys made from your password, before anything is sent.
+The server stores only ciphertext and your password itself is never
+sent, so neither we nor anyone who breaks into the server can read your
+data. The recovery key shown at sign-up is the only way back in if you
+forget the password. How the keys work:
+[Zero-Trust-Core](https://github.com/EdoSag/Zero-Trust-Core#key-hierarchy) and
+[zerotrust.bz/security](https://zerotrust.bz/security/).
+
+- Bookmarks, history, settings, open tabs, user scripts and the privacy
+  report are encrypted in the account. The server only sees sealed rows
+  with random ids.
+- Blocklists and the phishing and malware list are downloaded whole and
+  checked on the phone, so the pages you open are never sent anywhere.
+- Private tabs are never saved to history or synced.
+- The download list, the download vault and what user scripts store stay on
+  the phone, encrypted.
+- Pages are translated on the phone; the page's text never leaves it.
+- ZT Browser never stores passwords.
+
+## One account, one core
+
+One Zero-Trust account opens every app in the suite. Sign-in, unlock
+(fingerprint or face, auto-lock), the recovery key, settings, the look,
+sync and languages come from
+[Zero-Trust-Core](https://github.com/EdoSag/Zero-Trust-Core), so they work
+the same in every app. Accounts made before the core still sign in and
+see their data.
+
+## Install
+
+Android: get the latest signed APK from this repository's
+[Releases](https://github.com/EdoSag/Zero-Trust-Browser/releases/latest),
+or from [zerotrust.bz/install](https://zerotrust.bz/install/#browser),
+which also shows each file's SHA-256, the signing fingerprint and an
+Obtainium link. GitHub Releases are the main way the apps are published.
+
+Builds from GitHub check for a newer release themselves (Settings > About,
+one anonymous request a day, can be turned off). Every Zero-Trust app is signed
+with the same key, and Android only installs an update signed with it.
+
+Windows 10 and 11: each release also has
+`zero-trust-browser-windows-<version>-build<number>.zip`. Unzip it into its
+own folder and start `zerotrust_browser.exe`. The app is not code-signed yet,
+so Windows may warn about an unknown publisher the first time.
+
+## Languages
+
+English and Hebrew, with right-to-left layout. Choose under
+Settings > Appearance > Language. See
+[Texts and languages](#texts-and-languages) for how the texts are kept.
 
 ## How it is built
 
@@ -292,7 +354,31 @@ the result with the same key as the blocklist and uploads
 The app checks once a day. Run the workflow once by hand after merging so
 the first list exists.
 
-## Builds
+## Build from source
+
+Flutter 3.47.9, the version CI pins (3.50 deprecates `material.dart` and
+fails analyze).
+
+```bash
+# .env (not committed; CI writes its own). Public client values only:
+# never a service-role key, because .env is bundled into the APK.
+SUPABASE_URL=https://<project>.supabase.co
+SUPABASE_ANON_KEY=<publishable key>
+
+flutter pub get
+dart run zt_release_checks --app browser   # shared release checks
+flutter analyze && flutter test
+flutter run                # Android
+flutter run -d windows     # Windows
+```
+
+Never add `cryptography_flutter`: it breaks the core's key derivation and
+sign-in fails.
+
+## Branches and releases
+
+Work happens on `Dev`: pull requests target `Dev`, never `main`. A release
+is one `Dev` → `main` pull request.
 
 Every push to `main` builds a signed APK and publishes it as a GitHub
 Release (`.github/workflows/android-apk.yml`). The repository needs the
@@ -327,6 +413,16 @@ run's Summary page.
 - Web engine: Android System WebView, part of the Android platform; on
   Windows, Microsoft Edge WebView2 (the SDK is BSD-3-Clause and is
   downloaded when building).
+
+## Support and security
+
+- Help centre: [zerotrust.bz/help](https://zerotrust.bz/help/). Questions and
+  account deletion: support@zerotrust.bz.
+- Security problems: please report them privately to cyber@zerotrust.bz. What
+  the encryption does and doesn't protect against is on
+  [zerotrust.bz/security](https://zerotrust.bz/security/).
+- [Privacy policy](https://zerotrust.bz/privacy/) and
+  [terms](https://zerotrust.bz/terms/).
 
 ## License
 
