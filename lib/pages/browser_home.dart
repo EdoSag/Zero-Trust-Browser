@@ -972,12 +972,28 @@ class _BrowserHomeState extends ConsumerState<BrowserHome>
       _snack(tab.javascript ? l.assistCant : l.readerNeedsJs);
       return;
     }
-    await showPageAssistSheet(
-      context,
-      title: a!.title.isNotEmpty ? a.title : tab.label,
-      text: text,
-      onActivity: ref.read(vaultControllerProvider.notifier).touch,
-    );
+    // The sheet sits above the screen that hides private tabs once they
+    // lock (B29): for a private page it closes itself at that moment, and
+    // the answer being written is stopped.
+    final ValueNotifier<bool> locked = ValueNotifier<bool>(false);
+    final ProviderSubscription<bool>? lock = tab.private
+        ? ref.listenManual<bool>(
+            privateLockProvider,
+            (bool? _, bool now) => locked.value = now,
+          )
+        : null;
+    try {
+      await showPageAssistSheet(
+        context,
+        title: a!.title.isNotEmpty ? a.title : tab.label,
+        text: text,
+        onActivity: ref.read(vaultControllerProvider.notifier).touch,
+        closeWhen: locked,
+      );
+    } finally {
+      lock?.close();
+      locked.dispose();
+    }
   }
 
   // ---- Reader, reading list, page tools ------------------------------------

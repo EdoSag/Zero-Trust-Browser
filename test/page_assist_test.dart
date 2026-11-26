@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -66,6 +67,7 @@ void main() {
       WidgetTester tester, {
       Locale locale = const Locale('en'),
       VoidCallback? onActivity,
+      ValueListenable<bool>? closeWhen,
     }) async {
       // A 1080x2400 phone, like the devices the app ships to.
       tester.view.physicalSize = const Size(1080, 2400);
@@ -90,6 +92,7 @@ void main() {
                   title: 'Kitchen renovation',
                   text: pageText,
                   onActivity: onActivity,
+                  closeWhen: closeWhen,
                 ),
                 child: const Text('open'),
               ),
@@ -172,6 +175,60 @@ void main() {
       expectOnScreen(tester, find.byKey(const Key('assist_copy')));
       expectOnScreen(tester, find.byKey(const Key('assist_back')));
       expect(find.byKey(const Key('assist_stop')), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('closes with its answer when the private tab locks', (
+      WidgetTester tester,
+    ) async {
+      final FakeZtAssist assist = FakeZtAssist(
+        answer: (_) => <String>['Work starts', ' in January.'],
+      );
+      ZtAssist.instance = assist;
+      final ValueNotifier<bool> locked = ValueNotifier<bool>(false);
+      addTearDown(locked.dispose);
+      await pumpSheet(tester, closeWhen: locked);
+      await tester.tap(summarize);
+      await tester.pumpAndSettle();
+      expect(find.text('Work starts in January.'), findsOneWidget);
+
+      locked.value = true;
+      await tester.pumpAndSettle();
+      // Nothing of the page is left on the screen, and nothing to ask with.
+      expect(find.byType(PageAssistSheet), findsNothing);
+      expect(find.text('Work starts in January.'), findsNothing);
+      expect(find.text('Kitchen renovation'), findsNothing);
+      expect(find.text('open'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('a lock in the middle of an answer stops the model', (
+      WidgetTester tester,
+    ) async {
+      // The second piece waits, so the answer is half written.
+      final Completer<void> rest = Completer<void>();
+      int pieces = 0;
+      final FakeZtAssist assist = FakeZtAssist(
+        answer: (_) => <String>['Work starts', ' in January.'],
+        beforePiece: () async {
+          if (pieces++ > 0) await rest.future;
+        },
+      );
+      ZtAssist.instance = assist;
+      final ValueNotifier<bool> locked = ValueNotifier<bool>(false);
+      addTearDown(locked.dispose);
+      await pumpSheet(tester, closeWhen: locked);
+      await tester.tap(summarize);
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Work starts'), findsOneWidget);
+
+      locked.value = true;
+      await tester.pumpAndSettle();
+      expect(assist.cancelled, 1);
+      expect(find.byType(PageAssistSheet), findsNothing);
+      rest.complete();
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
 

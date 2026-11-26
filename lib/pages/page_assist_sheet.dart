@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:zerotrust_browser/browser/page_assist.dart';
@@ -13,17 +14,26 @@ import 'package:zt_assist/zt_assist.dart';
 /// same phone and nowhere else; nothing is kept of it. [onActivity] is
 /// called while an answer is being written, so the app does not lock
 /// itself in the middle.
+///
+/// The sheet sits above the page, so above the screen that hides private
+/// tabs once they lock. [closeWhen] turning true (the page's private tab
+/// locked) stops the answer and takes the sheet down with what it shows.
 Future<void> showPageAssistSheet(
   BuildContext context, {
   required String title,
   required String text,
   VoidCallback? onActivity,
+  ValueListenable<bool>? closeWhen,
 }) => showModalBottomSheet<void>(
   context: context,
   isScrollControlled: true,
   showDragHandle: true,
-  builder: (_) =>
-      PageAssistSheet(title: title, text: text, onActivity: onActivity),
+  builder: (_) => PageAssistSheet(
+    title: title,
+    text: text,
+    onActivity: onActivity,
+    closeWhen: closeWhen,
+  ),
 );
 
 class PageAssistSheet extends StatefulWidget {
@@ -32,11 +42,15 @@ class PageAssistSheet extends StatefulWidget {
     required this.title,
     required this.text,
     this.onActivity,
+    this.closeWhen,
   });
 
   final String title;
   final String text;
   final VoidCallback? onActivity;
+
+  /// True once the page may no longer be shown: the sheet closes itself.
+  final ValueListenable<bool>? closeWhen;
 
   @override
   State<PageAssistSheet> createState() => _PageAssistSheetState();
@@ -59,7 +73,30 @@ class _PageAssistSheetState extends State<PageAssistSheet> {
   bool get _running => _answering != null;
 
   @override
+  void initState() {
+    super.initState();
+    widget.closeWhen?.addListener(_closeIfAsked);
+  }
+
+  void _closeIfAsked() {
+    if (!mounted || !(widget.closeWhen?.value ?? false)) return;
+    // The answer is about a page that is hidden now: stop it at once, and
+    // take the sheet down even where something else is open above it.
+    unawaited(_answering?.cancel());
+    _answering = null;
+    final ModalRoute<Object?>? route = ModalRoute.of(context);
+    if (route == null || !route.isActive) return;
+    final NavigatorState navigator = Navigator.of(context);
+    if (route.isCurrent) {
+      navigator.pop();
+    } else {
+      navigator.removeRoute(route);
+    }
+  }
+
+  @override
   void dispose() {
+    widget.closeWhen?.removeListener(_closeIfAsked);
     // Leaving in the middle tells the model to stop writing.
     unawaited(_answering?.cancel());
     _question.dispose();
