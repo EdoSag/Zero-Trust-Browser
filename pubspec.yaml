@@ -25,6 +25,13 @@ dependencies:
       url: https://github.com/EdoSag/Zero-Trust-Core.git
       path: packages/zero_trust_core
       ref: v1.0.1
+  # "Ask ZT Assist" about a page: the AI runs in ZT Assist on the same
+  # phone. Independent of zero_trust_core, so it may be newer.
+  zt_assist:
+    git:
+      url: https://github.com/EdoSag/Zero-Trust-Core.git
+      path: packages/zt_assist
+      ref: d7c08b679c316a209b0f361ce3a76e8054ad9a03
   flutter_riverpod: ^3.5.0
   supabase_flutter: ^2.9.0
   # Reset links from account emails (EmailLinks).

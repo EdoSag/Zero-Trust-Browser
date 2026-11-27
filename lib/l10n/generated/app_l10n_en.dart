@@ -2472,4 +2472,69 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get fillCodeUnavailable => 'Fill code doesn\'t work here';
+
+  @override
+  String get assistAsk => 'Ask ZT Assist';
+
+  @override
+  String get assistAskSub =>
+      'Summarize the page or ask about it, on your phone';
+
+  @override
+  String get assistPagePrivacy =>
+      'ZT Assist works on this phone. The page is not sent anywhere.';
+
+  @override
+  String get assistSummarizePage => 'Summarize this page';
+
+  @override
+  String get assistAskAboutPage => 'Ask about this page';
+
+  @override
+  String get assistSend => 'Ask';
+
+  @override
+  String get assistStarting =>
+      'Getting ZT Assist ready. The first answer takes a few seconds longer.';
+
+  @override
+  String get assistStoppedByUser => 'Stopped before the end.';
+
+  @override
+  String get assistReadBeginning =>
+      'The page is long, so only its beginning was read.';
+
+  @override
+  String get assistCheckAnswer =>
+      'Written by an AI model on your phone. It can be wrong: check what matters against the page.';
+
+  @override
+  String get assistCopyAnswer => 'Copy the answer';
+
+  @override
+  String get assistAskSomethingElse => 'Ask something else';
+
+  @override
+  String get assistCant => 'This page has no article for ZT Assist to read.';
+
+  @override
+  String get assistNotInstalled => 'ZT Assist is not on this phone.';
+
+  @override
+  String get assistNoModel =>
+      'ZT Assist has no model yet. Open ZT Assist and download one.';
+
+  @override
+  String get assistLoadFailed =>
+      'ZT Assist could not load its model. The phone may be short of free memory: close other apps and try again.';
+
+  @override
+  String get assistNeedsUpdate =>
+      'ZT Assist needs an update before it can do this.';
+
+  @override
+  String get assistStopped => 'ZT Assist stopped in the middle. Try again.';
+
+  @override
+  String get assistFailed => 'ZT Assist could not answer. Try again.';
 }
